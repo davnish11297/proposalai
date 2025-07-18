@@ -1,0 +1,180 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      String   @default("MEMBER") // ADMIN, MANAGER, MEMBER, VIEWER
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  proposals    Proposal[]
+  comments     Comment[]
+  activities   Activity[]
+  teamMembers  TeamMember[]
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  organizationId String?
+}
+
+model Organization {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  logo            String?
+  website         String?
+  industry        String?
+  size            String?
+  brandGuidelines String?
+  valueProps      String? // Store as JSON string
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  users     User[]
+  proposals Proposal[]
+  teams     Team[]
+}
+
+model Proposal {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  clientName  String?
+  type        String   @default("PROPOSAL") // PROPOSAL, RFP_RESPONSE, etc.
+  status      String   @default("DRAFT") // DRAFT, IN_REVIEW, APPROVED, etc.
+  content     String   // Store as JSON string
+  metadata    String?  // Store as JSON string
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  author      User   @relation(fields: [authorId], references: [id])
+  authorId    String
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  organizationId String?
+  comments    Comment[]
+  activities  Activity[]
+}
+
+model Comment {
+  id         String   @id @default(cuid())
+  content    String
+  position   String?  // Store as JSON string
+  createdAt  DateTime @default(now())
+
+  // Relations
+  proposal   Proposal @relation(fields: [proposalId], references: [id])
+  proposalId String
+  author     User     @relation(fields: [authorId], references: [id])
+  authorId   String
+}
+
+model Activity {
+  id        String   @id @default(cuid())
+  type      String   // CREATED, UPDATED, PUBLISHED, etc.
+  details   String?  // Store as JSON string
+  createdAt DateTime @default(now())
+
+  // Relations
+  proposal   Proposal @relation(fields: [proposalId], references: [id])
+  proposalId String
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  members     TeamMember[]
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  role      String   @default("MEMBER") // ADMIN, EDITOR, VIEWER, MEMBER
+  createdAt DateTime @default(now())
+
+  // Relations
+  team   Team @relation(fields: [teamId], references: [id])
+  teamId String
+  user   User @relation(fields: [userId], references: [id])
+  userId String
+
+  @@unique([teamId, userId])
+}
+
+model Template {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  category    String
+  content     String   // Store as JSON string
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Snippet {
+  id         String   @id @default(cuid())
+  title      String
+  content    String
+  category   String
+  tags       String?  // Store as JSON string
+  usageCount Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model CaseStudy {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  challenge   String
+  solution    String
+  results     String
+  metrics     String?  // Store as JSON string
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PricingModel {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  pricing     String   // Store as JSON string
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Client {
+  id          String   @id @default(cuid())
+  name        String
+  email       String?
+  phone       String?
+  company     String?
+  industry    String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

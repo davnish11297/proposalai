@@ -1,0 +1,600 @@
+import OpenAI from 'openai';
+import { IGenerateProposalRequest, IProposal, ISnippet, IOrganization } from '../types';
+
+// AI Provider types
+type AIProvider = 'openai' | 'huggingface' | 'ollama' | 'deepseek' | 'template';
+
+interface AIResponse {
+  content: string;
+  success: boolean;
+  provider: AIProvider;
+  error?: string;
+}
+
+// Initialize OpenAI client only if API key is available
+const getOpenAIClient = () => {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY environment variable is required for OpenAI features');
+  }
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+};
+
+// Hugging Face API client
+const getHuggingFaceClient = () => {
+  if (!process.env.HUGGINGFACE_API_KEY) {
+    throw new Error('HUGGINGFACE_API_KEY environment variable is required for Hugging Face features');
+  }
+  return {
+    apiKey: process.env.HUGGINGFACE_API_KEY,
+    baseURL: 'https://api-inference.huggingface.co/models/',
+  };
+};
+
+// DeepSeek API client
+const getDeepSeekClient = () => {
+  if (!process.env.DEEPSEEK_API_KEY) {
+    throw new Error('DEEPSEEK_API_KEY environment variable is required for DeepSeek features');
+  }
+  return {
+    apiKey: process.env.DEEPSEEK_API_KEY,
+    baseURL: 'https://api.deepseek.com/v1'
+  };
+};
+
+export class AIService {
+  private static instance: AIService;
+  private preferredProvider: AIProvider = 'openai';
+
+  private constructor() {
+    // Use template-based generation since DeepSeek has insufficient balance
+    this.preferredProvider = 'template';
+  }
+
+  public static getInstance(): AIService {
+    if (!AIService.instance) {
+      AIService.instance = new AIService();
+    }
+    return AIService.instance;
+  }
+
+  async generateProposal(
+    request: IGenerateProposalRequest,
+    organization: IOrganization,
+    snippets: ISnippet[],
+    caseStudies: any[],
+    pricingModels: any[]
+  ): Promise<{ content: any; suggestedSnippets: ISnippet[] }> {
+    const systemPrompt = this.buildSystemPrompt(organization, snippets, caseStudies, pricingModels);
+    const userPrompt = this.buildUserPrompt(request);
+
+    // Use template-based generation since DeepSeek has insufficient balance
+    const providers: AIProvider[] = ['template'];
+    
+    for (const provider of providers) {
+      try {
+        const response = await this.generateWithProvider(provider, systemPrompt, userPrompt);
+        if (response.success) {
+          let parsedContent;
+          
+          // For template provider, the content is already a JSON string, so parse it directly
+          if (provider === 'template') {
+            try {
+              parsedContent = JSON.parse(response.content);
+            } catch (error) {
+              console.error('Failed to parse template content:', error);
+              // Fallback to template proposal
+              return this.generateTemplateProposal(request, organization, snippets, caseStudies, pricingModels);
+            }
+          } else {
+            // For other providers, use the parseGeneratedContent method
+            parsedContent = this.parseGeneratedContent(response.content);
+          }
+          
+          const suggestedSnippets = this.suggestRelevantSnippets(request, snippets);
+
+          return {
+            content: parsedContent,
+            suggestedSnippets,
+          };
+        }
+      } catch (error) {
+        console.error(`${provider} generation failed:`, error);
+        continue;
+      }
+    }
+
+    // If all providers fail, use template-based generation
+    return this.generateTemplateProposal(request, organization, snippets, caseStudies, pricingModels);
+  }
+
+  private async generateWithProvider(
+    provider: AIProvider, 
+    systemPrompt: string, 
+    userPrompt: string
+  ): Promise<AIResponse> {
+    switch (provider) {
+      case 'openai':
+        return this.generateWithOpenAI(systemPrompt, userPrompt);
+      case 'huggingface':
+        return this.generateWithHuggingFace(systemPrompt, userPrompt);
+      case 'ollama':
+        return this.generateWithOllama(systemPrompt, userPrompt);
+      case 'deepseek':
+        return this.generateWithDeepSeek(systemPrompt, userPrompt);
+      case 'template':
+        return this.generateWithTemplate(systemPrompt, userPrompt);
+      default:
+        throw new Error(`Unknown AI provider: ${provider}`);
+    }
+  }
+
+  private async generateWithOpenAI(systemPrompt: string, userPrompt: string): Promise<AIResponse> {
+    try {
+      const openai = getOpenAIClient();
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 4000,
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      return {
+        content: content || '',
+        success: !!content,
+        provider: 'openai'
+      };
+    } catch (error) {
+      return {
+        content: '',
+        success: false,
+        provider: 'openai',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  private async generateWithHuggingFace(systemPrompt: string, userPrompt: string): Promise<AIResponse> {
+    try {
+      const client = getHuggingFaceClient();
+      const model = 'microsoft/DialoGPT-medium'; // Free model
+      
+      const response = await fetch(`${client.baseURL}${model}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${client.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          inputs: `${systemPrompt}\n\n${userPrompt}`,
+          parameters: {
+            max_length: 1000,
+            temperature: 0.7,
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Hugging Face API error: ${response.status}`);
+      }
+
+      const data = await response.json() as any;
+      const content = Array.isArray(data) ? data[0]?.generated_text : data.generated_text;
+      
+      return {
+        content: content || '',
+        success: !!content,
+        provider: 'huggingface'
+      };
+    } catch (error) {
+      return {
+        content: '',
+        success: false,
+        provider: 'huggingface',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  private async generateWithOllama(systemPrompt: string, userPrompt: string): Promise<AIResponse> {
+    try {
+      // Ollama runs locally, so we need to check if it's available
+      const response = await fetch('http://localhost:11434/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama2', // or any other model you have installed
+          prompt: `${systemPrompt}\n\n${userPrompt}`,
+          stream: false,
+          options: {
+            temperature: 0.7,
+            num_predict: 1000,
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Ollama API error: ${response.status}`);
+      }
+
+      const data = await response.json() as any;
+      return {
+        content: data.response || '',
+        success: !!data.response,
+        provider: 'ollama'
+      };
+    } catch (error) {
+      return {
+        content: '',
+        success: false,
+        provider: 'ollama',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  private async generateWithDeepSeek(systemPrompt: string, userPrompt: string): Promise<AIResponse> {
+    try {
+      const client = getDeepSeekClient();
+      
+      console.log('🔍 Attempting DeepSeek API call...');
+      
+      const response = await fetch(`${client.baseURL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${client.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 4000,
+        })
+      });
+
+      console.log(`🔍 DeepSeek API response status: ${response.status}`);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`🔍 DeepSeek API error: ${response.status} - ${errorText}`);
+        throw new Error(`DeepSeek API error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json() as any;
+      console.log('🔍 DeepSeek API response data:', JSON.stringify(data, null, 2));
+      
+      const content = data.choices?.[0]?.message?.content;
+      console.log('🔍 DeepSeek generated content:', content);
+      
+      return {
+        content: content || '',
+        success: !!content,
+        provider: 'deepseek'
+      };
+    } catch (error) {
+      console.error('🔍 DeepSeek generation error:', error);
+      return {
+        content: '',
+        success: false,
+        provider: 'deepseek',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  private async generateWithTemplate(systemPrompt: string, userPrompt: string): Promise<AIResponse> {
+    // Template-based generation - no AI required
+    const templateContent = this.generateTemplateContent(systemPrompt, userPrompt);
+    return {
+      content: templateContent,
+      success: true,
+      provider: 'template'
+    };
+  }
+
+  private generateTemplateContent(systemPrompt: string, userPrompt: string): string {
+    // Extract key information from prompts
+    const clientMatch = userPrompt.match(/Client: (.+)/);
+    const projectMatch = userPrompt.match(/Project Description: (.+)/);
+    const budgetMatch = userPrompt.match(/Budget: (.+)/);
+    const timelineMatch = userPrompt.match(/Timeline: (.+)/);
+
+    const clientName = clientMatch ? clientMatch[1] : 'Valued Client';
+    const projectDesc = projectMatch ? projectMatch[1] : 'Professional services';
+    const budget = budgetMatch ? budgetMatch[1] : 'To be discussed';
+    const timeline = timelineMatch ? timelineMatch[1] : 'Flexible';
+
+    let content = {
+      executiveSummary: `We are pleased to present this proposal for ${clientName} regarding ${projectDesc}.`,
+      problemStatement: `Based on our understanding, you require professional services to address ${projectDesc}.`,
+      solution: `Our comprehensive solution includes:\n- Detailed analysis and planning\n- Professional implementation\n- Ongoing support and maintenance`,
+      approach: `Our approach will follow these steps:\n1. Initial consultation and requirements gathering\n2. Solution design and planning\n3. Implementation and testing\n4. Review and feedback\n5. Final delivery and support`,
+      timeline: `Project Timeline: ${timeline}`,
+      pricing: `Investment: ${budget}`,
+      budgetDetails: `The proposed budget of ${budget} covers all project phases, including planning, implementation, and support. A detailed breakdown can be provided upon request.`,
+      nextSteps: [
+        'Review and approve this proposal',
+        'Schedule kickoff meeting',
+        'Begin project implementation'
+      ]
+    };
+
+    // Clean all string fields of asterisks and Markdown
+    for (const key in content) {
+      if (typeof content[key] === 'string') {
+        content[key] = content[key]
+          .replace(/\*\*(.*?)\*\*/g, '$1')
+          .replace(/\*(.*?)\*/g, '$1')
+          .replace(/`(.*?)`/g, '$1')
+          .replace(/#{1,6}\s/g, '')
+          .replace(/\[(.*?)\]\(.*?\)/g, '$1')
+          .replace(/\n\s*[-*+]\s/g, '\n- ')
+          .replace(/\n\s*\d+\.\s/g, '\n1. ');
+      }
+    }
+
+    return JSON.stringify(content);
+  }
+
+  private generateTemplateProposal(
+    request: IGenerateProposalRequest,
+    organization: IOrganization,
+    snippets: ISnippet[],
+    caseStudies: any[],
+    pricingModels: any[]
+  ): { content: any; suggestedSnippets: ISnippet[] } {
+    // Include value propositions in the solution
+    const valuePropsText = organization.valueProps && organization.valueProps.length > 0 
+      ? `\n\nOur key value propositions:\n${organization.valueProps.map(vp => `• ${vp}`).join('\n')}`
+      : '';
+
+    const content = {
+      executiveSummary: `We are pleased to present this proposal for ${request.clientName} regarding ${request.projectDescription}.`,
+      problemStatement: `Based on our understanding, you require professional services to address ${request.projectDescription}.`,
+      solution: `Our comprehensive solution includes:\n- Detailed analysis and planning\n- Professional implementation\n- Ongoing support and maintenance${valuePropsText}`,
+      approach: `Our approach will follow these steps:\n1. Initial consultation and requirements gathering\n2. Solution design and planning\n3. Implementation and testing\n4. Review and feedback\n5. Final delivery and support`,
+      timeline: `Project Timeline: ${request.timeline || '4-6 weeks'}`,
+      pricing: `Investment: ${request.budget || 'To be discussed'}`,
+      budgetDetails: `The proposed budget of ${request.budget || 'To be discussed'} covers all project phases, including planning, implementation, and support. A detailed breakdown can be provided upon request.`,
+      nextSteps: [
+        'Review and approve this proposal',
+        'Schedule kickoff meeting',
+        'Begin project implementation'
+      ]
+    };
+
+    const suggestedSnippets = this.suggestRelevantSnippets(request, snippets);
+
+    return { content, suggestedSnippets };
+  }
+
+  async enhanceContent(content: string, instructions: string): Promise<string> {
+    const providers: AIProvider[] = [this.preferredProvider, 'huggingface', 'template'];
+    
+    for (const provider of providers) {
+      try {
+        const response = await this.generateWithProvider(
+          provider,
+          "You are a professional proposal writer. Enhance the given content according to the instructions while maintaining the original structure and key information.",
+          `Content to enhance:\n${content}\n\nInstructions: ${instructions}`
+        );
+        
+        if (response.success) {
+          return response.content;
+        }
+      } catch (error) {
+        console.error(`${provider} enhancement failed:`, error);
+        continue;
+      }
+    }
+
+    return content; // Return original content if all providers fail
+  }
+
+  async generateSnippetSuggestions(context: string, category: string): Promise<string[]> {
+    const providers: AIProvider[] = [this.preferredProvider, 'huggingface', 'template'];
+    
+    for (const provider of providers) {
+      try {
+        const response = await this.generateWithProvider(
+          provider,
+          "You are a proposal writing assistant. Generate 3-5 relevant content snippets for the given context and category.",
+          `Context: ${context}\nCategory: ${category}\n\nGenerate relevant snippets:`
+        );
+        
+        if (response.success) {
+          const suggestions = response.content.split('\n').filter(s => s.trim());
+          return suggestions.length > 0 ? suggestions : [];
+        }
+      } catch (error) {
+        console.error(`${provider} snippet generation failed:`, error);
+        continue;
+      }
+    }
+
+    // Fallback template snippets
+    return [
+      `Professional ${category} solution for ${context}`,
+      `Comprehensive ${category} approach`,
+      `Best practices in ${category}`,
+      `Proven ${category} methodology`
+    ];
+  }
+
+  async analyzeProposalEffectiveness(content: string): Promise<{
+    score: number;
+    suggestions: string[];
+    strengths: string[];
+    weaknesses: string[];
+  }> {
+    const providers: AIProvider[] = [this.preferredProvider, 'huggingface', 'template'];
+    
+    for (const provider of providers) {
+      try {
+        const response = await this.generateWithProvider(
+          provider,
+          "You are a proposal effectiveness analyzer. Rate the proposal from 1-10 and provide specific feedback.",
+          `Analyze this proposal:\n${content}`
+        );
+        
+        if (response.success) {
+          return this.parseAnalysis(response.content);
+        }
+      } catch (error) {
+        console.error(`${provider} analysis failed:`, error);
+        continue;
+      }
+    }
+
+    // Fallback analysis
+    return {
+      score: 7,
+      suggestions: ['Consider adding more specific metrics', 'Include case studies if available'],
+      strengths: ['Clear structure', 'Professional tone'],
+      weaknesses: ['Could use more specific details'],
+    };
+  }
+
+  private buildSystemPrompt(
+    organization: IOrganization,
+    snippets: ISnippet[],
+    caseStudies: any[],
+    pricingModels: any[]
+  ): string {
+    const valuePropsText = organization.valueProps && organization.valueProps.length > 0 
+      ? `\nValue Propositions:\n${organization.valueProps.map(vp => `- ${vp}`).join('\n')}`
+      : '';
+
+    return `You are an AI assistant specialized in creating professional business proposals for ${organization.name}.
+
+Organization Context:
+- Company: ${organization.name}
+- Industry: ${organization.industry || 'Technology'}
+- Brand Voice: ${organization.brandVoice || 'Professional and friendly'}
+- Website: ${organization.website || 'N/A'}${valuePropsText}
+
+Available Content Snippets:
+${snippets.map(s => `- ${s.title}: ${s.content.substring(0, 100)}...`).join('\n')}
+
+Case Studies:
+${caseStudies.map(cs => `- ${cs.title}: ${cs.description}`).join('\n')}
+
+Pricing Models:
+${pricingModels.map(pm => `- ${pm.name}: ${pm.description || 'Custom pricing'}`).join('\n')}
+
+Instructions:
+1. Create a professional, well-structured proposal
+2. Use the organization's brand voice and tone
+3. Incorporate relevant snippets and case studies naturally
+4. Include clear pricing, budget details, approach, and timeline information
+5. Make it client-focused and solution-oriented
+6. Use professional language and formatting
+7. Include executive summary, problem statement, solution, approach, timeline, pricing, budget details, and next steps
+8. Emphasize the organization's value propositions throughout the proposal
+9. IMPORTANT: Do NOT use Markdown formatting (no **bold**, *italic*, or other Markdown syntax)
+10. Use plain text only - no special formatting characters
+
+Format the response as a structured JSON object with these sections.`;
+  }
+
+  private buildUserPrompt(request: IGenerateProposalRequest): string {
+    return `Create a proposal for:
+
+Client: ${request.clientName}
+${request.clientEmail ? `Email: ${request.clientEmail}` : ''}
+Project Description: ${request.projectDescription}
+${request.budget ? `Budget: ${request.budget}` : ''}
+${request.timeline ? `Timeline: ${request.timeline}` : ''}
+${request.requirements ? `Requirements: ${request.requirements.join(', ')}` : ''}
+${request.customInstructions ? `Custom Instructions: ${request.customInstructions}` : ''}
+
+Generate a comprehensive, professional proposal that addresses the client's needs and showcases our capabilities. Be sure to include a detailed approach/methodology section and a budget details section explaining the budget breakdown or rationale.`;
+  }
+
+  private parseGeneratedContent(content: string): any {
+    try {
+      // Clean up any Markdown formatting before parsing
+      const cleanedContent = content
+        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold formatting
+        .replace(/\*(.*?)\*/g, '$1') // Remove italic formatting
+        .replace(/`(.*?)`/g, '$1') // Remove code formatting
+        .replace(/#{1,6}\s/g, '') // Remove headers
+        .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Remove links, keep text
+        .replace(/\n\s*[-*+]\s/g, '\n- ') // Normalize list markers
+        .replace(/\n\s*\d+\.\s/g, '\n1. '); // Normalize numbered lists
+
+      // Try to parse as JSON first
+      return JSON.parse(cleanedContent);
+    } catch {
+      // If not JSON, structure it as sections
+      const sections = content.split('\n\n').filter(section => section.trim());
+      return {
+        sections: sections.map(section => ({
+          title: section.split('\n')[0] || 'Section',
+          content: section.split('\n').slice(1).join('\n')
+        }))
+      };
+    }
+  }
+
+  private suggestRelevantSnippets(request: IGenerateProposalRequest, snippets: ISnippet[]): ISnippet[] {
+    const relevantKeywords = [
+      request.projectDescription,
+      request.budget,
+      request.timeline,
+      ...(request.requirements || [])
+    ].join(' ').toLowerCase();
+
+    return snippets
+      .filter(snippet => {
+        const snippetText = `${snippet.title} ${snippet.content} ${snippet.tags.join(' ')}`.toLowerCase();
+        return snippet.tags.some(tag => relevantKeywords.includes(tag.toLowerCase())) ||
+               snippetText.includes(relevantKeywords.split(' ')[0]);
+      })
+      .sort((a, b) => b.usageCount - a.usageCount)
+      .slice(0, 5);
+  }
+
+  private parseAnalysis(analysis: string): {
+    score: number;
+    suggestions: string[];
+    strengths: string[];
+    weaknesses: string[];
+  } {
+    // Simple parsing - in a real implementation, you'd want more sophisticated parsing
+    const lines = analysis.split('\n').filter(line => line.trim());
+    
+    let score = 5;
+    const suggestions: string[] = [];
+    const strengths: string[] = [];
+    const weaknesses: string[] = [];
+
+    lines.forEach(line => {
+      if (line.toLowerCase().includes('score') || line.toLowerCase().includes('rating')) {
+        const scoreMatch = line.match(/\d+/);
+        if (scoreMatch) score = parseInt(scoreMatch[0]);
+      } else if (line.toLowerCase().includes('suggest') || line.toLowerCase().includes('improve')) {
+        suggestions.push(line);
+      } else if (line.toLowerCase().includes('strength') || line.toLowerCase().includes('good')) {
+        strengths.push(line);
+      } else if (line.toLowerCase().includes('weakness') || line.toLowerCase().includes('improve')) {
+        weaknesses.push(line);
+      }
+    });
+
+    return { score, suggestions, strengths, weaknesses };
+  }
+}
+
+export const aiService = AIService.getInstance(); 
