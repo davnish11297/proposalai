@@ -1,8 +1,27 @@
 import { Router } from 'express';
 import { proposalController } from '../controllers/proposalController';
 import { authenticateToken } from '../middleware/auth';
+import express from 'express';
+import multer from 'multer';
+import { PDFService } from '../services/pdfService';
 
 const router = Router();
+const pdfService = new PDFService();
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed'));
+    }
+  },
+});
 
 // List all proposals
 router.get('/', authenticateToken, (req, res) => proposalController.getProposals(req, res));
@@ -36,5 +55,28 @@ router.post('/:id/send-email', authenticateToken, (req, res) => proposalControll
 
 // Download proposal as PDF
 router.get('/:id/download-pdf', authenticateToken, (req, res) => proposalController.downloadPDF(req, res));
+
+// Extract text from PDF
+router.post('/extract-pdf', upload.single('pdf'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No PDF file uploaded' });
+    }
+
+    const extractedText = await pdfService.extractTextFromBuffer(req.file.buffer);
+    
+    res.json({
+      success: true,
+      content: extractedText,
+      message: 'PDF text extracted successfully'
+    });
+  } catch (error) {
+    console.error('PDF extraction error:', error);
+    res.status(500).json({
+      error: 'Failed to extract text from PDF',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
 
 export default router; 

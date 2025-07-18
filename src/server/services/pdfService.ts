@@ -1,5 +1,7 @@
 import puppeteer from 'puppeteer';
 import { IProposal } from '../types';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export class PDFService {
   private cleanMarkdown(text: string): string {
@@ -314,6 +316,41 @@ export class PDFService {
 
   async generatePDFBuffer(proposal: IProposal): Promise<Buffer> {
     return await this.generatePDF(proposal);
+  }
+
+  /**
+   * Extract text content from a PDF file
+   */
+  async extractTextFromPDF(filePath: string): Promise<string> {
+    try {
+      // For now, we'll use a simple approach with pdf-parse
+      // You may need to install: npm install pdf-parse
+      const pdfParse = require('pdf-parse');
+      const dataBuffer = fs.readFileSync(filePath);
+      
+      const data = await pdfParse(dataBuffer);
+      return data.text || '';
+    } catch (error) {
+      console.error('Error extracting text from PDF:', error);
+      throw new Error('Failed to extract text from PDF');
+    }
+  }
+
+  /**
+   * Extract text from uploaded PDF buffer
+   */
+  async extractTextFromBuffer(buffer: Buffer): Promise<string> {
+    try {
+      // For now, we'll use a simple approach with pdf-parse
+      // You may need to install: npm install pdf-parse
+      const pdfParse = require('pdf-parse');
+      
+      const data = await pdfParse(buffer);
+      return data.text || '';
+    } catch (error) {
+      console.error('Error extracting text from PDF buffer:', error);
+      throw new Error('Failed to extract text from PDF');
+    }
   }
 }
 

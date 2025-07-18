@@ -174,14 +174,15 @@ export async function getOpenRouterChatCompletion(messages: Array<{ role: string
   const requestBody = {
     model,
     messages,
-    max_tokens: 1000,
+    max_tokens: 400, // Reduced from 800 to work within current credit limits (475 available)
     temperature: 0.7,
   };
 
   console.log('🔍 Sending request to OpenRouter:', {
     model,
     messageCount: messages.length,
-    firstMessage: messages[0]?.content?.substring(0, 50) + '...'
+    firstMessage: messages[0]?.content?.substring(0, 50) + '...',
+    maxTokens: requestBody.max_tokens
   });
 
   const response = await fetch(`${API_BASE_URL}/chat/completions`, {
@@ -202,6 +203,12 @@ export async function getOpenRouterChatCompletion(messages: Array<{ role: string
       statusText: response.statusText,
       errorText
     });
+    
+    // Handle specific credit limit error
+    if (response.status === 402) {
+      throw new Error('OpenRouter credits exhausted. Please visit https://openrouter.ai/settings/credits to add more credits or upgrade your account.');
+    }
+    
     throw new Error(`OpenRouter API error: ${response.status} ${response.statusText} - ${errorText}`);
   }
   
