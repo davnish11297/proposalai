@@ -1,10 +1,10 @@
 # ProposalAI - Smart Client Proposal & RFP Response Generator
 
-> AI-powered proposal generation platform for B2B teams
+> AI-powered proposal generation platform for the B2B teams
 
 ProposalAI is a comprehensive SaaS solution that helps B2B teams create professional proposals, sales decks,
  and RFP responses using AI. It combines your company's knowledge base with GPT-4 to generate tailored, on-b
-rand proposals in minutes.
+rand proposals in minutes. 
 
 ## 🚀 Features
 
