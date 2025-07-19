@@ -31,12 +31,10 @@ export class CommentController {
         db.comment.findMany({
           where: { proposalId },
           include: {
-            user: {
+            author: {
               select: { 
-                firstName: true, 
-                lastName: true, 
-                email: true, 
-                avatar: true 
+                name: true, 
+                email: true 
               }
             }
           },
@@ -92,16 +90,14 @@ export class CommentController {
         data: {
           content: commentData.content,
           position: commentData.position || null,
-          userId: req.user!.userId,
+          authorId: req.user!.userId,
           proposalId,
         },
         include: {
-          user: {
+          author: {
             select: { 
-              firstName: true, 
-              lastName: true, 
-              email: true, 
-              avatar: true 
+              name: true, 
+              email: true 
             }
           }
         }
@@ -113,7 +109,7 @@ export class CommentController {
           type: 'COMMENTED',
           userId: req.user!.userId,
           proposalId,
-          details: { commentId: comment.id }
+          details: JSON.stringify({ commentId: comment.id })
         }
       });
 
@@ -164,7 +160,7 @@ export class CommentController {
       }
 
       // Only allow the comment author to edit
-      if (existingComment.userId !== req.user!.userId) {
+      if (existingComment.authorId !== req.user!.userId) {
         res.status(403).json({
           success: false,
           error: 'You can only edit your own comments'
@@ -179,12 +175,10 @@ export class CommentController {
           position: updateData.position || null,
         },
         include: {
-          user: {
+          author: {
             select: { 
-              firstName: true, 
-              lastName: true, 
-              email: true, 
-              avatar: true 
+              name: true, 
+              email: true 
             }
           }
         }
@@ -236,7 +230,7 @@ export class CommentController {
       }
 
       // Only allow the comment author or admin to delete
-      if (existingComment.userId !== req.user!.userId && req.user!.role !== 'ADMIN') {
+      if (existingComment.authorId !== req.user!.userId && req.user!.role !== 'ADMIN') {
         res.status(403).json({
           success: false,
           error: 'You can only delete your own comments'

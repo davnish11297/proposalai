@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { proposalsAPI } from '../services/api';
-import { DocumentTextIcon, UserIcon, CalendarIcon, PencilSquareIcon, EyeIcon, TrashIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { DocumentTextIcon, UserIcon, CalendarIcon, PencilSquareIcon, EyeIcon, TrashIcon, ArrowLeftIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline';
 
 export default function Drafts() {
   const navigate = useNavigate();
   const [drafts, setDrafts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [selectedDraft, setSelectedDraft] = useState<any>(null);
+  const [recipientEmail, setRecipientEmail] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState('');
 
   useEffect(() => {
     fetchDrafts();
@@ -33,6 +38,45 @@ export default function Drafts() {
       fetchDrafts();
     }
   };
+
+  const handleSend = (draft: any) => {
+    setSelectedDraft(draft);
+    setRecipientEmail('');
+    setSendError('');
+    setShowSendModal(true);
+  };
+
+  const handleSendProposal = async () => {
+    if (!recipientEmail.trim()) {
+      setSendError('Please enter a recipient email');
+      return;
+    }
+
+    if (!selectedDraft) return;
+
+    try {
+      setSending(true);
+      setSendError('');
+      
+      await proposalsAPI.sendEmail(selectedDraft.id, { recipientEmail: recipientEmail.trim() });
+      
+      // Close modal and refresh drafts
+      setShowSendModal(false);
+      setSelectedDraft(null);
+      setRecipientEmail('');
+      
+      // Show success message
+      alert('Proposal sent successfully! It has been moved to Sent Proposals.');
+      
+      // Refresh the drafts list (the sent proposal will no longer appear here)
+      fetchDrafts();
+    } catch (err: any) {
+      setSendError(err.response?.data?.error || 'Failed to send proposal');
+    } finally {
+      setSending(false);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -101,21 +145,27 @@ export default function Drafts() {
                   </div>
                   <div className="text-blue-800 text-sm line-clamp-3 mb-4">{draft.description}</div>
                 </div>
-                <div className="flex gap-3 mt-2">
+                <div className="flex gap-2 mt-2 flex-wrap">
                   <button
-                    className="flex items-center gap-1 px-3 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-400 text-white font-semibold hover:from-blue-600 hover:to-blue-500 transition"
+                    className="flex items-center gap-1 px-3 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-400 text-white font-semibold hover:from-blue-600 hover:to-blue-500 transition text-sm"
                     onClick={() => handleEdit(draft.id)}
                   >
                     <PencilSquareIcon className="h-4 w-4" /> Edit
                   </button>
                   <button
-                    className="flex items-center gap-1 px-3 py-2 rounded-lg bg-gradient-to-r from-green-400 to-green-300 text-white font-semibold hover:from-green-500 hover:to-green-400 transition"
+                    className="flex items-center gap-1 px-3 py-2 rounded-lg bg-gradient-to-r from-green-400 to-green-300 text-white font-semibold hover:from-green-500 hover:to-green-400 transition text-sm"
                     onClick={() => handleView(draft.id)}
                   >
                     <EyeIcon className="h-4 w-4" /> View
                   </button>
                   <button
-                    className="flex items-center gap-1 px-3 py-2 rounded-lg bg-gradient-to-r from-red-400 to-red-300 text-white font-semibold hover:from-red-500 hover:to-red-400 transition"
+                    className="flex items-center gap-1 px-3 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-purple-400 text-white font-semibold hover:from-purple-600 hover:to-purple-500 transition text-sm"
+                    onClick={() => handleSend(draft)}
+                  >
+                    <PaperAirplaneIcon className="h-4 w-4" /> Send
+                  </button>
+                  <button
+                    className="flex items-center gap-1 px-3 py-2 rounded-lg bg-gradient-to-r from-red-400 to-red-300 text-white font-semibold hover:from-red-500 hover:to-red-400 transition text-sm"
                     onClick={() => handleDelete(draft.id)}
                   >
                     <TrashIcon className="h-4 w-4" /> Delete
@@ -126,6 +176,60 @@ export default function Drafts() {
           </div>
         )}
       </div>
+
+      {/* Send Proposal Modal */}
+      {showSendModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <PaperAirplaneIcon className="h-6 w-6 text-purple-500" />
+              <h3 className="text-xl font-bold text-gray-900">Send Proposal</h3>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-gray-600 mb-2">Send "{selectedDraft?.title}" to:</p>
+              <input
+                type="email"
+                placeholder="recipient@example.com"
+                value={recipientEmail}
+                onChange={(e) => setRecipientEmail(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                disabled={sending}
+              />
+              {sendError && (
+                <p className="text-red-500 text-sm mt-2">{sendError}</p>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowSendModal(false)}
+                className="flex-1 px-4 py-3 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                disabled={sending}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendProposal}
+                disabled={sending || !recipientEmail.trim()}
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-500 to-purple-400 text-white font-semibold rounded-lg hover:from-purple-600 hover:to-purple-500 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {sending ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <PaperAirplaneIcon className="h-4 w-4" />
+                    Send
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

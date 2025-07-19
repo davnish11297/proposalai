@@ -8,11 +8,9 @@ interface Comment {
   position?: any;
   createdAt: string;
   updatedAt: string;
-  user: {
-    firstName: string;
-    lastName: string;
+  author: {
+    name: string | null;
     email: string;
-    avatar?: string;
   };
 }
 
@@ -166,25 +164,27 @@ const Comments: React.FC<CommentsProps> = ({ proposalId, currentUser }) => {
   };
 
   // Get user initials
-  const getUserInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  const getUserInitials = (name: string | null | undefined) => {
+    if (!name) return '?';
+    const names = name.split(' ');
+    if (names.length >= 2) {
+      return `${names[0].charAt(0)}${names[1].charAt(0)}`.toUpperCase();
+    }
+    return name.charAt(0).toUpperCase();
   };
 
   // Get user avatar
   const getUserAvatar = (comment: Comment) => {
-    if (comment.user.avatar) {
-      return <img src={comment.user.avatar} alt="Avatar" className="w-8 h-8 rounded-full" />;
-    }
     return (
       <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
-        {getUserInitials(comment.user.firstName, comment.user.lastName)}
+        {getUserInitials(comment.author.name)}
       </div>
     );
   };
 
   useEffect(() => {
     loadComments();
-  }, [proposalId]);
+  }, [proposalId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="bg-white rounded-lg border border-gray-200">
@@ -202,7 +202,9 @@ const Comments: React.FC<CommentsProps> = ({ proposalId, currentUser }) => {
       <div className="p-6 border-b border-gray-200">
         <form onSubmit={handleSubmitComment} className="space-y-4">
           <div className="flex gap-3">
-            {getUserAvatar({ user: currentUser } as Comment)}
+            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
+              {getUserInitials(`${currentUser.firstName} ${currentUser.lastName}`)}
+            </div>
             <div className="flex-1">
               <textarea
                 value={newComment}
@@ -250,7 +252,7 @@ const Comments: React.FC<CommentsProps> = ({ proposalId, currentUser }) => {
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-gray-900">
-                          {comment.user.firstName} {comment.user.lastName}
+                          {comment.author.name || 'Anonymous'}
                         </span>
                         <span className="text-xs text-gray-500">
                           {formatDate(comment.createdAt)}
@@ -262,7 +264,7 @@ const Comments: React.FC<CommentsProps> = ({ proposalId, currentUser }) => {
                       
                       {/* Comment Actions */}
                       <div className="flex items-center gap-2">
-                        {comment.user.email === currentUser.email && (
+                        {comment.author.email === currentUser.email && (
                           <>
                             <button
                               onClick={() => handleEditComment(comment)}

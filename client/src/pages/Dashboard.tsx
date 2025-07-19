@@ -1,10 +1,10 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { getOpenRouterChatCompletion } from '../services/api';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import '../ProposalMarkdown.css';
+import { getOpenRouterChatCompletion } from '../services/api';
 import { proposalsAPI } from '../services/api';
+import '../ProposalMarkdown.css';
 
 // Utility to convert HTML tags to markdown
 function htmlToMarkdown(input: string): string {
@@ -22,8 +22,6 @@ const Dashboard: React.FC = () => {
   const [proposalText, setProposalText] = useState('');
   const [generating, setGenerating] = useState(false);
   const [showContent, setShowContent] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [generatedContent, setGeneratedContent] = useState({
     executiveSummary: '',
     approach: '',
@@ -38,8 +36,335 @@ const Dashboard: React.FC = () => {
   const [email, setEmail] = useState('');
   const [proposalId, setProposalId] = useState<string | null>(null);
   const [selectedSuggestions, setSelectedSuggestions] = useState<string[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [loadingRefinementSuggestions, setLoadingRefinementSuggestions] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [uploadedPdfContent, setUploadedPdfContent] = useState<string>('');
+
+  // State for suggestions
+  const [predefinedSuggestions, setPredefinedSuggestions] = useState<Array<{
+    text: string;
+    icon: React.ReactNode;
+    color: 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'yellow';
+  }>>([]);
+  
+  const [refinementSuggestions, setRefinementSuggestions] = useState<Array<{
+    text: string;
+    icon: React.ReactNode;
+    color: 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'yellow';
+  }>>([]);
+
+  // Generate AI-based suggestions based on existing drafts
+  const generateSuggestionsFromDrafts = async () => {
+    try {
+      console.log('Starting draft-based suggestion generation...');
+      
+      // Fetch existing drafts to analyze
+      const response = await fetch('/api/proposals/drafts', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch drafts');
+      }
+      
+      const data = await response.json();
+      const drafts = data.data || [];
+      
+      if (drafts.length === 0) {
+        // If no drafts exist, fall back to generic suggestions
+        await generateSuggestions();
+        return;
+      }
+      
+      // Combine content from recent drafts for analysis
+      const recentDrafts = drafts.slice(0, 3); // Take last 3 drafts
+      const draftContent = recentDrafts
+        .map((draft: any) => draft.content || draft.fullContent || '')
+        .filter((content: string) => content.trim())
+        .join('\n\n');
+      
+      const messages = [
+        {
+          role: 'system',
+          content: 'You are an expert proposal writer. Based on the provided existing proposal drafts, generate 8 specific, actionable suggestions for improving future proposals. Each suggestion should be concise (2-4 words) and focus on different aspects like content, structure, persuasion, and professionalism. Return only the suggestions, one per line, without numbering or bullet points.'
+        },
+        {
+          role: 'user',
+          content: `Generate 8 proposal improvement suggestions based on these existing drafts:\n\n${draftContent}`
+        }
+      ];
+      
+      console.log('Calling OpenRouter API for draft-based suggestions...');
+      const aiResponse = await getOpenRouterChatCompletion(messages);
+      const aiSuggestions = aiResponse.choices[0]?.message?.content || '';
+      console.log('AI Draft-Based Response:', aiSuggestions);
+      
+      // Parse AI suggestions and create suggestion objects
+      const suggestions = aiSuggestions
+        .split('\n')
+        .filter((line: string) => line.trim())
+        .slice(0, 8)
+        .map((suggestion: string, index: number) => {
+          const colors: Array<'blue' | 'green' | 'purple' | 'orange' | 'red' | 'yellow'> = ['blue', 'green', 'purple', 'orange', 'red', 'yellow'];
+          const icons = [
+            <svg key="icon1" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>,
+            <svg key="icon2" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+            </svg>,
+            <svg key="icon3" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>,
+            <svg key="icon4" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>,
+            <svg key="icon5" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>,
+            <svg key="icon6" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>,
+            <svg key="icon7" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>,
+            <svg key="icon8" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          ];
+          
+          return {
+            text: suggestion.trim(),
+            icon: icons[index % icons.length],
+            color: colors[index % colors.length]
+          };
+        });
+      
+      console.log('Parsed draft-based suggestions:', suggestions);
+      setPredefinedSuggestions(suggestions);
+    } catch (error) {
+      console.error('Error generating draft-based suggestions:', error);
+      // Fall back to generic suggestions if draft-based generation fails
+      await generateSuggestions();
+    }
+  };
+
+  // Generate AI-based suggestions (generic)
+  const generateSuggestions = async () => {
+    try {
+      console.log('Starting AI suggestion generation...');
+      const messages = [
+        {
+          role: 'system',
+          content: 'You are an expert proposal writer. Generate 8 specific, actionable suggestions for improving a business proposal. Each suggestion should be concise (2-4 words) and focus on different aspects like content, structure, persuasion, and professionalism. Return only the suggestions, one per line, without numbering or bullet points.'
+        },
+        {
+          role: 'user',
+          content: 'Generate 8 proposal improvement suggestions.'
+        }
+      ];
+      
+      console.log('Calling OpenRouter API...');
+      const response = await getOpenRouterChatCompletion(messages);
+      const aiSuggestions = response.choices[0]?.message?.content || '';
+      console.log('AI Response:', aiSuggestions);
+      
+      // Parse AI suggestions and create suggestion objects
+      const suggestions = aiSuggestions
+        .split('\n')
+        .filter((line: string) => line.trim())
+        .slice(0, 8)
+        .map((suggestion: string, index: number) => {
+          const colors: Array<'blue' | 'green' | 'purple' | 'orange' | 'red' | 'yellow'> = ['blue', 'green', 'purple', 'orange', 'red', 'yellow'];
+          const icons = [
+            <svg key="icon1" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>,
+            <svg key="icon2" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+            </svg>,
+            <svg key="icon3" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>,
+            <svg key="icon4" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>,
+            <svg key="icon5" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>,
+            <svg key="icon6" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>,
+            <svg key="icon7" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>,
+            <svg key="icon8" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          ];
+          
+          return {
+            text: suggestion.trim(),
+            icon: icons[index % icons.length],
+            color: colors[index % colors.length]
+          };
+        });
+      
+      console.log('Parsed suggestions:', suggestions);
+      setPredefinedSuggestions(suggestions);
+    } catch (error) {
+      console.error('Error generating suggestions:', error);
+      // Fallback to basic suggestions if AI fails
+      setPredefinedSuggestions([
+        {
+          text: "Add Executive Summary",
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>,
+          color: 'blue' as const
+        },
+        {
+          text: "Include Budget Details",
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+          </svg>,
+          color: 'green' as const
+        },
+        {
+          text: "Add Timeline Section",
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>,
+          color: 'purple' as const
+        }
+      ]);
+    }
+  };
+
+  // Generate AI-based refinement suggestions
+  const generateRefinementSuggestions = async (proposalContent: string) => {
+    try {
+      console.log('Starting refinement suggestion generation...');
+      console.log('Proposal content:', proposalContent);
+      const messages = [
+        {
+          role: 'system',
+          content: 'You are an expert proposal writer. Based on the provided proposal content, generate 8 specific, actionable suggestions for refining and improving the proposal. Each suggestion should be concise (2-4 words) and focus on different aspects like clarity, persuasion, structure, and impact. Return only the suggestions, one per line, without numbering or bullet points.'
+        },
+        {
+          role: 'user',
+          content: `Generate 8 refinement suggestions for this proposal:\n\n${proposalContent}`
+        }
+      ];
+      
+      console.log('Calling OpenRouter API for refinement...');
+      const response = await getOpenRouterChatCompletion(messages);
+      const aiSuggestions = response.choices[0]?.message?.content || '';
+      console.log('AI Refinement Response:', aiSuggestions);
+      
+      // Parse AI suggestions and create suggestion objects
+      const suggestions = aiSuggestions
+        .split('\n')
+        .filter((line: string) => line.trim())
+        .slice(0, 8)
+        .map((suggestion: string, index: number) => {
+          const colors: Array<'blue' | 'green' | 'purple' | 'orange' | 'red' | 'yellow'> = ['blue', 'green', 'purple', 'orange', 'red', 'yellow'];
+          const icons = [
+            <svg key="icon1" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>,
+            <svg key="icon2" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>,
+            <svg key="icon3" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>,
+            <svg key="icon4" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>,
+            <svg key="icon5" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>,
+            <svg key="icon6" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          ];
+          
+          return {
+            text: suggestion.trim(),
+            icon: icons[index % icons.length],
+            color: colors[index % colors.length]
+          };
+        });
+      
+      console.log('Parsed refinement suggestions:', suggestions);
+      setRefinementSuggestions(suggestions);
+    } catch (error) {
+      console.error('Error generating refinement suggestions:', error);
+      // Fallback to basic refinement suggestions if AI fails
+      setRefinementSuggestions([
+        {
+          text: "Enhance Executive Summary",
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>,
+          color: 'blue' as const
+        },
+        {
+          text: "Add More Details",
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>,
+          color: 'green' as const
+        },
+        {
+          text: "Improve Clarity",
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>,
+          color: 'purple' as const
+        },
+        {
+          text: "Strengthen Budget",
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>,
+          color: 'orange' as const
+        },
+        {
+          text: "Add Timeline Details",
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>,
+          color: 'red' as const
+        },
+        {
+          text: "Include Case Studies",
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+          </svg>,
+          color: 'yellow' as const
+        },
+        {
+          text: "Add Testimonials",
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>,
+          color: 'blue' as const
+        },
+        {
+          text: "Improve Structure",
+          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>,
+          color: 'green' as const
+        }
+      ]);
+    }
+  };
 
   // Handle PDF file upload and extraction
   const handlePdfUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,299 +413,51 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Generate refinement suggestions based on the generated proposal
-  const generateRefinementSuggestions = useCallback(async (proposal: string) => {
-    setLoadingSuggestions(true);
-    // Clear selected suggestions when generating new ones
-    setSelectedSuggestions([]);
-    try {
-      // Create different prompt variations for variety
-      const promptVariations = [
-        {
-          role: 'system',
-          content: `You are an expert proposal consultant. Suggest 4-6 actionable ways to refine this proposal. Each suggestion should be short and specific.`,
-        },
-        {
-          role: 'system',
-          content: `You are a creative proposal strategist. Suggest 4-6 unique ways to enhance this proposal. Think outside the box.`,
-        },
-        {
-          role: 'system',
-          content: `You are a proposal optimization expert. Suggest 4-6 specific improvements for this proposal. Focus on overlooked areas.`,
-        }
-      ];
-      
-      // Randomly select a prompt variation
-      const randomPrompt = promptVariations[Math.floor(Math.random() * promptVariations.length)];
-      
-      const messages = [
-        randomPrompt,
-        {
-          role: 'user',
-          content: `Proposal: ${proposal}\n\nWhat are some ways to refine this proposal?`,
-        },
-      ];
-      const response = await getOpenRouterChatCompletion(messages);
-      const aiContent = response.choices[0]?.message?.content || '';
-      const lines = aiContent.split('\n').filter((line: string) => line.trim());
-      const aiSuggestions = lines
-        .map((line: string) => line.replace(/^\d+\.\s*/, '').trim())
-        .filter((suggestion: string) => suggestion.length > 10 && suggestion.length < 200)
-        .slice(0, 6);
-      
-      // If we got suggestions, use them; otherwise use fallback
-      if (aiSuggestions.length > 0) {
-        setSuggestions(aiSuggestions);
-      } else {
-        // Use different fallback suggestions each time
-        const fallbackVariations = [
-          [
-            'Add a competitive analysis section.',
-            'Include a risk mitigation strategy.',
-            'Suggest a phased rollout plan.',
-            'Expand on the project timeline with milestones.',
-            'Clarify the deliverables and success metrics.',
-            'Add a section on post-launch support.'
-          ],
-          [
-            'Include a technology stack overview.',
-            'Add a team structure and roles section.',
-            'Provide detailed cost breakdown.',
-            'Include quality assurance processes.',
-            'Add a communication plan.',
-            'Include a change management strategy.'
-          ],
-          [
-            'Add a market analysis section.',
-            'Include performance metrics and KPIs.',
-            'Provide alternative solutions.',
-            'Add a resource allocation plan.',
-            'Include a contingency plan.',
-            'Add a stakeholder management section.'
-          ]
-        ];
-        const randomFallback = fallbackVariations[Math.floor(Math.random() * fallbackVariations.length)];
-        setSuggestions(randomFallback);
-      }
-    } catch (error) {
-      console.error('Error generating refinement suggestions:', error);
-      
-      // Handle specific OpenRouter credit limit error
-      if (error instanceof Error && error.message.includes('OpenRouter credits exhausted')) {
-        console.warn('OpenRouter credits exhausted, using fallback suggestions');
-      }
-      
-      // Use different fallback suggestions on error
-      const fallbackVariations = [
-        [
-          'Add a competitive analysis section.',
-          'Include a risk mitigation strategy.',
-          'Suggest a phased rollout plan.',
-          'Expand on the project timeline with milestones.',
-          'Clarify the deliverables and success metrics.',
-          'Add a section on post-launch support.'
-        ],
-        [
-          'Include a technology stack overview.',
-          'Add a team structure and roles section.',
-          'Provide detailed cost breakdown.',
-          'Include quality assurance processes.',
-          'Add a communication plan.',
-          'Include a change management strategy.'
-        ],
-        [
-          'Add a market analysis section.',
-          'Include performance metrics and KPIs.',
-          'Provide alternative solutions.',
-          'Add a resource allocation plan.',
-          'Include a contingency plan.',
-          'Add a stakeholder management section.'
-        ]
-      ];
-      const randomFallback = fallbackVariations[Math.floor(Math.random() * fallbackVariations.length)];
-      setSuggestions(randomFallback);
-    } finally {
-      setLoadingSuggestions(false);
-    }
-  }, []);
-
   // Handle suggestion bubble click (select/unselect up to 5)
-  const handleSuggestionToggle = (suggestion: string) => {
-    setSelectedSuggestions(prev => {
-      if (prev.includes(suggestion)) {
-        return prev.filter(s => s !== suggestion);
-      } else if (prev.length < 5) {
-        return [...prev, suggestion];
-      } else {
-        return prev;
-      }
-    });
+  const handleSuggestionClick = (suggestion: string) => {
+    setSelectedSuggestions(prev => 
+      prev.includes(suggestion) 
+        ? prev.filter(s => s !== suggestion)
+        : prev.length < 5 
+          ? [...prev, suggestion]
+          : prev
+    );
   };
 
-  // Regenerate refinement suggestions
+  // Handle regeneration of suggestions
   const handleRegenerateSuggestions = async () => {
-    if (showContent && !generatedContent.fullContent) {
-      toast.error('No proposal content available to generate suggestions from');
-      return;
-    }
-    
     setLoadingSuggestions(true);
     setSelectedSuggestions([]);
     
     try {
-      if (showContent) {
-        // In refinement state - regenerate based on generated content
-        await generateRefinementSuggestions(generatedContent.fullContent);
-      } else {
-        // In initial state - regenerate initial suggestions with variety
-        const response = await proposalsAPI.getAll();
-        const proposals = response.data.data || [];
-        const recentContents = proposals
-          .slice(0, 3)
-          .map((p: any) => p.content?.executiveSummary || p.content || p.title || '')
-          .filter(Boolean)
-          .join('\n---\n');
-        
-        // Create different prompt variations to get variety
-        const promptVariations = [
-          {
-            role: 'system',
-            content: `You are an expert proposal consultant. Suggest 4-6 actionable ways to improve proposals. Each suggestion should be short and specific.`,
-          },
-          {
-            role: 'system',
-            content: `You are a creative proposal strategist. Suggest 4-6 unique ways to enhance proposals. Think outside the box.`,
-          },
-          {
-            role: 'system',
-            content: `You are a proposal optimization expert. Suggest 4-6 specific improvements for proposals. Focus on overlooked areas.`,
-          }
-        ];
-        
-        // Randomly select a prompt variation
-        const randomPrompt = promptVariations[Math.floor(Math.random() * promptVariations.length)];
-        
-        if (recentContents) {
-          const messages = [
-            randomPrompt,
-            {
-              role: 'user',
-              content: `Recent Proposals:\n${recentContents}\n\nWhat are some ways to refine or advance future proposals?`,
-            },
-          ];
-          const aiResponse = await getOpenRouterChatCompletion(messages);
-          const aiContent = aiResponse.choices[0]?.message?.content || '';
-          const lines = aiContent.split('\n').filter((line: string) => line.trim());
-          const aiSuggestions = lines
-            .map((line: string) => line.replace(/^\d+\.\s*/, '').trim())
-            .filter((suggestion: string) => suggestion.length > 10 && suggestion.length < 200)
-            .slice(0, 6);
-          
-          // If we got suggestions, use them; otherwise use fallback
-          if (aiSuggestions.length > 0) {
-            setSuggestions(aiSuggestions);
-          } else {
-            // Use different fallback suggestions each time
-            const fallbackVariations = [
-              [
-                'Add a competitive analysis section.',
-                'Include a risk mitigation strategy.',
-                'Suggest a phased rollout plan.',
-                'Expand on the project timeline with milestones.',
-                'Clarify the deliverables and success metrics.',
-                'Add a section on post-launch support.'
-              ],
-              [
-                'Include a technology stack overview.',
-                'Add a team structure and roles section.',
-                'Provide detailed cost breakdown.',
-                'Include quality assurance processes.',
-                'Add a communication plan.',
-                'Include a change management strategy.'
-              ],
-              [
-                'Add a market analysis section.',
-                'Include performance metrics and KPIs.',
-                'Provide alternative solutions.',
-                'Add a resource allocation plan.',
-                'Include a contingency plan.',
-                'Add a stakeholder management section.'
-              ]
-            ];
-            const randomFallback = fallbackVariations[Math.floor(Math.random() * fallbackVariations.length)];
-            setSuggestions(randomFallback);
-          }
-        } else {
-          // Use different fallback suggestions when no recent proposals exist
-          const fallbackVariations = [
-            [
-              'Add a competitive analysis section.',
-              'Include a risk mitigation strategy.',
-              'Suggest a phased rollout plan.',
-              'Expand on the project timeline with milestones.',
-              'Clarify the deliverables and success metrics.',
-              'Add a section on post-launch support.'
-            ],
-            [
-              'Include a technology stack overview.',
-              'Add a team structure and roles section.',
-              'Provide detailed cost breakdown.',
-              'Include quality assurance processes.',
-              'Add a communication plan.',
-              'Include a change management strategy.'
-            ],
-            [
-              'Add a market analysis section.',
-              'Include performance metrics and KPIs.',
-              'Provide alternative solutions.',
-              'Add a resource allocation plan.',
-              'Include a contingency plan.',
-              'Add a stakeholder management section.'
-            ]
-          ];
-          const randomFallback = fallbackVariations[Math.floor(Math.random() * fallbackVariations.length)];
-          setSuggestions(randomFallback);
-        }
-      }
+      console.log('Regenerating draft-based suggestions...');
+      await generateSuggestionsFromDrafts(); // Use draft-based generation
+      toast.success('New AI-generated suggestions based on your drafts loaded!');
     } catch (error) {
-      console.error('Error regenerating suggestions:', error);
-      
-      // Handle specific OpenRouter credit limit error
-      if (error instanceof Error && error.message.includes('OpenRouter credits exhausted')) {
-        console.warn('OpenRouter credits exhausted, using fallback suggestions');
-      }
-      
-      // Use different fallback suggestions on error
-      const fallbackVariations = [
-        [
-          'Add a competitive analysis section.',
-          'Include a risk mitigation strategy.',
-          'Suggest a phased rollout plan.',
-          'Expand on the project timeline with milestones.',
-          'Clarify the deliverables and success metrics.',
-          'Add a section on post-launch support.'
-        ],
-        [
-          'Include a technology stack overview.',
-          'Add a team structure and roles section.',
-          'Provide detailed cost breakdown.',
-          'Include quality assurance processes.',
-          'Add a communication plan.',
-          'Include a change management strategy.'
-        ],
-        [
-          'Add a market analysis section.',
-          'Include performance metrics and KPIs.',
-          'Provide alternative solutions.',
-          'Add a resource allocation plan.',
-          'Include a contingency plan.',
-          'Add a stakeholder management section.'
-        ]
-      ];
-      const randomFallback = fallbackVariations[Math.floor(Math.random() * fallbackVariations.length)];
-      setSuggestions(randomFallback);
+      console.error('Error regenerating draft-based suggestions:', error);
+      toast.error('Failed to regenerate suggestions');
     } finally {
       setLoadingSuggestions(false);
+    }
+  };
+
+  // Handle regeneration of refinement suggestions
+  const handleRegenerateRefinementSuggestions = async () => {
+    setLoadingRefinementSuggestions(true);
+    setSelectedSuggestions([]);
+    
+    try {
+      console.log('Regenerating refinement suggestions...');
+      const combinedContent = uploadedPdfContent.trim() 
+        ? `${proposalText.trim() ? proposalText.trim() + '\n\n' : ''}PDF Content:\n${uploadedPdfContent.trim()}`
+        : proposalText.trim() || 'business proposal'; // Fallback content if nothing is provided
+      await generateRefinementSuggestions(combinedContent); // Call the AI generation function
+      toast.success('New AI-generated refinement suggestions loaded!');
+    } catch (error) {
+      console.error('Error regenerating refinement suggestions:', error);
+      toast.error('Failed to regenerate refinement suggestions');
+    } finally {
+      setLoadingRefinementSuggestions(false);
     }
   };
 
@@ -554,62 +631,24 @@ const Dashboard: React.FC = () => {
 
   // After proposal is generated, generate suggestions
   useEffect(() => {
-    // If no content, fetch recent proposals and get AI suggestions
-    if (!showContent) {
-      (async () => {
-        try {
-          const response = await proposalsAPI.getAll();
-          const proposals = response.data.data || [];
-          const recentContents = proposals
-            .slice(0, 3)
-            .map((p: any) => p.content?.executiveSummary || p.content || p.title || '')
-            .filter(Boolean)
-            .join('\n---\n');
-          if (recentContents) {
-            setLoadingSuggestions(true);
-            const messages = [
-              {
-                role: 'system',
-                content: `You are an expert proposal consultant. Given the following recent proposals, suggest 4-6 actionable ways to improve or refine future proposals. Each suggestion should be a short, specific improvement or addition, such as adding a new section, clarifying a point, or proposing a next step. Suggestions should be relevant to the content and context of these proposals.`,
-              },
-              {
-                role: 'user',
-                content: `Recent Proposals:\n${recentContents}\n\nWhat are some ways to refine or advance future proposals?`,
-              },
-            ];
-            const aiResponse = await getOpenRouterChatCompletion(messages);
-            const aiContent = aiResponse.choices[0]?.message?.content || '';
-            const lines = aiContent.split('\n').filter((line: string) => line.trim());
-            const aiSuggestions = lines
-              .map((line: string) => line.replace(/^\d+\.\s*/, '').trim())
-              .filter((suggestion: string) => suggestion.length > 10 && suggestion.length < 200)
-              .slice(0, 6);
-            setSuggestions(aiSuggestions);
-          } else {
-            setSuggestions([
-              'Add a competitive analysis section.',
-              'Include a risk mitigation strategy.',
-              'Suggest a phased rollout plan.',
-              'Expand on the project timeline with milestones.',
-              'Clarify the deliverables and success metrics.',
-              'Add a section on post-launch support.'
-            ]);
-          }
-        } catch (error) {
-          setSuggestions([
-            'Add a competitive analysis section.',
-            'Include a risk mitigation strategy.',
-            'Suggest a phased rollout plan.',
-            'Expand on the project timeline with milestones.',
-            'Clarify the deliverables and success metrics.',
-            'Add a section on post-launch support.'
-          ]);
-        } finally {
-          setLoadingSuggestions(false);
-        }
-      })();
-    }
-  }, [showContent]);
+    // Initialize suggestions on component load
+    const initializeSuggestions = async () => {
+      try {
+        console.log('Initializing suggestions...');
+        setLoadingSuggestions(true);
+        
+        await generateSuggestionsFromDrafts(); // Call the new draft-based generation function
+        
+        console.log('Suggestions initialized successfully');
+      } catch (error) {
+        console.error('Error initializing suggestions:', error);
+      } finally {
+        setLoadingSuggestions(false);
+      }
+    };
+    
+    initializeSuggestions();
+  }, []);
 
   // REMOVED: Auto-generation useEffect that was causing unwanted generation when typing
   // Now generation only happens when user explicitly clicks Generate/Refine button
@@ -639,12 +678,12 @@ const Dashboard: React.FC = () => {
         </div>
       </nav>
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-8">
+      <div className="w-full max-w-[1400px] mx-auto py-8 px-4 sm:px-8">
         {!showContent ? (
           // Single centered card when no content is generated
           <div className="flex flex-col items-center justify-center min-h-[80vh]">
-            <div className="w-full max-w-4xl bg-white/90 rounded-2xl shadow-xl border border-gray-100 p-10 flex flex-col items-center justify-center min-h-[480px] mx-auto">
-              <h2 className="text-2xl font-extrabold text-gray-900 mb-4 text-center">AI Proposal Generator</h2>
+            <div className="w-full max-w-6xl bg-white/90 rounded-2xl shadow-xl border border-gray-100 p-10 flex flex-col items-center justify-center min-h-[480px] mx-auto">
+              <h2 className="text-3xl font-extrabold text-gray-900 mb-6 text-center tracking-tight">What can I help with?</h2>
               
               {/* Text box with integrated PDF upload */}
               <div className="w-full relative mb-4">
@@ -659,8 +698,8 @@ const Dashboard: React.FC = () => {
                 )}
                 
                 <textarea
-                  className="w-full h-[180px] rounded-lg border border-gray-200 px-4 py-3 text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50 resize-none"
-                  placeholder={uploadedPdfContent ? "Add additional context or requirements (optional)..." : "Describe your client or project... or upload a PDF to generate a refined proposal"}
+                  className="w-full h-[180px] rounded-lg border border-gray-200 px-4 py-3 text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50 resize-none font-normal"
+                  placeholder="Ask ProposalAI or type / to see prompts..."
                   value={proposalText}
                   onChange={e => setProposalText(e.target.value)}
                   disabled={generating}
@@ -702,59 +741,117 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Suggestions under the text box */}
-              <div className="w-full flex flex-wrap gap-2 justify-center mb-4 min-h-[60px]">
-                {loadingSuggestions ? (
-                  // Show placeholder suggestion bubbles during loading to maintain layout
-                  Array.from({ length: 6 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="px-4 py-2 rounded-full border border-gray-200 bg-gray-100 animate-pulse"
-                      style={{ width: '180px', height: '40px' }}
-                    >
-                      <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
-                    </div>
-                  ))
-                ) : (
-                  suggestions.slice(0, 6).map((s, i) => {
-                    // Show more text in each bubble - limit to 8 words instead of 5
-                    const words = s.replace(/^[*_\-\s]+|[*_\-\s]+$/g, '').split(' ');
-                    const display = words.length > 8 ? words.slice(0, 8).join(' ') + '…' : s.replace(/^[*_\-\s]+|[*_\-\s]+$/g, '');
-                    const isSelected = selectedSuggestions.includes(s);
-                    const isDisabled = !isSelected && selectedSuggestions.length >= 5;
-                    return (
-                      <button
-                        key={i}
-                        className={`px-4 py-2 rounded-full border transition max-w-[220px] font-medium text-sm ${
-                          isSelected
-                            ? 'bg-blue-600 text-white border-blue-600 shadow'
-                            : isDisabled
-                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60'
-                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-blue-300'
-                        }`}
-                        onClick={() => handleSuggestionToggle(s)}
-                        disabled={isDisabled}
-                        title={s}
-                      >
-                        {display}
-                      </button>
-                    );
-                  })
-                )}
-              </div>
+              {/* Initial Suggestions - SMALL TAGS STYLING */}
+              {!showContent && (
+                <div className="mb-6">
+                  <div className="flex flex-wrap gap-2">
+                    {loadingSuggestions ? (
+                      // Loading placeholders
+                      Array.from({ length: 8 }).map((_, i) => (
+                        <div key={i} className="px-3 py-1.5 rounded-full border border-gray-200 bg-gray-100 animate-pulse inline-flex items-center">
+                          <div className="h-3 bg-gray-200 rounded animate-pulse" style={{ width: `${60 + (i * 10)}px` }}></div>
+                        </div>
+                      ))
+                    ) : predefinedSuggestions.length > 0 ? (
+                      predefinedSuggestions.map((suggestion, i) => {
+                        const isSelected = selectedSuggestions.includes(suggestion.text);
+                        const isDisabled = !isSelected && selectedSuggestions.length >= 5;
+                        
+                        // Small, transparent styling for initial suggestions
+                        const baseClasses = "px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 cursor-pointer border";
+                        const selectedClasses = isSelected 
+                          ? "bg-blue-100 text-blue-700 border-blue-300 shadow-sm" 
+                          : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100 hover:border-gray-300";
+                        const disabledClasses = isDisabled 
+                          ? "opacity-40 cursor-not-allowed bg-gray-50 text-gray-400 border-gray-200" 
+                          : "";
+                        
+                        return (
+                          <button
+                            key={`initial-${i}-${suggestion.text}`}
+                            onClick={() => !isDisabled && handleSuggestionClick(suggestion.text)}
+                            disabled={isDisabled}
+                            className={`${baseClasses} ${isDisabled ? disabledClasses : selectedClasses}`}
+                          >
+                            {suggestion.text}
+                          </button>
+                        );
+                      })
+                    ) : (
+                      // Empty state
+                      <div className="text-center text-gray-500 py-4 font-normal">
+                        No suggestions available. Click "New Suggestions" to generate some.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Refinement Suggestions - SMALL TAGS STYLING */}
+              {showContent && (
+                <div className="mb-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {loadingRefinementSuggestions ? (
+                      // Loading placeholders
+                      <div className="col-span-full flex flex-wrap gap-2">
+                        {Array.from({ length: 8 }).map((_, i) => (
+                          <div key={i} className="px-3 py-1.5 rounded-full border border-gray-200 bg-gray-100 animate-pulse inline-flex items-center">
+                            <div className="h-3 bg-gray-200 rounded animate-pulse" style={{ width: `${60 + (i * 10)}px` }}></div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : refinementSuggestions.length > 0 ? (
+                      <div className="col-span-full flex flex-wrap gap-2">
+                        {refinementSuggestions.map((suggestion, i) => {
+                          const isSelected = selectedSuggestions.includes(suggestion.text);
+                          const isDisabled = !isSelected && selectedSuggestions.length >= 5;
+                          
+                          // Small, transparent styling for refinement suggestions
+                          const baseClasses = "px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 cursor-pointer border";
+                          const selectedClasses = isSelected 
+                            ? "bg-blue-100 text-blue-700 border-blue-300 shadow-sm" 
+                            : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100 hover:border-gray-300";
+                          const disabledClasses = isDisabled 
+                            ? "opacity-40 cursor-not-allowed bg-gray-50 text-gray-400 border-gray-200" 
+                            : "";
+                          
+                          return (
+                            <button
+                              key={`refinement-${i}-${suggestion.text}`}
+                              onClick={() => !isDisabled && handleSuggestionClick(suggestion.text)}
+                              disabled={isDisabled}
+                              className={`${baseClasses} ${isDisabled ? disabledClasses : selectedClasses}`}
+                            >
+                              {suggestion.text}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      // Empty state
+                      <div className="col-span-full text-center text-gray-500 py-4 font-normal">
+                        No refinement suggestions available. Generate a proposal first or click "New Suggestions".
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               
-              {/* Regenerate Suggestions button */}
-              <div className="w-full flex justify-center mb-4">
+              {/* Unified Regenerate Suggestions button */}
+              <div className="w-full flex justify-center mb-6">
                 <button
-                  onClick={handleRegenerateSuggestions}
-                  disabled={loadingSuggestions}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Generate new refinement suggestions"
+                  onClick={showContent ? handleRegenerateRefinementSuggestions : handleRegenerateSuggestions}
+                  disabled={showContent ? loadingRefinementSuggestions : loadingSuggestions}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Generate new suggestions"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
-                  {loadingSuggestions ? 'Generating...' : 'Regenerate Suggestions'}
+                  {showContent 
+                    ? (loadingRefinementSuggestions ? 'Generating...' : 'New Suggestions')
+                    : (loadingSuggestions ? 'Generating...' : 'New Suggestions')
+                  }
                 </button>
               </div>
               {/* Generate and Clear buttons */}
@@ -782,7 +879,7 @@ const Dashboard: React.FC = () => {
           </div>
         ) : (
           // Side-by-side layout when content is generated
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 max-w-7xl mx-auto">
             {/* Left side - Input and Refinement */}
             <div className="bg-white/90 rounded-2xl shadow-xl border border-gray-100 p-8">
               <h2 className="text-xl font-extrabold text-gray-900 mb-4">Refine Proposal</h2>
@@ -843,60 +940,62 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Suggestions */}
+              {/* Suggestions - SMALL TAGS STYLING */}
               <div className="w-full flex flex-wrap gap-2 mb-4 min-h-[40px]">
-                {loadingSuggestions ? (
+                {loadingRefinementSuggestions ? (
                   // Show placeholder suggestion bubbles during loading to maintain layout
-                  Array.from({ length: 6 }).map((_, i) => (
+                  Array.from({ length: 8 }).map((_, i) => (
                     <div
                       key={i}
-                      className="px-3 py-1.5 rounded-full border border-gray-200 bg-gray-100 animate-pulse"
-                      style={{ width: '140px', height: '32px' }}
+                      className="px-3 py-1.5 rounded-full border border-gray-200 bg-gray-100 animate-pulse inline-flex items-center"
+                      style={{ minWidth: '80px', minHeight: '28px' }}
                     >
-                      <div className="h-3 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="h-3 bg-gray-200 rounded animate-pulse" style={{ width: `${60 + (i * 10)}px` }}></div>
                     </div>
                   ))
                 ) : (
-                  suggestions.slice(0, 6).map((s, i) => {
-                    const words = s.replace(/^[*_\-\s]+|[*_\-\s]+$/g, '').split(' ');
-                    const display = words.length > 8 ? words.slice(0, 8).join(' ') + '…' : s.replace(/^[*_\-\s]+|[*_\-\s]+$/g, '');
-                    const isSelected = selectedSuggestions.includes(s);
+                  refinementSuggestions.map((s, i) => {
+                    const isSelected = selectedSuggestions.includes(s.text);
                     const isDisabled = !isSelected && selectedSuggestions.length >= 5;
+                    
+                    // Small, transparent styling for refinement suggestions
+                    const baseClasses = "px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 cursor-pointer border";
+                    const selectedClasses = isSelected 
+                      ? "bg-blue-100 text-blue-700 border-blue-300 shadow-sm" 
+                      : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100 hover:border-gray-300";
+                    const disabledClasses = isDisabled 
+                      ? "opacity-40 cursor-not-allowed bg-gray-50 text-gray-400 border-gray-200" 
+                      : "";
+                    
                     return (
                       <button
-                        key={i}
-                        className={`px-3 py-1.5 rounded-full border transition max-w-[180px] font-medium text-xs ${
-                          isSelected
-                            ? 'bg-blue-600 text-white border-blue-600 shadow'
-                            : isDisabled
-                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60'
-                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-blue-300'
-                        }`}
-                        onClick={() => handleSuggestionToggle(s)}
+                        key={`refinement-${i}-${s.text}`}
+                        onClick={() => !isDisabled && handleSuggestionClick(s.text)}
                         disabled={isDisabled}
-                        title={s}
+                        className={`${baseClasses} ${isDisabled ? disabledClasses : selectedClasses}`}
                       >
-                        {display}
+                        {s.text}
                       </button>
                     );
                   })
                 )}
               </div>
               
-              {/* Regenerate Suggestions button */}
+              {/* New Suggestions button */}
               <div className="w-full flex justify-center mb-4">
                 <button
-                  onClick={handleRegenerateSuggestions}
-                  disabled={loadingSuggestions}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Generate new refinement suggestions"
+                  onClick={handleRegenerateRefinementSuggestions}
+                  disabled={loadingRefinementSuggestions}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Generate new suggestions"
                 >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
-                  {loadingSuggestions ? 'Generating...' : 'Regenerate Suggestions'}
+                  {loadingRefinementSuggestions ? 'Generating...' : 'New Suggestions'}
                 </button>
               </div>
+              
               {/* Refine and Clear buttons */}
               <div className="flex gap-3">
                 <button
