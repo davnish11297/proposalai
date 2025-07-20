@@ -67,6 +67,8 @@ export const proposalsAPI = {
   downloadPDF: (id: string) => api.get(`/proposals/${id}/download-pdf`, { responseType: 'blob' }),
   getByClient: (clientName: string) => api.get('/proposals', { params: { clientName } }),
   getEmailTrackingStats: (id: string) => api.get(`/email-tracking/stats/${id}`),
+  getAccessRequests: (id: string) => api.get(`/proposals/${id}/access-requests`),
+  grantAccessRequest: (id: string, requestId: string) => api.post(`/proposals/${id}/access-requests/${requestId}/grant`),
 };
 
 export const templatesAPI = {
@@ -163,6 +165,24 @@ export const teamsAPI = {
     api.delete(`/teams/${teamId}/members/${memberId}`),
   getProposals: (teamId: string, params?: any) =>
     api.get(`/teams/${teamId}/proposals`, { params }),
+};
+
+// Notification API
+export const notificationAPI = {
+  // Get all notifications for the current user
+  getAll: () => api.get('/notifications'),
+  
+  // Get unread notification count
+  getUnreadCount: () => api.get('/notifications/unread-count'),
+  
+  // Mark notification as read
+  markAsRead: (notificationId: string) => api.put(`/notifications/${notificationId}/read`),
+  
+  // Mark all notifications as read
+  markAllAsRead: () => api.put('/notifications/mark-all-read'),
+  
+  // Get proposal-specific notifications
+  getByProposal: (proposalId: string) => api.get(`/notifications/proposal/${proposalId}`),
 };
 
 /**

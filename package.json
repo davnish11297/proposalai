@@ -5,7 +5,7 @@
   "main": "dist/server/index.js",
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-    "dev:server": "nodemon --exec tsx src/server/index.ts",
+    "dev:server": "PORT=3001 DATABASE_URL=\"file:$(pwd)/prisma/dev.db\" nodemon --exec tsx src/server/index.ts",
     "dev:client": "cd client && PORT=3000 npm start",
     "build": "npm run build:server && npm run build:client",
     "build:server": "tsc -p tsconfig.server.json",

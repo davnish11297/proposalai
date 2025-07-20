@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { proposalsAPI, commentsAPI } from '../services/api';
+import { useAuth } from '../hooks/useAuth';
 import { 
   UserIcon, 
   CalendarIcon, 
@@ -15,14 +16,16 @@ import {
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import Comments from '../components/Comments';
+import NotificationBell from '../components/NotificationBell';
 
 export default function SentProposals() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [sent, setSent] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [resending, setResending] = useState<string | null>(null);
-  const [showComments, setShowComments] = useState<string | null>(null);
+
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -96,8 +99,8 @@ export default function SentProposals() {
     window.location.href = '/login';
   };
 
-  const toggleComments = (proposalId: string) => {
-    setShowComments(showComments === proposalId ? null : proposalId);
+  const handleViewComments = (proposalId: string) => {
+    navigate(`/proposals/${proposalId}/view?tab=comments`);
   };
 
   const getEmailStatusIcon = (proposal: any) => {
@@ -160,6 +163,7 @@ export default function SentProposals() {
               <a href="/drafts" className="text-white/80 hover:text-white transition-colors">Drafts</a>
               <a href="/sent-proposals" className="text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">Sent Proposals</a>
               <a href="/profile" className="text-white/80 hover:text-white transition-colors">Profile</a>
+              <NotificationBell />
               <button 
                 onClick={handleLogout}
                 className="text-white/80 hover:text-white transition-colors"
@@ -241,7 +245,7 @@ export default function SentProposals() {
                     </button>
                                         <button
                       className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-gradient-to-r from-purple-400 to-purple-300 text-white text-sm font-semibold hover:from-purple-500 hover:to-purple-400 transition relative"
-                      onClick={() => toggleComments(proposal.id)}
+                      onClick={() => handleViewComments(proposal.id)}
                     >
                       <ChatBubbleLeftIcon className="h-3 w-3" /> 
                       Comments
@@ -271,18 +275,7 @@ export default function SentProposals() {
                     </button>
                   </div>
                   
-                  {/* Comments Section */}
-                  {showComments === proposal.id && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <Comments 
-                        proposalId={proposal.id} 
-                        onCommentsLoaded={() => {
-                          // Refresh unread counts when comments are loaded
-                          fetchUnreadCounts(sent);
-                        }}
-                      />
-                    </div>
-                  )}
+
                 </div>
               ))}
             </div>

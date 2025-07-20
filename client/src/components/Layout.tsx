@@ -20,6 +20,7 @@ import {
   IdentificationIcon,
 } from '@heroicons/react/24/outline';
 import { cn } from '../utils/cn';
+import NotificationBell from './NotificationBell';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
@@ -145,6 +146,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
             <div className="flex flex-1"></div>
             <div className="flex items-center gap-x-6">
+              {/* Notification Bell */}
+              <div data-testid="notification-bell-container">
+                <NotificationBell />
+              </div>
+              
               {/* User menu */}
               <div className="relative">
                 <div className="flex items-center space-x-4">

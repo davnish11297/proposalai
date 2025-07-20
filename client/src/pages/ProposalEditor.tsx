@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { proposalsAPI, getOpenRouterChatCompletion } from '../services/api';
 import ClientSelectionModal from '../components/ClientSelectionModal';
+import NotificationBell from '../components/NotificationBell';
 import ReactMarkdown from 'react-markdown';
 
 const ProposalEditor: React.FC = () => {
@@ -31,6 +32,8 @@ const ProposalEditor: React.FC = () => {
       projectScope: ''
     }
   });
+  const [accessRequests, setAccessRequests] = useState<any[]>([]);
+  const [grantingRequestId, setGrantingRequestId] = useState<string | null>(null);
 
   const isNewProposal = !id;
 
@@ -48,6 +51,14 @@ const ProposalEditor: React.FC = () => {
 
     if (id) {
       fetchProposal();
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      proposalsAPI.getAccessRequests(id)
+        .then(({ data }) => setAccessRequests(data.data))
+        .catch(() => setAccessRequests([]));
     }
   }, [id]);
 
@@ -251,6 +262,21 @@ const ProposalEditor: React.FC = () => {
     toast.success('Client selection cleared');
   };
 
+  const handleGrantAccess = async (requestId: string) => {
+    setGrantingRequestId(requestId);
+    try {
+      await proposalsAPI.grantAccessRequest(id!, requestId);
+      toast.success('Access granted and email sent!');
+      // Refresh access requests
+      const { data } = await proposalsAPI.getAccessRequests(id!);
+      setAccessRequests(data.data);
+    } catch (error) {
+      toast.error('Failed to grant access');
+    } finally {
+      setGrantingRequestId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -273,6 +299,7 @@ const ProposalEditor: React.FC = () => {
               <a href="/drafts" className="text-white/80 hover:text-white transition-colors">Drafts</a>
               <a href="/sent-proposals" className="text-white/80 hover:text-white transition-colors">Sent Proposals</a>
               <a href="/profile" className="text-white/80 hover:text-white transition-colors">Profile</a>
+              <NotificationBell />
               <button 
                 onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = '/login'; }}
                 className="text-white/80 hover:text-white transition-colors"
@@ -287,6 +314,42 @@ const ProposalEditor: React.FC = () => {
       <div className="flex flex-1 min-h-0">
         {/* Left Sidebar */}
         <aside className="w-[380px] min-w-[380px] max-w-[380px] bg-white border-r border-gray-200 flex flex-col p-8">
+          {/* Access Requests UI (for owner) */}
+          {accessRequests.length > 0 && (
+            <div className="mt-8">
+              <h3 className="text-lg font-bold mb-2 text-blue-700">Access Requests</h3>
+              <ul className="space-y-4">
+                {accessRequests.map((req) => (
+                  <li key={req.id} className="bg-blue-50 rounded-lg p-4 flex flex-col md:flex-row md:items-center md:justify-between border border-blue-100">
+                    <div>
+                      <div className="font-semibold text-blue-900">{req.name} ({req.email})</div>
+                      <div className="text-sm text-gray-700">{req.company}</div>
+                      <div className="text-xs text-gray-500">{req.reason}</div>
+                      <div className="text-xs text-gray-400 mt-1">Requested: {new Date(req.createdAt).toLocaleString()}</div>
+                      {req.status === 'GRANTED' && req.accessCode && (
+                        <div className="text-green-700 text-xs mt-1">Granted: {req.accessCode}</div>
+                      )}
+                    </div>
+                    {req.status === 'PENDING' && (
+                      <button
+                        className="mt-2 md:mt-0 px-4 py-2 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-green-600 transition disabled:opacity-50"
+                        disabled={grantingRequestId === req.id}
+                        onClick={() => handleGrantAccess(req.id)}
+                      >
+                        {grantingRequestId === req.id ? 'Granting...' : 'Grant Access'}
+                      </button>
+                    )}
+                    {req.status === 'GRANTED' && (
+                      <span className="ml-2 text-green-600 font-semibold">Granted</span>
+                    )}
+                    {req.status === 'DENIED' && (
+                      <span className="ml-2 text-red-600 font-semibold">Denied</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <h2 className="text-2xl font-bold text-gray-900 mb-8">
             {isNewProposal ? 'Create New Proposal' : 'Edit Proposal'}
           </h2>

@@ -9,10 +9,12 @@ import {
   DocumentTextIcon,
   UserIcon,
   CalendarIcon,
-  BuildingOfficeIcon
+  BuildingOfficeIcon,
+  EnvelopeIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { publicAPI } from '../services/api';
+import PublicComments from '../components/PublicComments';
 
 interface Proposal {
   id: string;
@@ -39,12 +41,20 @@ const PublicProposal: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [loading, setLoading] = useState(true);
-  const [requiresPassword, setRequiresPassword] = useState(false);
+  const [requiresPassword, setRequiresPassword] = useState(true); // Start with true to show access form by default
   const [accessCode, setAccessCode] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
   const [feedbackAction, setFeedbackAction] = useState<'approve' | 'reject' | 'comment' | null>(null);
   const [comment, setComment] = useState('');
+  const [showRequestAccess, setShowRequestAccess] = useState(false);
+  const [requestAccessData, setRequestAccessData] = useState({
+    name: '',
+    email: '',
+    company: '',
+    reason: ''
+  });
+  const [submittingRequest, setSubmittingRequest] = useState(false);
 
   const fetchProposal = useCallback(async (code?: string) => {
     try {
@@ -58,10 +68,30 @@ const PublicProposal: React.FC = () => {
           setLoading(false);
           return;
         }
-        throw new Error(data.error || 'Failed to fetch proposal');
+        if (response.status === 403) {
+          // Proposal has been approved/rejected
+          setProposal({ 
+            id: id!, 
+            title: 'Proposal Reviewed', 
+            content: '{}', 
+            clientName: '', 
+            author: { name: '', email: '' }, 
+            organization: { name: '' },
+            createdAt: new Date().toISOString(),
+            status: 'REVIEWED'
+          });
+          setIsAuthenticated(true);
+          setLoading(false);
+          return;
+        }
+        // For any other error, show the access code form
+        setRequiresPassword(true);
+        setLoading(false);
+        return;
       }
 
       setProposal(data.data);
+      setRequiresPassword(false); // We successfully got the proposal, so no password required
       if (code) {
         setIsAuthenticated(true);
       }
@@ -72,7 +102,26 @@ const PublicProposal: React.FC = () => {
         setLoading(false);
         return;
       }
-      toast.error('Failed to load proposal');
+      if (error.response?.status === 403) {
+        // Proposal has been approved/rejected
+        setProposal({ 
+          id: id!, 
+          title: 'Proposal Reviewed', 
+          content: '{}', 
+          clientName: '', 
+          author: { name: '', email: '' }, 
+          organization: { name: '' },
+          createdAt: new Date().toISOString(),
+          status: 'REVIEWED'
+        });
+        setIsAuthenticated(true);
+        setLoading(false);
+        return;
+      }
+      // For any other error, show the access code form
+      setRequiresPassword(true);
+      setLoading(false);
+      return;
     } finally {
       setLoading(false);
     }
@@ -149,6 +198,48 @@ const PublicProposal: React.FC = () => {
     }
   };
 
+  const handleRequestAccess = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!requestAccessData.name.trim() || !requestAccessData.email.trim()) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      setSubmittingRequest(true);
+      
+      // Send request access email to the proposal author
+      const response = await fetch(`http://localhost:3001/api/public/proposals/${id}/request-access`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: requestAccessData.name.trim(),
+          email: requestAccessData.email.trim(),
+          company: requestAccessData.company.trim(),
+          reason: requestAccessData.reason.trim()
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Access request sent successfully! The proposal owner will review your request.');
+        setShowRequestAccess(false);
+        setRequestAccessData({ name: '', email: '', company: '', reason: '' });
+      } else {
+        throw new Error(data.error || 'Failed to send access request');
+      }
+    } catch (error) {
+      console.error('Error requesting access:', error);
+      toast.error('Failed to send access request. Please try again.');
+    } finally {
+      setSubmittingRequest(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
@@ -159,6 +250,15 @@ const PublicProposal: React.FC = () => {
       </div>
     );
   }
+
+  // Debug logging
+  console.log('PublicProposal render state:', { 
+    requiresPassword, 
+    isAuthenticated, 
+    loading, 
+    showRequestAccess,
+    proposal: proposal ? 'exists' : 'null'
+  });
 
   if (requiresPassword && !isAuthenticated) {
     return (
@@ -198,8 +298,122 @@ const PublicProposal: React.FC = () => {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 mb-4">
               Can't find your access code? Check your email or contact the sender.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowRequestAccess(true)}
+              className="text-blue-600 hover:text-blue-700 text-sm font-medium underline"
+            >
+              Request Access to this Proposal
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (showRequestAccess) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
+          <div className="text-center mb-8">
+            <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+              <EnvelopeIcon className="h-8 w-8 text-blue-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Request Access</h1>
+            <p className="text-gray-600">Fill out the form below to request access to this proposal.</p>
+          </div>
+
+          <form onSubmit={handleRequestAccess} className="space-y-6">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                Full Name *
+              </label>
+              <input
+                type="text"
+                id="name"
+                value={requestAccessData.name}
+                onChange={(e) => setRequestAccessData({...requestAccessData, name: e.target.value})}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your full name"
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address *
+              </label>
+              <input
+                type="email"
+                id="email"
+                value={requestAccessData.email}
+                onChange={(e) => setRequestAccessData({...requestAccessData, email: e.target.value})}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your email address"
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-2">
+                Company
+              </label>
+              <input
+                type="text"
+                id="company"
+                value={requestAccessData.company}
+                onChange={(e) => setRequestAccessData({...requestAccessData, company: e.target.value})}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your company name"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="reason" className="block text-sm font-medium text-gray-700 mb-2">
+                Reason for Access
+              </label>
+              <textarea
+                id="reason"
+                value={requestAccessData.reason}
+                onChange={(e) => setRequestAccessData({...requestAccessData, reason: e.target.value})}
+                rows={3}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Please explain why you need access to this proposal..."
+              />
+            </div>
+
+            <div className="flex space-x-4">
+              <button
+                type="submit"
+                disabled={submittingRequest}
+                className="flex-1 bg-gradient-to-r from-blue-600 to-blue-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submittingRequest ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Sending...
+                  </div>
+                ) : (
+                  'Send Request'
+                )}
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setShowRequestAccess(false)}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-500">
+              The proposal owner will review your request and respond via email.
             </p>
           </div>
         </div>
@@ -278,139 +492,194 @@ const PublicProposal: React.FC = () => {
               <DocumentTextIcon className="h-5 w-5 text-blue-600" />
               <div>
                 <p className="text-sm text-gray-500">Status</p>
-                <p className="font-medium text-gray-900">Ready for Review</p>
+                <p className={`font-medium ${
+                  proposal.status === 'APPROVED' ? 'text-green-600' :
+                  proposal.status === 'REJECTED' ? 'text-red-600' :
+                  proposal.status === 'IN_REVIEW' ? 'text-yellow-600' :
+                  'text-gray-900'
+                }`}>
+                  {proposal.status === 'APPROVED' ? 'Approved' :
+                   proposal.status === 'REJECTED' ? 'Rejected' :
+                   proposal.status === 'IN_REVIEW' ? 'Under Review' :
+                   'Ready for Review'}
+                </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Proposal Content */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-          <div className="prose max-w-none">
-            {content.executiveSummary && (
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Executive Summary</h2>
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{content.executiveSummary}</p>
+        {/* Proposal Content - Only show if there's actual content */}
+        {(content.executiveSummary || content.approach || content.budgetDetails || content.timeline || content.budget) && (
+          <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
+            <div className="prose max-w-none">
+              {content.executiveSummary && (
+                <div className="mb-8">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Executive Summary</h2>
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{content.executiveSummary}</p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {content.approach && (
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Our Approach</h2>
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{content.approach}</p>
+              {content.approach && (
+                <div className="mb-8">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Our Approach</h2>
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{content.approach}</p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {content.budgetDetails && (
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Budget Details</h2>
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{content.budgetDetails}</p>
+              {content.budgetDetails && (
+                <div className="mb-8">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Budget Details</h2>
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{content.budgetDetails}</p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {content.timeline && (
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Timeline</h2>
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{content.timeline}</p>
+              {content.timeline && (
+                <div className="mb-8">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Timeline</h2>
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{content.timeline}</p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {content.budget && (
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Investment</h2>
-                <div className="bg-blue-50 rounded-lg p-6 border-l-4 border-blue-500">
-                  <p className="text-2xl font-bold text-blue-900">{content.budget}</p>
+              {content.budget && (
+                <div className="mb-8">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Investment</h2>
+                  <div className="bg-blue-50 rounded-lg p-6 border-l-4 border-blue-500">
+                    <p className="text-2xl font-bold text-blue-900">{content.budget}</p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Feedback Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Provide Your Feedback</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <button
-              onClick={() => setFeedbackAction('approve')}
-              className="flex items-center justify-center space-x-2 p-4 border-2 border-green-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition"
-            >
-              <CheckCircleIcon className="h-6 w-6 text-green-600" />
-              <span className="font-medium text-green-700">Approve</span>
-            </button>
-            
-            <button
-              onClick={() => setFeedbackAction('reject')}
-              className="flex items-center justify-center space-x-2 p-4 border-2 border-red-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition"
-            >
-              <XCircleIcon className="h-6 w-6 text-red-600" />
-              <span className="font-medium text-red-700">Reject</span>
-            </button>
-            
-            <button
-              onClick={() => setFeedbackAction('comment')}
-              className="flex items-center justify-center space-x-2 p-4 border-2 border-blue-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition"
-            >
-              <ChatBubbleLeftIcon className="h-6 w-6 text-blue-600" />
-              <span className="font-medium text-blue-700">Comment</span>
-            </button>
-          </div>
-
-          {feedbackAction === 'comment' && (
-            <div className="mb-6">
-              <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-2">
-                Your Comments
-              </label>
-              <textarea
-                id="comment"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Share your thoughts, questions, or requested modifications..."
-              />
+        {proposal.status === 'APPROVED' ? (
+          <div className="bg-green-50 rounded-2xl shadow-lg p-8 mb-8 border border-green-200">
+            <div className="text-center">
+              <CheckCircleIcon className="h-16 w-16 text-green-600 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-green-900 mb-2">Proposal Approved!</h2>
+              <p className="text-green-700 mb-4">Thank you for approving this proposal. The team will be in touch soon to discuss next steps.</p>
+              <div className="bg-white rounded-lg p-4 inline-block">
+                <p className="text-sm text-gray-600">Approved on {new Date().toLocaleDateString()}</p>
+              </div>
             </div>
-          )}
-
-          {feedbackAction && (
-            <div className="flex space-x-4">
+          </div>
+        ) : proposal.status === 'REJECTED' ? (
+          <div className="bg-red-50 rounded-2xl shadow-lg p-8 mb-8 border border-red-200">
+            <div className="text-center">
+              <XCircleIcon className="h-16 w-16 text-red-600 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-red-900 mb-2">Proposal Rejected</h2>
+              <p className="text-red-700 mb-4">Thank you for your feedback. We appreciate you taking the time to review this proposal.</p>
+              <div className="bg-white rounded-lg p-4 inline-block">
+                <p className="text-sm text-gray-600">Rejected on {new Date().toLocaleDateString()}</p>
+              </div>
+            </div>
+          </div>
+        ) : proposal.status === 'REVIEWED' ? (
+          <div className="bg-gray-50 rounded-2xl shadow-lg p-8 mb-8 border border-gray-200">
+            <div className="text-center">
+              <DocumentTextIcon className="h-16 w-16 text-gray-600 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Proposal Already Reviewed</h2>
+              <p className="text-gray-700 mb-4">This proposal has already been reviewed and is no longer accessible for feedback.</p>
+              <div className="bg-white rounded-lg p-4 inline-block">
+                <p className="text-sm text-gray-600">Access expired</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Provide Your Feedback</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <button
-                onClick={() => handleFeedbackSubmit(feedbackAction)}
-                disabled={submittingFeedback}
-                className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-600 transition disabled:opacity-50"
+                onClick={() => setFeedbackAction('approve')}
+                className="flex items-center justify-center space-x-2 p-4 border-2 border-green-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition"
               >
-                {submittingFeedback ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                ) : (
-                  <ArrowRightIcon className="h-5 w-5" />
-                )}
-                <span>
-                  {feedbackAction === 'approve' ? 'Approve Proposal' :
-                   feedbackAction === 'reject' ? 'Reject Proposal' :
-                   'Submit Comment'}
-                </span>
+                <CheckCircleIcon className="h-6 w-6 text-green-600" />
+                <span className="font-medium text-green-700">Approve</span>
               </button>
               
               <button
-                onClick={() => {
-                  setFeedbackAction(null);
-                  setComment('');
-                }}
-                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition"
+                onClick={() => setFeedbackAction('reject')}
+                className="flex items-center justify-center space-x-2 p-4 border-2 border-red-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition"
               >
-                Cancel
+                <XCircleIcon className="h-6 w-6 text-red-600" />
+                <span className="font-medium text-red-700">Reject</span>
+              </button>
+              
+              <button
+                onClick={() => setFeedbackAction('comment')}
+                className="flex items-center justify-center space-x-2 p-4 border-2 border-blue-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition"
+              >
+                <ChatBubbleLeftIcon className="h-6 w-6 text-blue-600" />
+                <span className="font-medium text-blue-700">Comment</span>
               </button>
             </div>
-          )}
-        </div>
+
+            {feedbackAction === 'comment' && (
+              <div className="mb-6">
+                <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-2">
+                  Your Comments
+                </label>
+                <textarea
+                  id="comment"
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Share your thoughts, questions, or requested modifications..."
+                />
+              </div>
+            )}
+
+            {feedbackAction && (
+              <div className="flex space-x-4">
+                <button
+                  onClick={() => handleFeedbackSubmit(feedbackAction)}
+                  disabled={submittingFeedback}
+                  className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-600 transition disabled:opacity-50"
+                >
+                  {submittingFeedback ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  ) : (
+                    <ArrowRightIcon className="h-5 w-5" />
+                  )}
+                  <span>
+                    {feedbackAction === 'approve' ? 'Approve Proposal' :
+                     feedbackAction === 'reject' ? 'Reject Proposal' :
+                     'Submit Comment'}
+                  </span>
+                </button>
+                
+                <button
+                  onClick={() => {
+                    setFeedbackAction(null);
+                    setComment('');
+                  }}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Comments Section - Only show if proposal is not reviewed */}
+        {isAuthenticated && proposal.status !== 'APPROVED' && proposal.status !== 'REJECTED' && proposal.status !== 'REVIEWED' && (
+          <PublicComments 
+            proposalId={proposal.id} 
+            accessCode={accessCode}
+          />
+        )}
       </div>
     </div>
   );

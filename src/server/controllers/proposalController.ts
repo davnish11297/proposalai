@@ -244,6 +244,94 @@ export class ProposalController {
     }
   }
 
+  // List all access requests for a proposal (owner only)
+  async getAccessRequests(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      // Ensure the user owns the proposal
+      const proposal = await db.proposal.findFirst({
+        where: { id, organizationId: req.user!.organizationId },
+      });
+      if (!proposal) {
+        res.status(404).json({ success: false, error: 'Proposal not found' });
+        return;
+      }
+      const requests = await db.accessRequest.findMany({
+        where: { proposalId: id },
+        orderBy: { createdAt: 'desc' },
+      });
+      res.json({ success: true, data: requests });
+    } catch (error) {
+      console.error('Get access requests error:', error);
+      res.status(500).json({ success: false, error: 'Failed to fetch access requests' });
+    }
+  }
+
+  // Grant a pending access request
+  async grantAccessRequest(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { id, requestId } = req.params;
+      // Ensure the user owns the proposal
+      const proposal = await db.proposal.findFirst({
+        where: { id, organizationId: req.user!.organizationId },
+      });
+      if (!proposal) {
+        res.status(404).json({ success: false, error: 'Proposal not found' });
+        return;
+      }
+      const accessRequest = await db.accessRequest.findUnique({ where: { id: requestId } });
+      if (!accessRequest || accessRequest.proposalId !== id) {
+        res.status(404).json({ success: false, error: 'Access request not found' });
+        return;
+      }
+      if (accessRequest.status !== 'PENDING') {
+        res.status(400).json({ success: false, error: 'Access request already processed' });
+        return;
+      }
+      // Generate a new access code
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let newCode = '';
+      for (let i = 0; i < 6; i++) newCode += chars.charAt(Math.floor(Math.random() * chars.length));
+      // Update proposal metadata
+      let metadata = {};
+      try { metadata = proposal.metadata ? JSON.parse(proposal.metadata) : {}; } catch {}
+      if (!metadata.accessCodes) metadata.accessCodes = [];
+      metadata.accessCodes.push(newCode);
+      // Update proposal
+      await db.proposal.update({
+        where: { id },
+        data: {
+          metadata: JSON.stringify(metadata),
+          status: 'IN_REVIEW',
+        },
+      });
+      // Update access request
+      await db.accessRequest.update({
+        where: { id: requestId },
+        data: {
+          status: 'GRANTED',
+          grantedAt: new Date(),
+          accessCode: newCode,
+        },
+      });
+      // Send email to requester with access code
+      await emailService.sendAccessRequestEmail({
+        to: accessRequest.email,
+        proposalTitle: proposal.title,
+        requesterName: accessRequest.name,
+        requesterEmail: accessRequest.email,
+        requesterCompany: accessRequest.company || '',
+        reason: accessRequest.reason || '',
+        proposalId: proposal.id,
+        accessCode: newCode,
+      });
+      res.json({ success: true, message: 'Access granted and email sent', accessCode: newCode });
+    } catch (error) {
+      console.error('Grant access request error:', error);
+      res.status(500).json({ success: false, error: 'Failed to grant access' });
+    }
+  }
+
   // Delete proposal
   async deleteProposal(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {

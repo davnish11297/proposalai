@@ -79,4 +79,9 @@ router.post('/extract-pdf', upload.single('pdf'), async (req, res) => {
   }
 });
 
+// List all access requests for a proposal
+router.get('/:id/access-requests', authenticateToken, (req, res) => proposalController.getAccessRequests(req, res));
+// Grant a pending access request
+router.post('/:id/access-requests/:requestId/grant', authenticateToken, (req, res) => proposalController.grantAccessRequest(req, res));
+
 export default router; 

@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getOpenRouterChatCompletion } from '../services/api';
 import { proposalsAPI } from '../services/api';
+import NotificationBell from '../components/NotificationBell';
 import '../ProposalMarkdown.css';
 
 // Utility to convert HTML tags to markdown
@@ -583,6 +584,7 @@ const Dashboard: React.FC = () => {
               <a href="/drafts" className="text-white/80 hover:text-white transition-colors">Drafts</a>
               <a href="/sent-proposals" className="text-white/80 hover:text-white transition-colors">Sent Proposals</a>
               <a href="/profile" className="text-white/80 hover:text-white transition-colors">Profile</a>
+              <NotificationBell />
               <button 
                 onClick={handleLogout}
                 className="text-white/80 hover:text-white transition-colors"

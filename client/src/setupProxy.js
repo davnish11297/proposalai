@@ -3,25 +3,35 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 module.exports = function(app) {
   console.log('🔧 Setting up proxy middleware...');
   
-  // Only proxy requests that start with /api
+  // Proxy all API requests to the backend
   app.use(
     '/api',
     createProxyMiddleware({
       target: 'http://localhost:3001',
       changeOrigin: true,
-      logLevel: 'debug',
-      pathRewrite: {
-        '^/api': '/api', // Keep the /api prefix
-      },
+      logLevel: 'silent', // Reduce logging
       onProxyReq: (proxyReq, req, res) => {
-        console.log('🔄 Proxying request:', req.method, req.url, '->', proxyReq.path);
+        // Log only important requests
+        if (req.url.includes('/public/proposals')) {
+          console.log('🔄 Proxying public proposal request:', req.method, req.url);
+        }
       },
       onProxyRes: (proxyRes, req, res) => {
-        console.log('✅ Proxy response:', req.method, req.url, '->', proxyRes.statusCode);
+        // Log only important responses
+        if (req.url.includes('/public/proposals')) {
+          console.log('✅ Proxy response:', req.method, req.url, '->', proxyRes.statusCode);
+        }
       },
       onError: (err, req, res) => {
-        console.log('❌ Proxy error:', err.message);
-        console.log('❌ Proxy error details:', err);
+        console.log('❌ Proxy error for:', req.url, '->', err.message);
+        // Send a proper error response
+        res.writeHead(500, {
+          'Content-Type': 'application/json',
+        });
+        res.end(JSON.stringify({ 
+          success: false, 
+          error: 'Proxy error: ' + err.message 
+        }));
       }
     })
   );

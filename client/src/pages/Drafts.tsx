@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { proposalsAPI } from '../services/api';
 import { DocumentTextIcon, UserIcon, CalendarIcon, PencilSquareIcon, EyeIcon, TrashIcon, ArrowLeftIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline';
+import NotificationBell from '../components/NotificationBell';
 
 export default function Drafts() {
   const navigate = useNavigate();
@@ -97,6 +98,7 @@ export default function Drafts() {
               <a href="/drafts" className="text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">Drafts</a>
               <a href="/sent-proposals" className="text-white/80 hover:text-white transition-colors">Sent Proposals</a>
               <a href="/profile" className="text-white/80 hover:text-white transition-colors">Profile</a>
+              <NotificationBell />
               <button 
                 onClick={handleLogout}
                 className="text-white/80 hover:text-white transition-colors"

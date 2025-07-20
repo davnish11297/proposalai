@@ -2,6 +2,8 @@ import { Response } from 'express';
 import { prisma as db } from '../utils/database';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { ICreateComment, IUpdateComment } from '../types';
+import { emailService } from '../services/emailService';
+import { notificationController } from './notificationController';
 
 export class CommentController {
   // Get all comments for a proposal
@@ -171,6 +173,73 @@ export class CommentController {
           details: JSON.stringify({ commentId: comment.id })
         }
       });
+
+      // Create notification for proposal owner if comment is from a client
+      const proposal = await db.proposal.findFirst({
+        where: { id: proposalId },
+        include: { author: true }
+      });
+
+      if (proposal && proposal.authorId !== req.user!.userId) {
+        // This is a client comment, notify the proposal owner
+        await notificationController.createNotification({
+          userId: proposal.authorId,
+          type: 'COMMENT',
+          title: 'New Client Comment',
+          message: `A client commented on your proposal "${proposal.title}"`,
+          proposalId,
+          metadata: {
+            commentId: comment.id,
+            clientName: req.user!.name || req.user!.email
+          }
+        });
+      }
+
+      // Check if this is an owner replying to a client comment
+      // Get the proposal and check if there are any public user comments
+      const proposalWithComments = await db.proposal.findFirst({
+        where: { id: proposalId },
+        include: {
+          comments: {
+            where: {
+              author: {
+                isPublicUser: true
+              }
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 1
+          }
+        }
+      });
+
+      // If there are public user comments and this is the proposal owner, send notification
+      if (proposalWithComments && proposalWithComments.comments.length > 0 && proposalWithComments.authorId === req.user!.userId) {
+        const latestClientComment = proposalWithComments.comments[0];
+        
+        // Get access code from proposal metadata
+        let accessCode = '';
+        try {
+          const metadata = proposalWithComments.metadata ? JSON.parse(proposalWithComments.metadata) : {};
+          accessCode = metadata.accessCodes?.[0] || '';
+        } catch (error) {
+          console.error('Error parsing proposal metadata for access code:', error);
+        }
+
+        if (accessCode && latestClientComment.author.email) {
+          try {
+            await emailService.sendClientReplyNotificationEmail({
+              to: latestClientComment.author.email,
+              proposalTitle: proposalWithComments.title,
+              proposalId: proposalWithComments.id,
+              ownerName: req.user!.name || 'Proposal Owner',
+              replyContent: commentData.content,
+              accessCode
+            });
+          } catch (emailError) {
+            console.error('Failed to send client reply notification:', emailError);
+          }
+        }
+      }
 
       res.status(201).json({
         success: true,

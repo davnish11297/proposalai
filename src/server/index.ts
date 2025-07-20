@@ -92,15 +92,15 @@ app.use(cors(corsOptions));
 // Rate limiting - More lenient in development
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || process.env.NODE_ENV === 'production' ? '100' : '1000'), // More lenient in development
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || process.env.NODE_ENV === 'production' ? '100' : '10000'), // Much more lenient in development
   message: {
     success: false,
     error: 'Too many requests from this IP, please try again later.'
   },
   skip: (req) => {
-    // Skip rate limiting for health checks and public proposals in development
+    // Skip rate limiting for health checks, public proposals, and auth routes in development
     if (process.env.NODE_ENV !== 'production') {
-      return req.path === '/health' || req.path.startsWith('/api/public/');
+      return req.path === '/health' || req.path.startsWith('/api/public/') || req.path.startsWith('/api/auth/');
     }
     return false;
   }
@@ -138,6 +138,7 @@ app.use('/api/users', require('./routes/users').default);
 app.use('/api/analytics', require('./routes/analytics').default);
 app.use('/api/clients', require('./routes/clients').default);
 app.use('/api/email-tracking', require('./routes/emailTracking').default);
+app.use('/api/notifications', require('./routes/notifications').default);
 
 // Public proposal route
 app.use('/api/public/proposals', require('./routes/publicProposals').default);
