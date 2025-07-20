@@ -105,7 +105,26 @@ const limiter = rateLimit({
     return false;
   }
 });
+
+// More lenient rate limiting for notification endpoints
+const notificationLimiter = rateLimit({
+  windowMs: 2 * 60 * 1000, // 2 minutes
+  max: process.env.NODE_ENV === 'production' ? 30 : 1000, // Much more lenient for notifications
+  message: {
+    success: false,
+    error: 'Too many notification requests, please try again later.'
+  },
+  skip: (req) => {
+    // Skip rate limiting for notifications in development
+    if (process.env.NODE_ENV !== 'production') {
+      return true;
+    }
+    return false;
+  }
+});
+
 app.use('/api/', limiter);
+app.use('/api/notifications', notificationLimiter);
 
 // Compression
 app.use(compression());

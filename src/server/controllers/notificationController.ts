@@ -188,7 +188,7 @@ export class NotificationController {
   }
 
   // Create a notification (internal method)
-  static async createNotification(data: {
+  async createNotification(data: {
     userId: string;
     type: string;
     title: string;

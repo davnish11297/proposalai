@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   BellIcon, 
@@ -33,32 +33,62 @@ export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  
+  // Rate limiting and backoff state
+  const [isRateLimited, setIsRateLimited] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const lastFetchTime = useRef<number>(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (user) {
       fetchNotifications();
       fetchUnreadCount();
       
-      // Poll for new notifications every 30 seconds
-      const interval = setInterval(() => {
-        fetchUnreadCount();
-      }, 30000);
+      // Poll for new notifications every 2 minutes (120 seconds) instead of 30 seconds
+      intervalRef.current = setInterval(() => {
+        // Only fetch if not rate limited and enough time has passed
+        const now = Date.now();
+        if (!isRateLimited && (now - lastFetchTime.current) > 60000) { // 1 minute minimum between calls
+          fetchUnreadCount();
+          fetchNotifications(); // Also fetch the full notification list
+          lastFetchTime.current = now;
+        }
+      }, 120000); // 2 minutes
 
-      return () => clearInterval(interval);
+      return () => {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+        }
+      };
     }
-  }, [user]);
+  }, [user, isRateLimited]);
 
   const fetchNotifications = async () => {
     try {
       setLoading(true);
       setError(false);
+      setIsRateLimited(false);
+      setRetryCount(0);
+      
       const response = await notificationAPI.getAll();
       if (response.data.success) {
         setNotifications(response.data.data);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch notifications:', error);
       setError(true);
+      
+      // Handle rate limiting
+      if (error.response?.status === 429 || error.message?.includes('Too many requests')) {
+        setIsRateLimited(true);
+        // Exponential backoff: wait 2^retryCount minutes
+        const backoffTime = Math.min(Math.pow(2, retryCount) * 60000, 300000); // Max 5 minutes
+        setTimeout(() => {
+          setIsRateLimited(false);
+          setRetryCount(prev => prev + 1);
+        }, backoffTime);
+      }
     } finally {
       setLoading(false);
     }
@@ -66,12 +96,30 @@ export default function NotificationBell() {
 
   const fetchUnreadCount = async () => {
     try {
+      // Skip if rate limited
+      if (isRateLimited) {
+        return;
+      }
+      
       const response = await notificationAPI.getUnreadCount();
       if (response.data.success) {
         setUnreadCount(response.data.data.unreadCount);
+        setIsRateLimited(false);
+        setRetryCount(0);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch unread count:', error);
+      
+      // Handle rate limiting
+      if (error.response?.status === 429 || error.message?.includes('Too many requests')) {
+        setIsRateLimited(true);
+        // Exponential backoff: wait 2^retryCount minutes
+        const backoffTime = Math.min(Math.pow(2, retryCount) * 60000, 300000); // Max 5 minutes
+        setTimeout(() => {
+          setIsRateLimited(false);
+          setRetryCount(prev => prev + 1);
+        }, backoffTime);
+      }
       // Don't set error here as we still want to show the bell
     }
   };
@@ -196,18 +244,43 @@ export default function NotificationBell() {
     <div className="relative">
       {/* Notification Bell Button - Always show, even if API fails */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-        title={user ? "Notifications" : "Login to see notifications"}
+        onClick={() => {
+          const newIsOpen = !isOpen;
+          setIsOpen(newIsOpen);
+          
+          // If opening the dropdown, refresh notifications immediately
+          if (newIsOpen && user && !isRateLimited) {
+            fetchNotifications();
+            fetchUnreadCount();
+          }
+        }}
+        className={`relative p-2 rounded-lg transition-colors ${
+          isRateLimited 
+            ? 'text-yellow-300 hover:text-yellow-200 hover:bg-yellow-900/20' 
+            : 'text-white/80 hover:text-white hover:bg-white/10'
+        }`}
+        title={
+          isRateLimited 
+            ? "Rate limited - notifications temporarily unavailable" 
+            : user 
+              ? "Notifications" 
+              : "Login to see notifications"
+        }
       >
         <BellIcon className="h-6 w-6" />
-        {user && unreadCount > 0 && (
+        {user && unreadCount > 0 && !isRateLimited && (
           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
-        {/* Show a subtle indicator if there's an error */}
-        {error && (
+        {/* Show rate limiting indicator */}
+        {isRateLimited && (
+          <span className="absolute -bottom-1 -right-1 bg-yellow-500 text-white text-xs rounded-full h-3 w-3 flex items-center justify-center">
+            ⏱
+          </span>
+        )}
+        {/* Show error indicator */}
+        {error && !isRateLimited && (
           <span className="absolute -bottom-1 -right-1 bg-yellow-400 text-white text-xs rounded-full h-3 w-3 flex items-center justify-center">
             !
           </span>
@@ -220,15 +293,49 @@ export default function NotificationBell() {
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
-            {unreadCount > 0 && (
-              <button
-                onClick={markAllAsRead}
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-              >
-                Mark all read
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {!isRateLimited && (
+                <button
+                  onClick={() => {
+                    fetchNotifications();
+                    fetchUnreadCount();
+                  }}
+                  disabled={loading}
+                  className={`p-1 transition-colors ${
+                    loading 
+                      ? 'text-gray-300 cursor-not-allowed' 
+                      : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                  title="Refresh notifications"
+                >
+                  <svg className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
+              )}
+              {unreadCount > 0 && !isRateLimited && (
+                <button
+                  onClick={markAllAsRead}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  Mark all read
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* Rate Limiting Message */}
+          {isRateLimited && (
+            <div className="p-4 bg-yellow-50 border-b border-yellow-200">
+              <div className="flex items-center gap-2 text-yellow-800">
+                <ClockIcon className="h-4 w-4" />
+                <p className="text-sm font-medium">Rate limited</p>
+              </div>
+              <p className="text-xs text-yellow-600 mt-1">
+                Too many requests. Notifications will resume automatically in a few minutes.
+              </p>
+            </div>
+          )}
 
           {/* Notifications List */}
           <div className="max-h-80 overflow-y-auto">
@@ -242,10 +349,14 @@ export default function NotificationBell() {
                 <BellIcon className="h-8 w-8 mx-auto mb-2 text-gray-300" />
                 <p>
                   {!user ? 'Please login to see notifications' : 
+                   isRateLimited ? 'Notifications temporarily unavailable' :
                    error ? 'Unable to load notifications' : 'No notifications yet'}
                 </p>
-                {error && (
+                {error && !isRateLimited && (
                   <p className="text-xs text-gray-400 mt-1">Check console for details</p>
+                )}
+                {isRateLimited && (
+                  <p className="text-xs text-yellow-600 mt-1">Please wait a few minutes</p>
                 )}
               </div>
             ) : (
@@ -291,7 +402,7 @@ export default function NotificationBell() {
           </div>
 
           {/* Footer */}
-          {notifications.length > 0 && (
+          {notifications.length > 0 && !isRateLimited && (
             <div className="p-3 border-t border-gray-200 bg-gray-50">
               <button
                 onClick={() => {
