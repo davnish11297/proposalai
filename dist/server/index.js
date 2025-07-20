@@ -18,7 +18,7 @@ const passport_1 = __importDefault(require("passport"));
 require("./services/authService");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 app.set('trust proxy', 1);
 app.use((0, helmet_1.default)({
     contentSecurityPolicy: {
@@ -41,7 +41,6 @@ app.use(passport_1.default.initialize());
 app.use(passport_1.default.session());
 const allowedOrigins = [
     'http://localhost:3000',
-    'http://localhost:3001',
     'http://localhost:3002',
     'http://localhost:3003',
     'http://localhost:3004',
@@ -106,6 +105,7 @@ app.use('/api/organizations', require('./routes/organizations').default);
 app.use('/api/users', require('./routes/users').default);
 app.use('/api/analytics', require('./routes/analytics').default);
 app.use('/api/clients', require('./routes/clients').default);
+app.use('/api/email-tracking', require('./routes/emailTracking').default);
 app.use('/api/public/proposals', require('./routes/publicProposals').default);
 app.use((err, req, res, next) => {
     console.error('Unhandled error:', err);

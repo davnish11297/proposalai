@@ -10,13 +10,16 @@ export interface EmailConfig {
 }
 export declare class EmailService {
     private transporter;
+    constructor();
     private cleanMarkdown;
-    constructor(config?: EmailConfig);
     private generateEmailHTML;
+    private generateAccessCode;
     sendProposalEmail(proposal: IProposal, recipientEmail: string, pdfBuffer?: Buffer, pdfUrl?: string): Promise<{
         success: boolean;
         messageId?: string;
         error?: string;
+        trackingId?: string;
+        accessCode?: string;
     }>;
     verifyConnection(): Promise<boolean>;
 }

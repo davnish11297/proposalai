@@ -36,7 +36,10 @@ async function authenticateToken(req, res, next) {
             });
             return;
         }
-        req.user = payload;
+        req.user = {
+            ...payload,
+            organizationId: user.organizationId
+        };
         next();
     }
     catch (error) {

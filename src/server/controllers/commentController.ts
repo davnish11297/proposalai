@@ -45,6 +45,23 @@ export class CommentController {
         db.comment.count({ where: { proposalId } })
       ]);
 
+      // Mark comments as read when proposal owner views them
+      const proposalOwner = await db.proposal.findFirst({
+        where: { id: proposalId },
+        select: { authorId: true }
+      });
+
+      if (proposalOwner && proposalOwner.authorId === req.user!.userId) {
+        await db.comment.updateMany({
+          where: { 
+            proposalId,
+            isRead: false,
+            authorId: { not: req.user!.userId } // Don't mark own comments as read
+          },
+          data: { isRead: true }
+        });
+      }
+
       res.json({
         success: true,
         data: comments,
@@ -64,6 +81,48 @@ export class CommentController {
     }
   }
 
+  // Get unread comment count for a proposal
+  async getUnreadCount(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { proposalId } = req.params;
+
+      // Verify proposal exists and user has access
+      const proposalAccess = await db.proposal.findFirst({
+        where: {
+          id: proposalId,
+          organizationId: req.user!.organizationId,
+        }
+      });
+
+      if (!proposalAccess) {
+        res.status(404).json({
+          success: false,
+          error: 'Proposal not found'
+        });
+        return;
+      }
+
+      const unreadCount = await db.comment.count({
+        where: { 
+          proposalId,
+          isRead: false,
+          authorId: { not: req.user!.userId } // Don't count own comments
+        }
+      });
+
+      res.json({
+        success: true,
+        data: { unreadCount }
+      });
+    } catch (error) {
+      console.error('Get unread count error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch unread count'
+      });
+    }
+  }
+
   // Create a new comment
   async createComment(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
@@ -71,14 +130,14 @@ export class CommentController {
       const commentData: ICreateComment = req.body;
 
       // Verify proposal exists and user has access
-      const proposal = await db.proposal.findFirst({
+      const proposalCreate = await db.proposal.findFirst({
         where: {
           id: proposalId,
           organizationId: req.user!.organizationId,
         }
       });
 
-      if (!proposal) {
+      if (!proposalCreate) {
         res.status(404).json({
           success: false,
           error: 'Proposal not found'

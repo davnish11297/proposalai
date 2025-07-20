@@ -1,4 +1,8 @@
-import { UserRole, ProposalStatus, ProposalType, ActivityType, ExportFormat } from '@prisma/client';
+type UserRole = string;
+type ProposalStatus = string;
+type ProposalType = string;
+type ActivityType = string;
+type ExportFormat = string;
 export interface IUser {
     id: string;
     email: string;
@@ -313,4 +317,5 @@ export interface IBrandGuidelines {
     };
     examples: string[];
 }
+export {};
 //# sourceMappingURL=index.d.ts.map

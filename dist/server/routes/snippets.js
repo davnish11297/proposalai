@@ -10,10 +10,6 @@ const router = express_1.default.Router();
 router.get('/', auth_1.authenticateToken, async (req, res) => {
     try {
         const snippets = await database_1.prisma.snippet.findMany({
-            where: {
-                organizationId: req.user.organizationId,
-                isActive: true,
-            },
             orderBy: { usageCount: 'desc' }
         });
         res.json({
@@ -44,7 +40,6 @@ router.post('/', auth_1.authenticateToken, async (req, res) => {
                 content,
                 category,
                 tags: tags || [],
-                organizationId: req.user.organizationId,
             }
         });
         return res.status(201).json({
@@ -67,8 +62,6 @@ router.post('/:id/increment-usage', auth_1.authenticateToken, async (req, res) =
         const snippet = await database_1.prisma.snippet.findFirst({
             where: {
                 id,
-                organizationId: req.user.organizationId,
-                isActive: true,
             }
         });
         if (!snippet) {

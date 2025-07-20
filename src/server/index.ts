@@ -16,7 +16,7 @@ import './services/authService';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 // Trust proxy for rate limiting and X-Forwarded-For
 app.set('trust proxy', 1);
@@ -48,9 +48,8 @@ app.use(passport.session());
 
 // CORS configuration
 const allowedOrigins = [
-  'http://localhost:3000', 
-  'http://localhost:3001', 
-  'http://localhost:3002', 
+  'http://localhost:3000',
+  'http://localhost:3002',
   'http://localhost:3003',
   'http://localhost:3004',
   'http://localhost:3005',
@@ -90,13 +89,20 @@ const corsOptions = process.env.NODE_ENV === 'production'
 
 app.use(cors(corsOptions));
 
-// Rate limiting
+// Rate limiting - More lenient in development
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // limit each IP to 100 requests per windowMs
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || process.env.NODE_ENV === 'production' ? '100' : '1000'), // More lenient in development
   message: {
     success: false,
     error: 'Too many requests from this IP, please try again later.'
+  },
+  skip: (req) => {
+    // Skip rate limiting for health checks and public proposals in development
+    if (process.env.NODE_ENV !== 'production') {
+      return req.path === '/health' || req.path.startsWith('/api/public/');
+    }
+    return false;
   }
 });
 app.use('/api/', limiter);
@@ -131,6 +137,7 @@ app.use('/api/organizations', require('./routes/organizations').default);
 app.use('/api/users', require('./routes/users').default);
 app.use('/api/analytics', require('./routes/analytics').default);
 app.use('/api/clients', require('./routes/clients').default);
+app.use('/api/email-tracking', require('./routes/emailTracking').default);
 
 // Public proposal route
 app.use('/api/public/proposals', require('./routes/publicProposals').default);

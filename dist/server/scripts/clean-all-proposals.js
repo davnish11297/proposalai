@@ -22,18 +22,18 @@ async function cleanAllProposals() {
                     content = JSON.parse(cleaned);
                 }
                 catch {
-                    content = { executiveSummary: cleaned };
+                    content = JSON.stringify({ executiveSummary: cleaned });
                 }
                 needsUpdate = true;
             }
             if (typeof content !== 'object' || content === null) {
-                content = {
+                content = JSON.stringify({
                     executiveSummary: 'Content could not be parsed. Please regenerate this proposal.',
                     approach: 'Content could not be parsed. Please regenerate this proposal.',
                     budgetDetails: 'Content could not be parsed. Please regenerate this proposal.',
                     timeline: 'Content could not be parsed. Please regenerate this proposal.',
                     budget: 'To be discussed'
-                };
+                });
                 needsUpdate = true;
             }
             if (needsUpdate) {

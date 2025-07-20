@@ -11,7 +11,6 @@ router.get('/', auth_1.authenticateToken, async (req, res) => {
     try {
         const pricingModels = await database_1.prisma.pricingModel.findMany({
             where: {
-                organizationId: req.user.organizationId,
                 isActive: true,
             },
             orderBy: { createdAt: 'desc' }
@@ -43,7 +42,6 @@ router.post('/', auth_1.authenticateToken, async (req, res) => {
                 name,
                 description: description || null,
                 pricing,
-                organizationId: req.user.organizationId,
             }
         });
         return res.status(201).json({

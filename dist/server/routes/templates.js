@@ -11,16 +11,7 @@ router.get('/', auth_1.authenticateToken, async (req, res) => {
     try {
         const templates = await database_1.prisma.template.findMany({
             where: {
-                organizationId: req.user.organizationId,
                 isActive: true,
-            },
-            include: {
-                user: {
-                    select: { firstName: true, lastName: true }
-                },
-                _count: {
-                    select: { proposals: true }
-                }
             },
             orderBy: { updatedAt: 'desc' }
         });

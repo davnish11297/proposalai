@@ -1,4 +1,9 @@
-import { UserRole, ProposalStatus, ProposalType, ActivityType, ExportFormat } from '@prisma/client';
+// Note: These enums don't exist in the current Prisma schema, using string types instead
+type UserRole = string;
+type ProposalStatus = string;
+type ProposalType = string;
+type ActivityType = string;
+type ExportFormat = string;
 
 // User Types
 export interface IUser {

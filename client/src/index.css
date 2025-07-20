@@ -270,6 +270,24 @@
   }
   
   .glass {
-    @apply bg-white bg-opacity-80 backdrop-blur-sm border border-white border-opacity-20;
+    @apply bg-white/80 backdrop-blur-sm border border-white/20;
+  }
+  
+  /* Text color utilities */
+  .text-primary-600 {
+    @apply text-blue-600;
+  }
+  
+  .text-danger-600 {
+    @apply text-red-600;
+  }
+  
+  /* Shadow utilities */
+  .shadow-soft {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+  
+  .shadow-large {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   }
 } 

@@ -61,7 +61,7 @@ Create a `.env` file in your project root with your chosen configuration:
 # Database Configuration
 DATABASE_URL="postgresql://postgres:password@localhost:5432/proposalai"
 JWT_SECRET="your-super-secret-jwt-key"
-PORT=3001
+PORT=3000
 
 # AI Provider (choose one or more)
 OPENAI_API_KEY="your-openai-key"           # Optional

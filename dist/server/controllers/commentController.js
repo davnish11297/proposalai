@@ -25,12 +25,10 @@ class CommentController {
                 database_1.prisma.comment.findMany({
                     where: { proposalId },
                     include: {
-                        user: {
+                        author: {
                             select: {
-                                firstName: true,
-                                lastName: true,
-                                email: true,
-                                avatar: true
+                                name: true,
+                                email: true
                             }
                         }
                     },
@@ -40,6 +38,20 @@ class CommentController {
                 }),
                 database_1.prisma.comment.count({ where: { proposalId } })
             ]);
+            const proposalOwner = await database_1.prisma.proposal.findFirst({
+                where: { id: proposalId },
+                select: { authorId: true }
+            });
+            if (proposalOwner && proposalOwner.authorId === req.user.userId) {
+                await database_1.prisma.comment.updateMany({
+                    where: {
+                        proposalId,
+                        isRead: false,
+                        authorId: { not: req.user.userId }
+                    },
+                    data: { isRead: true }
+                });
+            }
             res.json({
                 success: true,
                 data: comments,
@@ -59,17 +71,53 @@ class CommentController {
             });
         }
     }
-    async createComment(req, res) {
+    async getUnreadCount(req, res) {
         try {
             const { proposalId } = req.params;
-            const commentData = req.body;
-            const proposal = await database_1.prisma.proposal.findFirst({
+            const proposalAccess = await database_1.prisma.proposal.findFirst({
                 where: {
                     id: proposalId,
                     organizationId: req.user.organizationId,
                 }
             });
-            if (!proposal) {
+            if (!proposalAccess) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Proposal not found'
+                });
+                return;
+            }
+            const unreadCount = await database_1.prisma.comment.count({
+                where: {
+                    proposalId,
+                    isRead: false,
+                    authorId: { not: req.user.userId }
+                }
+            });
+            res.json({
+                success: true,
+                data: { unreadCount }
+            });
+        }
+        catch (error) {
+            console.error('Get unread count error:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Failed to fetch unread count'
+            });
+        }
+    }
+    async createComment(req, res) {
+        try {
+            const { proposalId } = req.params;
+            const commentData = req.body;
+            const proposalCreate = await database_1.prisma.proposal.findFirst({
+                where: {
+                    id: proposalId,
+                    organizationId: req.user.organizationId,
+                }
+            });
+            if (!proposalCreate) {
                 res.status(404).json({
                     success: false,
                     error: 'Proposal not found'
@@ -80,16 +128,14 @@ class CommentController {
                 data: {
                     content: commentData.content,
                     position: commentData.position || null,
-                    userId: req.user.userId,
+                    authorId: req.user.userId,
                     proposalId,
                 },
                 include: {
-                    user: {
+                    author: {
                         select: {
-                            firstName: true,
-                            lastName: true,
-                            email: true,
-                            avatar: true
+                            name: true,
+                            email: true
                         }
                     }
                 }
@@ -99,7 +145,7 @@ class CommentController {
                     type: 'COMMENTED',
                     userId: req.user.userId,
                     proposalId,
-                    details: { commentId: comment.id }
+                    details: JSON.stringify({ commentId: comment.id })
                 }
             });
             res.status(201).json({
@@ -142,7 +188,7 @@ class CommentController {
                 });
                 return;
             }
-            if (existingComment.userId !== req.user.userId) {
+            if (existingComment.authorId !== req.user.userId) {
                 res.status(403).json({
                     success: false,
                     error: 'You can only edit your own comments'
@@ -156,12 +202,10 @@ class CommentController {
                     position: updateData.position || null,
                 },
                 include: {
-                    user: {
+                    author: {
                         select: {
-                            firstName: true,
-                            lastName: true,
-                            email: true,
-                            avatar: true
+                            name: true,
+                            email: true
                         }
                     }
                 }
@@ -205,7 +249,7 @@ class CommentController {
                 });
                 return;
             }
-            if (existingComment.userId !== req.user.userId && req.user.role !== 'ADMIN') {
+            if (existingComment.authorId !== req.user.userId && req.user.role !== 'ADMIN') {
                 res.status(403).json({
                     success: false,
                     error: 'You can only delete your own comments'

@@ -25,7 +25,7 @@ passport.use(new GoogleStrategy(
   async (accessToken, refreshToken, profile, done) => {
     try {
       const email = profile.emails?.[0]?.value;
-      if (!email) return done(new Error('No email from Google'), null);
+      if (!email) return done(new Error('No email from Google'), false);
       let user = await prisma.user.findUnique({ where: { email } });
       if (!user) {
         // Create user if doesn't exist
@@ -41,7 +41,7 @@ passport.use(new GoogleStrategy(
       }
       return done(null, user);
     } catch (err) {
-      return done(err, null);
+      return done(err, false);
     }
   }
 ));

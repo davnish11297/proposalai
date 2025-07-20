@@ -3,7 +3,9 @@ import { verifyToken, JWTPayload } from '../utils/auth';
 import { prisma } from '../utils/database';
 
 export interface AuthenticatedRequest extends Request {
-  user?: JWTPayload;
+  user?: JWTPayload & {
+    organizationId?: string;
+  };
 }
 
 export async function authenticateToken(
@@ -46,7 +48,10 @@ export async function authenticateToken(
       return;
     }
 
-    req.user = payload;
+    req.user = {
+      ...payload,
+      organizationId: user.organizationId
+    };
     next();
   } catch (error) {
     console.error('Authentication error:', error);

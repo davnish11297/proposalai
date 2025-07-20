@@ -26,7 +26,7 @@ passport_1.default.use(new passport_google_oauth20_1.Strategy({
     try {
         const email = profile.emails?.[0]?.value;
         if (!email)
-            return done(new Error('No email from Google'), null);
+            return done(new Error('No email from Google'), false);
         let user = await database_1.prisma.user.findUnique({ where: { email } });
         if (!user) {
             user = await database_1.prisma.user.create({
@@ -41,7 +41,7 @@ passport_1.default.use(new passport_google_oauth20_1.Strategy({
         return done(null, user);
     }
     catch (err) {
-        return done(err, null);
+        return done(err, false);
     }
 }));
 exports.default = passport_1.default;

@@ -222,22 +222,30 @@ class ProposalController {
     async deleteProposal(req, res) {
         try {
             const { id } = req.params;
-            const proposal = await database_1.prisma.proposal.findFirst({
+            const existingProposal = await database_1.prisma.proposal.findFirst({
                 where: {
                     id,
                     organizationId: req.user.organizationId,
                 }
             });
-            if (!proposal) {
+            if (!existingProposal) {
                 res.status(404).json({
                     success: false,
                     error: 'Proposal not found'
                 });
                 return;
             }
-            await database_1.prisma.proposal.delete({
-                where: { id }
-            });
+            await database_1.prisma.$transaction([
+                database_1.prisma.activity.deleteMany({
+                    where: { proposalId: id }
+                }),
+                database_1.prisma.comment.deleteMany({
+                    where: { proposalId: id }
+                }),
+                database_1.prisma.proposal.delete({
+                    where: { id }
+                })
+            ]);
             res.json({
                 success: true,
                 message: 'Proposal deleted successfully'
@@ -563,25 +571,38 @@ class ProposalController {
                 });
                 return;
             }
+            await database_1.prisma.proposal.update({
+                where: { id: proposalId },
+                data: {
+                    status: 'SENT',
+                    emailSentAt: new Date(),
+                    emailRecipient: recipientEmail,
+                    emailMessageId: emailResult.messageId,
+                    emailTrackingId: emailResult.accessCode,
+                    updatedAt: new Date()
+                }
+            });
             await database_1.prisma.activity.create({
                 data: {
                     type: 'EMAIL_SENT',
                     userId: userId,
                     proposalId: proposalId,
-                    details: `Proposal sent to ${recipientEmail}`
-                }
-            });
-            await database_1.prisma.proposal.update({
-                where: { id: proposalId },
-                data: {
-                    status: 'SENT',
-                    updatedAt: new Date()
+                    details: JSON.stringify({
+                        action: 'email_sent',
+                        recipientEmail,
+                        messageId: emailResult.messageId,
+                        trackingId: emailResult.trackingId,
+                        accessCode: emailResult.accessCode,
+                        sentAt: new Date().toISOString()
+                    })
                 }
             });
             res.json({
                 success: true,
                 message: 'Proposal sent successfully',
-                messageId: emailResult.messageId
+                messageId: emailResult.messageId,
+                trackingId: emailResult.trackingId,
+                accessCode: emailResult.accessCode
             });
         }
         catch (error) {

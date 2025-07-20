@@ -3,8 +3,8 @@ import axios from 'axios';
 // In development, use relative URLs to work with the proxy
 // In production, use the full URL
 const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? (process.env.REACT_APP_API_URL || 'http://localhost:3001/api')
-  : '/api';
+  ? (process.env.REACT_APP_API_URL || 'http://localhost:3000/api')
+  : 'http://localhost:3001/api';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -66,6 +66,7 @@ export const proposalsAPI = {
     api.post(`/proposals/${id}/send-email`, data),
   downloadPDF: (id: string) => api.get(`/proposals/${id}/download-pdf`, { responseType: 'blob' }),
   getByClient: (clientName: string) => api.get('/proposals', { params: { clientName } }),
+  getEmailTrackingStats: (id: string) => api.get(`/email-tracking/stats/${id}`),
 };
 
 export const templatesAPI = {
@@ -120,7 +121,10 @@ export const usersAPI = {
 };
 
 export const publicAPI = {
-  getProposal: (id: string) => api.get(`/public/proposals/${id}`),
+  getProposal: (id: string, accessCode?: string) => 
+    api.get(`/public/proposals/${id}${accessCode ? `?accessCode=${accessCode}` : ''}`),
+  submitFeedback: (id: string, data: { accessCode: string; action: string; comment?: string }) =>
+    api.post(`/public/proposals/${id}/feedback`, data),
 }; 
 
 export const clientsAPI = {
@@ -134,6 +138,8 @@ export const clientsAPI = {
 export const commentsAPI = {
   getByProposal: (proposalId: string, params?: any) => 
     api.get(`/comments/proposal/${proposalId}`, { params }),
+  getUnreadCount: (proposalId: string) => 
+    api.get(`/comments/proposal/${proposalId}/unread`),
   create: (proposalId: string, data: { content: string; position?: any }) => 
     api.post(`/comments/proposal/${proposalId}`, data),
   update: (id: string, data: { content: string; position?: any }) => 

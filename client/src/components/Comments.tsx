@@ -1,13 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { toast } from 'react-hot-toast';
+import React, { useState, useEffect } from 'react';
 import { commentsAPI } from '../services/api';
+import { 
+  ChatBubbleLeftIcon, 
+  PaperAirplaneIcon, 
+  TrashIcon, 
+  PencilIcon,
+  UserIcon,
+  CalendarIcon
+} from '@heroicons/react/24/outline';
+import toast from 'react-hot-toast';
 
 interface Comment {
   id: string;
   content: string;
-  position?: any;
   createdAt: string;
-  updatedAt: string;
   author: {
     name: string | null;
     email: string;
@@ -16,71 +22,46 @@ interface Comment {
 
 interface CommentsProps {
   proposalId: string;
-  currentUser: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    avatar?: string;
-  };
+  className?: string;
+  onCommentsLoaded?: () => void;
 }
 
-const Comments: React.FC<CommentsProps> = ({ proposalId, currentUser }) => {
+export default function Comments({ proposalId, className = '', onCommentsLoaded }: CommentsProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [newComment, setNewComment] = useState('');
-  const [editingComment, setEditingComment] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const commentsEndRef = useRef<HTMLDivElement>(null);
 
-  // Load comments
-  const loadComments = async (pageNum = 1, append = false) => {
+  useEffect(() => {
+    fetchComments();
+  }, [proposalId]);
+
+  const fetchComments = async () => {
     try {
       setLoading(true);
-      const response = await commentsAPI.getByProposal(proposalId, { page: pageNum, limit: 10 });
-      
-      if (response.data.success) {
-        const newComments = response.data.data;
-        setComments(prev => append ? [...prev, ...newComments] : newComments);
-        setHasMore(response.data.pagination.page < response.data.pagination.totalPages);
-        setPage(pageNum);
-      }
+      const response = await commentsAPI.getByProposal(proposalId);
+      setComments(response.data.data);
+      onCommentsLoaded?.();
     } catch (error) {
-      console.error('Failed to load comments:', error);
+      console.error('Failed to fetch comments:', error);
       toast.error('Failed to load comments');
     } finally {
       setLoading(false);
     }
   };
 
-  // Load more comments
-  const loadMore = () => {
-    if (!loading && hasMore) {
-      loadComments(page + 1, true);
-    }
-  };
-
-  // Submit new comment
-  const handleSubmitComment = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim()) return;
 
     try {
       setSubmitting(true);
-      const response = await commentsAPI.create(proposalId, { content: newComment.trim() });
-      
-      if (response.data.success) {
-        setComments(prev => [response.data.data, ...prev]);
-        setNewComment('');
-        toast.success('Comment added successfully');
-        
-        // Scroll to top to show new comment
-        if (commentsEndRef.current) {
-          commentsEndRef.current.scrollIntoView({ behavior: 'smooth' });
-        }
-      }
+      await commentsAPI.create(proposalId, { content: newComment.trim() });
+      setNewComment('');
+      fetchComments();
+      toast.success('Comment added successfully');
     } catch (error) {
       console.error('Failed to add comment:', error);
       toast.error('Failed to add comment');
@@ -89,253 +70,163 @@ const Comments: React.FC<CommentsProps> = ({ proposalId, currentUser }) => {
     }
   };
 
-  // Start editing comment
-  const handleEditComment = (comment: Comment) => {
-    setEditingComment(comment.id);
-    setEditContent(comment.content);
-  };
-
-  // Cancel editing
-  const handleCancelEdit = () => {
-    setEditingComment(null);
-    setEditContent('');
-  };
-
-  // Submit edited comment
-  const handleSubmitEdit = async (commentId: string) => {
+  const handleEdit = async (commentId: string) => {
     if (!editContent.trim()) return;
 
     try {
-      const response = await commentsAPI.update(commentId, { content: editContent.trim() });
-      
-      if (response.data.success) {
-        setComments(prev => 
-          prev.map(comment => 
-            comment.id === commentId 
-              ? { ...comment, content: editContent.trim(), updatedAt: new Date().toISOString() }
-              : comment
-          )
-        );
-        setEditingComment(null);
-        setEditContent('');
-        toast.success('Comment updated successfully');
-      }
+      await commentsAPI.update(commentId, { content: editContent.trim() });
+      setEditingId(null);
+      setEditContent('');
+      fetchComments();
+      toast.success('Comment updated successfully');
     } catch (error) {
       console.error('Failed to update comment:', error);
       toast.error('Failed to update comment');
     }
   };
 
-  // Delete comment
-  const handleDeleteComment = async (commentId: string) => {
+  const handleDelete = async (commentId: string) => {
     if (!window.confirm('Are you sure you want to delete this comment?')) return;
 
     try {
-      const response = await commentsAPI.delete(commentId);
-      
-      if (response.data.success) {
-        setComments(prev => prev.filter(comment => comment.id !== commentId));
-        toast.success('Comment deleted successfully');
-      }
+      await commentsAPI.delete(commentId);
+      fetchComments();
+      toast.success('Comment deleted successfully');
     } catch (error) {
       console.error('Failed to delete comment:', error);
       toast.error('Failed to delete comment');
     }
   };
 
-  // Format date
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-    
-    if (diffInHours < 1) {
-      const diffInMinutes = Math.floor(diffInHours * 60);
-      return `${diffInMinutes} minute${diffInMinutes !== 1 ? 's' : ''} ago`;
-    } else if (diffInHours < 24) {
-      const hours = Math.floor(diffInHours);
-      return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
-    } else if (diffInHours < 168) { // 7 days
-      const days = Math.floor(diffInHours / 24);
-      return `${days} day${days !== 1 ? 's' : ''} ago`;
-    } else {
-      return date.toLocaleDateString();
-    }
+  const startEdit = (comment: Comment) => {
+    setEditingId(comment.id);
+    setEditContent(comment.content);
   };
 
-  // Get user initials
-  const getUserInitials = (name: string | null | undefined) => {
-    if (!name) return '?';
-    const names = name.split(' ');
-    if (names.length >= 2) {
-      return `${names[0].charAt(0)}${names[1].charAt(0)}`.toUpperCase();
-    }
-    return name.charAt(0).toUpperCase();
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditContent('');
   };
 
-  // Get user avatar
-  const getUserAvatar = (comment: Comment) => {
+  if (loading) {
     return (
-      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
-        {getUserInitials(comment.author.name)}
+      <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 ${className}`}>
+        <div className="flex items-center gap-2 mb-4">
+          <ChatBubbleLeftIcon className="h-5 w-5 text-blue-600" />
+          <h3 className="text-lg font-semibold text-gray-900">Comments</h3>
+        </div>
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading comments...</p>
+        </div>
       </div>
     );
-  };
-
-  useEffect(() => {
-    loadComments();
-  }, [proposalId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-          💬 Comments ({comments.length})
-        </h3>
-        <p className="text-sm text-gray-600 mt-1">
-          Collaborate with your team on this proposal
-        </p>
+    <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 ${className}`}>
+      <div className="flex items-center gap-2 mb-4">
+        <ChatBubbleLeftIcon className="h-5 w-5 text-blue-600" />
+        <h3 className="text-lg font-semibold text-gray-900">Comments ({comments.length})</h3>
       </div>
 
-      {/* Comment Form */}
-      <div className="p-6 border-b border-gray-200">
-        <form onSubmit={handleSubmitComment} className="space-y-4">
-          <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
-              {getUserInitials(`${currentUser.firstName} ${currentUser.lastName}`)}
-            </div>
-            <div className="flex-1">
-              <textarea
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Add a comment..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                rows={3}
-                disabled={submitting}
-              />
-              <div className="flex justify-between items-center mt-2">
-                <p className="text-xs text-gray-500">
-                  Press Ctrl+Enter to submit
-                </p>
-                <button
-                  type="submit"
-                  disabled={!newComment.trim() || submitting}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-                >
-                  {submitting ? 'Posting...' : 'Post Comment'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </form>
-      </div>
+      {/* Add new comment */}
+      <form onSubmit={handleSubmit} className="mb-6">
+        <div className="flex gap-2">
+          <textarea
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            placeholder="Add a comment..."
+            className="flex-1 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            rows={3}
+            disabled={submitting}
+          />
+          <button
+            type="submit"
+            disabled={!newComment.trim() || submitting}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {submitting ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            ) : (
+              <PaperAirplaneIcon className="h-4 w-4" />
+            )}
+            Send
+          </button>
+        </div>
+      </form>
 
-      {/* Comments List */}
-      <div className="max-h-96 overflow-y-auto">
-        {loading && comments.length === 0 ? (
-          <div className="p-6 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="text-gray-500 mt-2">Loading comments...</p>
-          </div>
-        ) : comments.length === 0 ? (
-          <div className="p-6 text-center">
-            <p className="text-gray-500">No comments yet. Be the first to comment!</p>
+      {/* Comments list */}
+      <div className="space-y-4">
+        {comments.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <ChatBubbleLeftIcon className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+            <p>No comments yet. Be the first to comment!</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
-            {comments.map((comment) => (
-              <div key={comment.id} className="p-6 hover:bg-gray-50 transition-colors">
-                <div className="flex gap-3">
-                  {getUserAvatar(comment)}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900">
-                          {comment.author.name || 'Anonymous'}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {formatDate(comment.createdAt)}
-                        </span>
-                        {comment.updatedAt !== comment.createdAt && (
-                          <span className="text-xs text-gray-400">(edited)</span>
-                        )}
-                      </div>
-                      
-                      {/* Comment Actions */}
-                      <div className="flex items-center gap-2">
-                        {comment.author.email === currentUser.email && (
-                          <>
-                            <button
-                              onClick={() => handleEditComment(comment)}
-                              className="text-xs text-gray-500 hover:text-blue-600 transition-colors"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteComment(comment.id)}
-                              className="text-xs text-gray-500 hover:text-red-600 transition-colors"
-                            >
-                              Delete
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Comment Content */}
-                    {editingComment === comment.id ? (
-                      <div className="space-y-3">
-                        <textarea
-                          value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                          rows={3}
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleSubmitEdit(comment.id)}
-                            className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={handleCancelEdit}
-                            className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-sm hover:bg-gray-400"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-gray-700 whitespace-pre-wrap">
-                        {comment.content}
-                      </div>
-                    )}
+          comments.map((comment) => (
+            <div key={comment.id} className="border border-gray-100 rounded-lg p-4 bg-gray-50">
+              {editingId === comment.id ? (
+                <div className="space-y-3">
+                  <textarea
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={3}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleEdit(comment.id)}
+                      className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={cancelEdit}
+                      className="px-3 py-1 bg-gray-500 text-white rounded text-sm hover:bg-gray-600"
+                    >
+                      Cancel
+                    </button>
                   </div>
                 </div>
-              </div>
-            ))}
-            
-            {/* Load More */}
-            {hasMore && (
-              <div className="p-6 text-center">
-                <button
-                  onClick={loadMore}
-                  disabled={loading}
-                  className="px-4 py-2 text-blue-600 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-                >
-                  {loading ? 'Loading...' : 'Load More Comments'}
-                </button>
-              </div>
-            )}
-            
-            <div ref={commentsEndRef} />
-          </div>
+              ) : (
+                <>
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <UserIcon className="h-4 w-4 text-gray-500" />
+                      <span className="font-medium text-gray-900">
+                        {comment.author.name || comment.author.email}
+                      </span>
+                      <span className="text-gray-400">•</span>
+                      <div className="flex items-center gap-1 text-sm text-gray-500">
+                        <CalendarIcon className="h-3 w-3" />
+                        {new Date(comment.createdAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => startEdit(comment)}
+                        className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                        title="Edit comment"
+                      >
+                        <PencilIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(comment.id)}
+                        className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                        title="Delete comment"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-gray-700 whitespace-pre-wrap">{comment.content}</p>
+                </>
+              )}
+            </div>
+          ))
         )}
       </div>
     </div>
   );
-};
-
-export default Comments; 
+} 

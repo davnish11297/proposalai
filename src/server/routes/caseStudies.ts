@@ -8,7 +8,6 @@ router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
   try {
     const caseStudies = await prisma.caseStudy.findMany({
       where: {
-        organizationId: req.user!.organizationId,
         isActive: true,
       },
       orderBy: { updatedAt: 'desc' }

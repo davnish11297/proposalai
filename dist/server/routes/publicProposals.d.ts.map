@@ -1,1 +1,1 @@
-{"version":3,"file":"publicProposals.d.ts","sourceRoot":"","sources":["../../../src/server/routes/publicProposals.ts"],"names":[],"mappings":"AAEA,QAAA,MAAM,MAAM,4CAAmB,CAAC;AAiBhC,eAAe,MAAM,CAAC"}
+{"version":3,"file":"publicProposals.d.ts","sourceRoot":"","sources":["../../../src/server/routes/publicProposals.ts"],"names":[],"mappings":"AAIA,QAAA,MAAM,MAAM,4CAAmB,CAAC;AAiKhC,eAAe,MAAM,CAAC"}

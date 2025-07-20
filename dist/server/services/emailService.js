@@ -5,72 +5,27 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.emailService = exports.EmailService = void 0;
 const nodemailer_1 = __importDefault(require("nodemailer"));
+const emailTrackingService_1 = require("./emailTrackingService");
 class EmailService {
+    constructor() {
+        this.transporter = nodemailer_1.default.createTransport({
+            host: process.env.SMTP_HOST,
+            port: parseInt(process.env.SMTP_PORT || '587'),
+            secure: false,
+            auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS,
+            },
+        });
+    }
     cleanMarkdown(text) {
         return text
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
             .replace(/\*(.*?)\*/g, '<em>$1</em>')
-            .replace(/`(.*?)`/g, '<code>$1</code>')
-            .replace(/#{1,6}\s/g, '')
-            .replace(/\[(.*?)\]\(.*?\)/g, '$1')
-            .replace(/\n\s*[-*+]\s/g, '\n• ')
-            .replace(/\n\s*\d+\.\s/g, '\n1. ');
+            .replace(/`([^`]+)`/g, '<code>$1</code>')
+            .replace(/\n/g, '<br>');
     }
-    constructor(config) {
-        if (config) {
-            this.transporter = nodemailer_1.default.createTransport({
-                host: config.host || 'smtp.gmail.com',
-                port: config.port || 587,
-                secure: config.secure || false,
-                auth: config.auth
-            });
-        }
-        else {
-            const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
-            const smtpPort = parseInt(process.env.SMTP_PORT || '587');
-            const smtpUser = process.env.SMTP_USER;
-            const smtpPass = process.env.SMTP_PASS;
-            if (smtpUser && smtpPass) {
-                if (smtpHost.includes('resend') || smtpUser.includes('resend') || smtpPass.startsWith('re_')) {
-                    this.transporter = nodemailer_1.default.createTransport({
-                        host: 'smtp.resend.com',
-                        port: 587,
-                        secure: false,
-                        auth: {
-                            user: 'resend',
-                            pass: smtpPass
-                        }
-                    });
-                }
-                else {
-                    this.transporter = nodemailer_1.default.createTransport({
-                        host: smtpHost,
-                        port: smtpPort,
-                        secure: false,
-                        auth: {
-                            user: smtpUser,
-                            pass: smtpPass
-                        },
-                        tls: {
-                            rejectUnauthorized: false
-                        }
-                    });
-                }
-            }
-            else {
-                this.transporter = nodemailer_1.default.createTransport({
-                    host: 'smtp.ethereal.email',
-                    port: 587,
-                    secure: false,
-                    auth: {
-                        user: 'test@ethereal.email',
-                        pass: 'test123'
-                    }
-                });
-            }
-        }
-    }
-    generateEmailHTML(proposal, pdfUrl) {
+    generateEmailHTML(proposal, pdfUrl, trackingId, accessCode) {
         let content;
         try {
             content = typeof proposal.content === 'string' ? JSON.parse(proposal.content) : proposal.content;
@@ -78,6 +33,8 @@ class EmailService {
         catch (error) {
             content = {};
         }
+        const trackingPixel = trackingId ? `<img src="${process.env.API_BASE_URL || 'http://localhost:3000'}/api/email-tracking/track/${trackingId}/pixel.png" width="1" height="1" style="display:none;" />` : '';
+        const proposalLink = `${process.env.CLIENT_BASE_URL || 'http://localhost:3000'}/proposal/${proposal.id}?accessCode=${accessCode}`;
         return `
       <!DOCTYPE html>
       <html lang="en">
@@ -137,6 +94,21 @@ class EmailService {
             font-weight: 600;
             margin: 20px 0;
           }
+          .access-code {
+            background: #f3f4f6;
+            border: 2px dashed #d1d5db;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px;
+            margin: 20px 0;
+          }
+          .access-code-text {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1e40af;
+            letter-spacing: 2px;
+            font-family: 'Courier New', monospace;
+          }
           .footer {
             margin-top: 30px;
             padding-top: 20px;
@@ -174,33 +146,60 @@ class EmailService {
           ` : ''}
           
           <div class="section">
-            <h3>Next Steps</h3>
-            <p>Please review the attached proposal in detail. We're available to discuss any questions or concerns you may have.</p>
-            <p>To schedule a follow-up call or request modifications, please reply to this email or contact us directly.</p>
+            <h3>Access Your Proposal</h3>
+            <p>To view the complete proposal and provide your feedback, please use the access code below:</p>
+            
+            <div class="access-code">
+              <p style="margin: 0 0 10px 0; color: #6b7280; font-size: 14px;">Your Access Code:</p>
+              <div class="access-code-text">${accessCode}</div>
+            </div>
+            
+            <p style="font-size: 14px; color: #6b7280;">This code is required to access your secure proposal portal.</p>
           </div>
           
-          ${pdfUrl ? `
           <div style="text-align: center;">
-            <a href="${pdfUrl}" class="cta-button">View Full Proposal</a>
+            <a href="${proposalLink}" class="cta-button">View Full Proposal</a>
           </div>
-          ` : ''}
+          
+          <div class="section">
+            <h3>Next Steps</h3>
+            <p>Once you've reviewed the proposal, you can:</p>
+            <ul style="color: #4b5563; margin-left: 20px;">
+              <li>Approve the proposal</li>
+              <li>Request modifications</li>
+              <li>Reject the proposal</li>
+              <li>Add comments or questions</li>
+            </ul>
+          </div>
           
           <div class="footer">
             <p>Best regards,<br>The ProposalAI Team</p>
             <p>Generated on ${new Date().toLocaleDateString()}</p>
           </div>
         </div>
+        
+        ${trackingPixel}
       </body>
       </html>
     `;
     }
+    generateAccessCode() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let result = '';
+        for (let i = 0; i < 6; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    }
     async sendProposalEmail(proposal, recipientEmail, pdfBuffer, pdfUrl) {
         try {
+            const trackingId = emailTrackingService_1.emailTrackingService.generateTrackingId();
+            const accessCode = this.generateAccessCode();
             const mailOptions = {
                 from: process.env.EMAIL_FROM || 'noreply@proposalai.com',
                 to: recipientEmail,
                 subject: `Proposal: ${proposal.title}`,
-                html: this.generateEmailHTML(proposal, pdfUrl),
+                html: this.generateEmailHTML(proposal, pdfUrl, trackingId, accessCode),
                 attachments: pdfBuffer ? [
                     {
                         filename: `${proposal.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_proposal.pdf`,
@@ -212,7 +211,9 @@ class EmailService {
             const info = await this.transporter.sendMail(mailOptions);
             return {
                 success: true,
-                messageId: info.messageId
+                messageId: info.messageId,
+                trackingId,
+                accessCode
             };
         }
         catch (error) {

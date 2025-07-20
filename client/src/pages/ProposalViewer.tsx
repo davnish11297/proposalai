@@ -3,8 +3,16 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { proposalsAPI } from '../services/api';
 import Comments from '../components/Comments';
+import EmailTracking from '../components/EmailTracking';
 import { useAuth } from '../hooks/useAuth';
-import { PaperAirplaneIcon, ChartBarIcon, LightBulbIcon, ArrowTrendingUpIcon, ClockIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowTrendingUpIcon,
+  LightBulbIcon,
+  ChartBarIcon,
+  CurrencyDollarIcon,
+  ClockIcon,
+  PaperAirplaneIcon
+} from '@heroicons/react/24/outline';
 import { getOpenRouterChatCompletion } from '../services/api';
 
 interface Proposal {
@@ -41,7 +49,7 @@ const ProposalViewer: React.FC = () => {
   const { user } = useAuth();
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'comments' | 'activity' | 'analytics'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'comments' | 'activity' | 'analytics' | 'email-tracking'>('overview');
   const [showSendModal, setShowSendModal] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState('');
   const [sending, setSending] = useState(false);
@@ -773,7 +781,8 @@ Return ONLY the JSON object, no other text.`;
                   { id: 'overview', label: 'Overview', icon: '📋' },
                   { id: 'comments', label: `Comments (${proposal._count?.comments || 0})`, icon: '💬' },
                   { id: 'activity', label: 'Activity', icon: '📊' },
-                  { id: 'analytics', label: 'Analytics', icon: '📈' }
+                  { id: 'analytics', label: 'Analytics', icon: '📈' },
+                  { id: 'email-tracking', label: 'Email Tracking', icon: '📧' }
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -1006,12 +1015,6 @@ Return ONLY the JSON object, no other text.`;
               {activeTab === 'comments' && (
                 <Comments 
                   proposalId={proposal.id} 
-                  currentUser={{
-                    firstName: user?.firstName || '',
-                    lastName: user?.lastName || '',
-                    email: user?.email || '',
-                    avatar: user?.avatar
-                  }}
                 />
               )}
 
@@ -1044,6 +1047,10 @@ Return ONLY the JSON object, no other text.`;
               )}
 
               {activeTab === 'analytics' && renderAnalyticsSection()}
+
+              {activeTab === 'email-tracking' && (
+                <EmailTracking proposalId={proposal.id} />
+              )}
             </div>
           </div>
         </div>

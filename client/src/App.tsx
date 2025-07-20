@@ -11,6 +11,7 @@ import Drafts from './pages/Drafts';
 import SentProposals from './pages/SentProposals';
 import Profile from './pages/Profile';
 import Home from './pages/Home';
+import PublicProposal from './pages/PublicProposal';
 import './index.css';
 
 function App() {
@@ -30,7 +31,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        {/* <Route path="/proposal/:id" element={<PublicProposal />} /> */}
+        <Route path="/proposal/:id" element={<PublicProposal />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
@@ -48,6 +49,7 @@ function App() {
       <Route path="/proposals/new" element={<ProposalEditor />} />
       <Route path="/proposals/:id" element={<ProposalEditor />} />
       <Route path="/proposals/:id/view" element={<ProposalViewer />} />
+      <Route path="/proposal/:id" element={<PublicProposal />} />
       {/* <Route path="/teams" element={<Teams />} /> */}
       {/* <Route path="/clients" element={<Clients />} /> */}
       {/* <Route path="/templates" element={<Templates />} /> */}
@@ -56,7 +58,6 @@ function App() {
       {/* <Route path="/pricing" element={<Pricing />} /> */}
       {/* <Route path="/analytics" element={<Analytics />} /> */}
       {/* <Route path="/settings" element={<Settings />} /> */}
-      {/* <Route path="/proposal/:id" element={<PublicProposal />} /> */}
       {/* <Route path="/proposal-builder" element={<ProposalBuilder />} /> */}
       {/* <Route path="/knowledge-base" element={<KnowledgeBase />} /> */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

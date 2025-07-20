@@ -55,7 +55,7 @@ export default function Login() {
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 sm:p-10 flex flex-col items-center">
         <div className="flex flex-col items-center mb-8">
           <div className="w-20 h-20 rounded-full bg-[#0a2540] flex items-center justify-center shadow-lg mb-4">
-            <span className="text-2xl font-bold text-white tracking-tight">Aipoosal</span>
+            <span className="text-2xl font-bold text-white tracking-tight">ProposalAI</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-1 text-center">Welcome to ProposalAI</h1>
           <p className="text-gray-500 text-center text-base">Sign in to continue</p>
@@ -64,7 +64,7 @@ export default function Login() {
           className="w-full flex items-center justify-center border border-gray-200 rounded-lg py-2.5 mb-6 text-gray-700 font-medium hover:bg-gray-50 transition"
           type="button"
           onClick={() => {
-            window.location.href = 'http://localhost:3001/api/auth/google';
+            window.location.href = 'http://localhost:3000/api/auth/google';
           }}
         >
           <svg className="w-5 h-5 mr-2" viewBox="0 0 48 48"><g><path fill="#4285F4" d="M44.5 20H24v8.5h11.7C34.7 33.1 29.8 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c2.7 0 5.2.9 7.2 2.5l6.4-6.4C33.5 5.1 28.1 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21c10.5 0 20-8.1 20-21 0-1.3-.1-2.7-.5-4z"/><path fill="#34A853" d="M6.3 14.7l7 5.1C15.1 16.1 19.2 13 24 13c2.7 0 5.2.9 7.2 2.5l6.4-6.4C33.5 5.1 28.1 3 24 3 15.1 3 7.6 8.7 6.3 14.7z"/><path fill="#FBBC05" d="M24 44c5.8 0 10.7-1.9 14.3-5.1l-6.6-5.4C29.7 35.1 27 36 24 36c-5.7 0-10.5-3.7-12.2-8.8l-7 5.4C7.6 39.3 15.1 44 24 44z"/><path fill="#EA4335" d="M44.5 20H24v8.5h11.7c-1.2 3.2-4.2 5.5-7.7 5.5-4.5 0-8.2-3.7-8.2-8.2 0-1.3.3-2.5.8-3.5l-7-5.4C7.6 14.7 3 19.8 3 24c0 11.6 9.4 21 21 21 5.8 0 10.7-1.9 14.3-5.1l-6.6-5.4C29.7 35.1 27 36 24 36c-5.7 0-10.5-3.7-12.2-8.8l-7 5.4C7.6 39.3 15.1 44 24 44z"/></g></svg>

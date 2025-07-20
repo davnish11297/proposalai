@@ -41,7 +41,7 @@ router.post('/extract-pdf', upload.single('pdf'), async (req, res) => {
             return res.status(400).json({ error: 'No PDF file uploaded' });
         }
         const extractedText = await pdfService.extractTextFromBuffer(req.file.buffer);
-        res.json({
+        return res.json({
             success: true,
             content: extractedText,
             message: 'PDF text extracted successfully'
@@ -49,7 +49,7 @@ router.post('/extract-pdf', upload.single('pdf'), async (req, res) => {
     }
     catch (error) {
         console.error('PDF extraction error:', error);
-        res.status(500).json({
+        return res.status(500).json({
             error: 'Failed to extract text from PDF',
             message: error instanceof Error ? error.message : 'Unknown error'
         });

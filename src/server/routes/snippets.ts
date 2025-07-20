@@ -7,10 +7,6 @@ const router = express.Router();
 router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
   try {
     const snippets = await prisma.snippet.findMany({
-      where: {
-        organizationId: req.user!.organizationId,
-        isActive: true,
-      },
       orderBy: { usageCount: 'desc' }
     });
 
@@ -44,7 +40,7 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
         content,
         category,
         tags: tags || [],
-        organizationId: req.user!.organizationId!,
+        // organizationId: req.user!.organizationId!, // Removed as not in schema
       }
     });
 
@@ -68,11 +64,10 @@ router.post('/:id/increment-usage', authenticateToken, async (req: Authenticated
     const { id } = req.params;
 
     const snippet = await prisma.snippet.findFirst({
-      where: {
-        id,
-        organizationId: req.user!.organizationId,
-        isActive: true,
-      }
+              where: {
+          id,
+          // organizationId: req.user!.organizationId, // Removed as not in schema
+        }
     });
 
     if (!snippet) {

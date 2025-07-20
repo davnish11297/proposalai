@@ -332,8 +332,9 @@ export class AIService {
 
     // Clean all string fields of asterisks and Markdown
     for (const key in content) {
-      if (typeof content[key] === 'string') {
-        content[key] = content[key]
+      const value = content[key as keyof typeof content];
+      if (typeof value === 'string') {
+        content[key as keyof typeof content] = value
           .replace(/\*\*(.*?)\*\*/g, '$1')
           .replace(/\*(.*?)\*/g, '$1')
           .replace(/`(.*?)`/g, '$1')
