@@ -5,7 +5,7 @@
   "main": "dist/server/index.js",
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-    "dev:server": "nodemon --exec tsx src/server/index.ts",
+    "dev:server": "PORT=3001 nodemon --exec tsx src/server/index.ts",
     "dev:client": "cd client && PORT=3000 npm start",
     "build": "npm run build:server && npm run build:client",
     "build:server": "tsc -p tsconfig.server.json",
@@ -34,7 +34,7 @@
   "author": "ProposalAI Team",
   "license": "MIT",
   "dependencies": {
-    "@prisma/client": "^5.6.0",
+    "@prisma/client": "^6.12.0",
     "@types/bcrypt": "^5.0.2",
     "@types/express-session": "^1.18.2",
     "@types/passport-google-oauth20": "^2.0.16",
@@ -50,6 +50,7 @@
     "express-validator": "^7.0.1",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.17.0",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.10.1",
     "openai": "^4.20.1",
@@ -58,7 +59,6 @@
     "pdf-lib": "^1.17.1",
     "pdf-parse": "^1.1.1",
     "pptxgenjs": "^3.12.0",
-    "prisma": "^5.6.0",
     "puppeteer": "^24.12.1",
     "uuid": "^9.0.1",
     "zod": "^3.22.4"
@@ -75,7 +75,7 @@
     "@types/uuid": "^9.0.8",
     "concurrently": "^8.2.2",
     "nodemon": "^3.1.10",
-    "prisma": "^5.6.0",
+    "prisma": "^6.12.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.3",
     "typescript": "^5.2.2"

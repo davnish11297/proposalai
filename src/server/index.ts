@@ -92,20 +92,53 @@ app.use(cors(corsOptions));
 // Rate limiting - More lenient in development
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || process.env.NODE_ENV === 'production' ? '100' : '1000'), // More lenient in development
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || process.env.NODE_ENV === 'production' ? '100' : '10000'), // Much more lenient in development
   message: {
     success: false,
     error: 'Too many requests from this IP, please try again later.'
   },
   skip: (req) => {
-    // Skip rate limiting for health checks and public proposals in development
+    // Skip rate limiting for health checks, public proposals, and auth routes in development
     if (process.env.NODE_ENV !== 'production') {
-      return req.path === '/health' || req.path.startsWith('/api/public/');
+      return req.path === '/health' || req.path.startsWith('/api/public/') || req.path.startsWith('/api/auth/');
+    }
+    // In production, only skip health checks and public routes
+    return req.path === '/health' || req.path.startsWith('/api/public/');
+  }
+});
+
+// More lenient rate limiting for notification endpoints
+const notificationLimiter = rateLimit({
+  windowMs: 2 * 60 * 1000, // 2 minutes
+  max: process.env.NODE_ENV === 'production' ? 30 : 1000, // Much more lenient for notifications
+  message: {
+    success: false,
+    error: 'Too many notification requests, please try again later.'
+  },
+  skip: (req) => {
+    // Skip rate limiting for notifications in development
+    if (process.env.NODE_ENV !== 'production') {
+      return true;
     }
     return false;
   }
 });
-app.use('/api/', limiter);
+
+// Apply rate limiting to all routes EXCEPT auth routes
+// Skip entirely if DISABLE_RATE_LIMITING_IN_DEV is set to true in development
+if (process.env.DISABLE_RATE_LIMITING_IN_DEV === 'true' && process.env.NODE_ENV !== 'production') {
+  console.log('⚠️  Rate limiting disabled in development mode');
+} else {
+  app.use('/api/', (req, res, next) => {
+    // Skip rate limiting for auth routes
+    if (req.path.startsWith('/auth/')) {
+      return next();
+    }
+    return limiter(req, res, next);
+  });
+}
+
+app.use('/api/notifications', notificationLimiter);
 
 // Compression
 app.use(compression());
@@ -138,6 +171,7 @@ app.use('/api/users', require('./routes/users').default);
 app.use('/api/analytics', require('./routes/analytics').default);
 app.use('/api/clients', require('./routes/clients').default);
 app.use('/api/email-tracking', require('./routes/emailTracking').default);
+app.use('/api/notifications', require('./routes/notifications').default);
 
 // Public proposal route
 app.use('/api/public/proposals', require('./routes/publicProposals').default);

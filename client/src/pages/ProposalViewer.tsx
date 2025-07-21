@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { proposalsAPI } from '../services/api';
 import Comments from '../components/Comments';
 import EmailTracking from '../components/EmailTracking';
+import NotificationBell from '../components/NotificationBell';
 import { useAuth } from '../hooks/useAuth';
 import {
   ArrowTrendingUpIcon,
@@ -46,6 +47,7 @@ interface Proposal {
 const ProposalViewer: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [loading, setLoading] = useState(true);
@@ -185,6 +187,14 @@ Return ONLY the JSON object, no other text.`;
       fetchProposal();
     }
   }, [id, fetchProposal]);
+
+  // Handle tab parameter from URL
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['overview', 'comments', 'activity', 'analytics', 'email-tracking'].includes(tabParam)) {
+      setActiveTab(tabParam as any);
+    }
+  }, [searchParams]);
 
   // Auto-generate analytics when first visiting the analytics tab
   useEffect(() => {
@@ -644,6 +654,7 @@ Return ONLY the JSON object, no other text.`;
                 <a href="/drafts" className="text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">Drafts</a>
                 <a href="/sent-proposals" className="text-white/80 hover:text-white transition-colors">Sent Proposals</a>
                 <a href="/profile" className="text-white/80 hover:text-white transition-colors">Profile</a>
+                <NotificationBell />
                 <button 
                   onClick={handleLogout}
                   className="text-white/80 hover:text-white transition-colors"
@@ -676,6 +687,7 @@ Return ONLY the JSON object, no other text.`;
                 <a href="/drafts" className="text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">Drafts</a>
                 <a href="/sent-proposals" className="text-white/80 hover:text-white transition-colors">Sent Proposals</a>
                 <a href="/profile" className="text-white/80 hover:text-white transition-colors">Profile</a>
+                <NotificationBell />
                 <button 
                   onClick={handleLogout}
                   className="text-white/80 hover:text-white transition-colors"
@@ -716,6 +728,7 @@ Return ONLY the JSON object, no other text.`;
               <a href="/drafts" className="text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">Drafts</a>
               <a href="/sent-proposals" className="text-white/80 hover:text-white transition-colors">Sent Proposals</a>
               <a href="/profile" className="text-white/80 hover:text-white transition-colors">Profile</a>
+              <NotificationBell />
               <button 
                 onClick={handleLogout}
                 className="text-white/80 hover:text-white transition-colors"
@@ -1014,7 +1027,8 @@ Return ONLY the JSON object, no other text.`;
 
               {activeTab === 'comments' && (
                 <Comments 
-                  proposalId={proposal.id} 
+                  proposalId={proposal.id}
+                  currentUserEmail={user?.email}
                 />
               )}
 

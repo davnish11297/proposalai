@@ -4,6 +4,7 @@ import { authenticateToken } from '../middleware/auth';
 import express from 'express';
 import multer from 'multer';
 import { PDFService } from '../services/pdfService';
+import db from '../utils/database';
 
 const router = Router();
 const pdfService = new PDFService();
@@ -76,6 +77,24 @@ router.post('/extract-pdf', upload.single('pdf'), async (req, res) => {
       error: 'Failed to extract text from PDF',
       message: error instanceof Error ? error.message : 'Unknown error'
     });
+  }
+});
+
+// List all access requests for a proposal
+router.get('/:id/access-requests', authenticateToken, (req, res) => proposalController.getAccessRequests(req, res));
+// Grant a pending access request
+router.post('/:id/access-requests/:requestId/grant', authenticateToken, (req, res) => proposalController.grantAccessRequest(req, res));
+
+// GET /api/proposals/drafts - fetch all draft proposals
+router.get('/drafts', async (req, res) => {
+  try {
+    const drafts = await db.proposal.findMany({
+      where: { status: 'DRAFT' },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json({ success: true, data: drafts });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to fetch drafts' });
   }
 });
 
