@@ -7,6 +7,9 @@ const router = Router();
 // Get all comments for a proposal
 router.get('/proposal/:proposalId', authenticateToken, (req, res) => commentController.getComments(req, res));
 
+// Get unread comment count for a proposal
+router.get('/proposal/:proposalId/unread', authenticateToken, (req, res) => commentController.getUnreadCount(req, res));
+
 // Create a new comment
 router.post('/proposal/:proposalId', authenticateToken, (req, res) => commentController.createComment(req, res));
 

@@ -2,6 +2,8 @@ import { Response } from 'express';
 import { prisma as db } from '../utils/database';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { ICreateComment, IUpdateComment } from '../types';
+import { emailService } from '../services/emailService';
+import { notificationController } from './notificationController';
 
 export class CommentController {
   // Get all comments for a proposal
@@ -31,12 +33,10 @@ export class CommentController {
         db.comment.findMany({
           where: { proposalId },
           include: {
-            user: {
+            author: {
               select: { 
-                firstName: true, 
-                lastName: true, 
-                email: true, 
-                avatar: true 
+                name: true, 
+                email: true 
               }
             }
           },
@@ -46,6 +46,23 @@ export class CommentController {
         }),
         db.comment.count({ where: { proposalId } })
       ]);
+
+      // Mark comments as read when proposal owner views them
+      const proposalOwner = await db.proposal.findFirst({
+        where: { id: proposalId },
+        select: { authorId: true }
+      });
+
+      if (proposalOwner && proposalOwner.authorId === req.user!.userId) {
+        await db.comment.updateMany({
+          where: { 
+            proposalId,
+            isRead: false,
+            authorId: { not: req.user!.userId } // Don't mark own comments as read
+          },
+          data: { isRead: true }
+        });
+      }
 
       res.json({
         success: true,
@@ -66,6 +83,48 @@ export class CommentController {
     }
   }
 
+  // Get unread comment count for a proposal
+  async getUnreadCount(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { proposalId } = req.params;
+
+      // Verify proposal exists and user has access
+      const proposalAccess = await db.proposal.findFirst({
+        where: {
+          id: proposalId,
+          organizationId: req.user!.organizationId,
+        }
+      });
+
+      if (!proposalAccess) {
+        res.status(404).json({
+          success: false,
+          error: 'Proposal not found'
+        });
+        return;
+      }
+
+      const unreadCount = await db.comment.count({
+        where: { 
+          proposalId,
+          isRead: false,
+          authorId: { not: req.user!.userId } // Don't count own comments
+        }
+      });
+
+      res.json({
+        success: true,
+        data: { unreadCount }
+      });
+    } catch (error) {
+      console.error('Get unread count error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch unread count'
+      });
+    }
+  }
+
   // Create a new comment
   async createComment(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
@@ -73,14 +132,14 @@ export class CommentController {
       const commentData: ICreateComment = req.body;
 
       // Verify proposal exists and user has access
-      const proposal = await db.proposal.findFirst({
+      const proposalCreate = await db.proposal.findFirst({
         where: {
           id: proposalId,
           organizationId: req.user!.organizationId,
         }
       });
 
-      if (!proposal) {
+      if (!proposalCreate) {
         res.status(404).json({
           success: false,
           error: 'Proposal not found'
@@ -92,16 +151,14 @@ export class CommentController {
         data: {
           content: commentData.content,
           position: commentData.position || null,
-          userId: req.user!.userId,
+          authorId: req.user!.userId,
           proposalId,
         },
         include: {
-          user: {
+          author: {
             select: { 
-              firstName: true, 
-              lastName: true, 
-              email: true, 
-              avatar: true 
+              name: true, 
+              email: true 
             }
           }
         }
@@ -113,9 +170,79 @@ export class CommentController {
           type: 'COMMENTED',
           userId: req.user!.userId,
           proposalId,
-          details: { commentId: comment.id }
+          details: JSON.stringify({ commentId: comment.id })
         }
       });
+
+      // Create notification for proposal owner if comment is from a client
+      const proposal = await db.proposal.findFirst({
+        where: { id: proposalId },
+        include: { author: true }
+      });
+
+      if (proposal && proposal.authorId !== req.user!.userId) {
+        // This is a client comment, notify the proposal owner
+        await notificationController.createNotification({
+          userId: proposal.authorId,
+          type: 'COMMENT',
+          title: 'New Client Comment',
+          message: `A client commented on your proposal "${proposal.title}"`,
+          proposalId,
+          metadata: {
+            commentId: comment.id,
+            clientName: req.user!.name || req.user!.email
+          }
+        });
+      }
+
+      // Check if this is an owner replying to a client comment
+      // Get the proposal and check if there are any public user comments
+      const proposalWithComments = await db.proposal.findFirst({
+        where: { id: proposalId },
+        include: {
+          comments: {
+            where: {
+              author: {
+                isPublicUser: true
+              }
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            include: {
+              author: true
+            }
+          }
+        }
+      });
+
+      // If there are public user comments and this is the proposal owner, send notification
+      if (proposalWithComments && proposalWithComments.comments.length > 0 && proposalWithComments.authorId === req.user!.userId) {
+        const latestClientComment = proposalWithComments.comments[0];
+        
+        // Get access code from proposal metadata
+        let accessCode = '';
+        try {
+          const metadata = proposalWithComments.metadata ? JSON.parse(proposalWithComments.metadata) : {};
+          accessCode = metadata.accessCodes?.[0] || '';
+        } catch (error) {
+          console.error('Error parsing proposal metadata for access code:', error);
+        }
+
+        if (accessCode && latestClientComment.author.email) {
+          try {
+            await emailService.sendClientReplyNotificationEmail({
+              to: latestClientComment.author.email,
+              proposalTitle: proposalWithComments.title,
+              proposalId: proposalWithComments.id,
+              ownerName: req.user!.name || 'Proposal Owner',
+              replyContent: commentData.content,
+              accessCode
+            });
+          } catch (emailError) {
+            console.error('Failed to send client reply notification:', emailError);
+          }
+        }
+      }
 
       res.status(201).json({
         success: true,
@@ -164,7 +291,7 @@ export class CommentController {
       }
 
       // Only allow the comment author to edit
-      if (existingComment.userId !== req.user!.userId) {
+      if (existingComment.authorId !== req.user!.userId) {
         res.status(403).json({
           success: false,
           error: 'You can only edit your own comments'
@@ -179,12 +306,10 @@ export class CommentController {
           position: updateData.position || null,
         },
         include: {
-          user: {
+          author: {
             select: { 
-              firstName: true, 
-              lastName: true, 
-              email: true, 
-              avatar: true 
+              name: true, 
+              email: true 
             }
           }
         }
@@ -236,7 +361,7 @@ export class CommentController {
       }
 
       // Only allow the comment author or admin to delete
-      if (existingComment.userId !== req.user!.userId && req.user!.role !== 'ADMIN') {
+      if (existingComment.authorId !== req.user!.userId && req.user!.role !== 'ADMIN') {
         res.status(403).json({
           success: false,
           error: 'You can only delete your own comments'

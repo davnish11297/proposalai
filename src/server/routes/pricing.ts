@@ -8,7 +8,6 @@ router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
   try {
     const pricingModels = await prisma.pricingModel.findMany({
       where: {
-        organizationId: req.user!.organizationId,
         isActive: true,
       },
       orderBy: { createdAt: 'desc' }
@@ -43,7 +42,7 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
         name,
         description: description || null,
         pricing,
-        organizationId: req.user!.organizationId!,
+        // organizationId: req.user!.organizationId!, // Removed as not in schema
       }
     });
 

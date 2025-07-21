@@ -14,23 +14,20 @@ router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
     let users = await prisma.user.findMany({
       where: {
         organizationId,
-        isActive: true,
       },
       select: {
         id: true,
-        firstName: true,
-        lastName: true,
+        name: true,
         email: true,
-        avatar: true,
         role: true,
       },
-      orderBy: { firstName: 'asc' },
+      orderBy: { name: 'asc' },
     });
 
     // If teamId is provided, filter out users already in the team
     if (teamId) {
       const teamMembers = await prisma.teamMember.findMany({
-        where: { teamId, isActive: true },
+        where: { teamId },
         select: { userId: true },
       });
       const memberIds = new Set(teamMembers.map(m => m.userId));

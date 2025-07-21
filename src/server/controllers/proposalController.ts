@@ -106,9 +106,10 @@ export class ProposalController {
       await db.activity.create({
         data: {
           type: 'VIEWED',
-          userId: req.user!.userId,
-          proposalId: id,
-          details: JSON.stringify({ action: 'viewed' })
+          user: { connect: { id: req.user!.userId } },
+          proposal: { connect: { id } },
+          details: JSON.stringify({ action: 'viewed' }),
+          message: 'Proposal viewed'
         }
       });
 
@@ -161,9 +162,10 @@ export class ProposalController {
       await db.activity.create({
         data: {
           type: 'CREATED',
-          userId: req.user!.userId,
-          proposalId: proposal.id,
-          details: JSON.stringify({ action: 'created' })
+          user: { connect: { id: req.user!.userId } },
+          proposal: { connect: { id: proposal.id } },
+          details: JSON.stringify({ action: 'created' }),
+          message: 'Proposal created'
         }
       });
 
@@ -224,9 +226,10 @@ export class ProposalController {
       await db.activity.create({
         data: {
           type: 'UPDATED',
-          userId: req.user!.userId,
-          proposalId: id,
-          details: JSON.stringify({ updatedFields: Object.keys(updateData) })
+          user: { connect: { id: req.user!.userId } },
+          proposal: { connect: { id } },
+          details: JSON.stringify({ updatedFields: Object.keys(updateData) }),
+          message: 'Proposal updated'
         }
       });
 
@@ -244,19 +247,107 @@ export class ProposalController {
     }
   }
 
+  // List all access requests for a proposal (owner only)
+  async getAccessRequests(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      // Ensure the user owns the proposal
+      const proposal = await db.proposal.findFirst({
+        where: { id, organizationId: req.user!.organizationId },
+      });
+      if (!proposal) {
+        res.status(404).json({ success: false, error: 'Proposal not found' });
+        return;
+      }
+      const requests = await db.accessRequest.findMany({
+        where: { proposalId: id },
+        orderBy: { createdAt: 'desc' },
+      });
+      res.json({ success: true, data: requests });
+    } catch (error) {
+      console.error('Get access requests error:', error);
+      res.status(500).json({ success: false, error: 'Failed to fetch access requests' });
+    }
+  }
+
+  // Grant a pending access request
+  async grantAccessRequest(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { id, requestId } = req.params;
+      // Ensure the user owns the proposal
+      const proposal = await db.proposal.findFirst({
+        where: { id, organizationId: req.user!.organizationId },
+      });
+      if (!proposal) {
+        res.status(404).json({ success: false, error: 'Proposal not found' });
+        return;
+      }
+      const accessRequest = await db.accessRequest.findUnique({ where: { id: requestId } });
+      if (!accessRequest || accessRequest.proposalId !== id) {
+        res.status(404).json({ success: false, error: 'Access request not found' });
+        return;
+      }
+      if (accessRequest.status !== 'PENDING') {
+        res.status(400).json({ success: false, error: 'Access request already processed' });
+        return;
+      }
+      // Generate a new access code
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let newCode = '';
+      for (let i = 0; i < 6; i++) newCode += chars.charAt(Math.floor(Math.random() * chars.length));
+      // Update proposal metadata
+      let metadata = {};
+      try { metadata = proposal.metadata ? JSON.parse(proposal.metadata) : {}; } catch {}
+      if (!metadata.accessCodes) metadata.accessCodes = [];
+      metadata.accessCodes.push(newCode);
+      // Update proposal
+      await db.proposal.update({
+        where: { id },
+        data: {
+          metadata: JSON.stringify(metadata),
+          status: 'IN_REVIEW',
+        },
+      });
+      // Update access request
+      await db.accessRequest.update({
+        where: { id: requestId },
+        data: {
+          status: 'GRANTED',
+          grantedAt: new Date(),
+          accessCode: newCode,
+        },
+      });
+      // Send email to requester with access code
+      await emailService.sendAccessRequestEmail({
+        to: accessRequest.email,
+        proposalTitle: proposal.title,
+        requesterName: accessRequest.name,
+        requesterEmail: accessRequest.email,
+        requesterCompany: accessRequest.company || '',
+        reason: accessRequest.reason || '',
+        proposalId: proposal.id,
+        accessCode: newCode,
+      });
+      res.json({ success: true, message: 'Access granted and email sent', accessCode: newCode });
+    } catch (error) {
+      console.error('Grant access request error:', error);
+      res.status(500).json({ success: false, error: 'Failed to grant access' });
+    }
+  }
+
   // Delete proposal
   async deleteProposal(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
 
-      const proposal = await db.proposal.findFirst({
+      const existingProposal = await db.proposal.findFirst({
         where: {
           id,
           organizationId: req.user!.organizationId,
         }
       });
 
-      if (!proposal) {
+      if (!existingProposal) {
         res.status(404).json({
           success: false,
           error: 'Proposal not found'
@@ -264,9 +355,21 @@ export class ProposalController {
         return;
       }
 
-      await db.proposal.delete({
-        where: { id }
-      });
+      // Delete related records first to avoid foreign key constraints
+      await db.$transaction([
+        // Delete activities
+        db.activity.deleteMany({
+          where: { proposalId: id }
+        }),
+        // Delete comments
+        db.comment.deleteMany({
+          where: { proposalId: id }
+        }),
+        // Delete the proposal
+        db.proposal.delete({
+          where: { id }
+        })
+      ]);
 
       res.json({
         success: true,
@@ -406,9 +509,10 @@ export class ProposalController {
       await db.activity.create({
         data: {
           type: 'CREATED',
-          userId: req.user!.userId,
-          proposalId: proposal.id,
-          details: JSON.stringify({ generatedWithAI: true })
+          user: { connect: { id: req.user!.userId } },
+          proposal: { connect: { id: proposal.id } },
+          details: JSON.stringify({ generatedWithAI: true }),
+          message: 'Proposal generated'
         }
       });
 
@@ -468,8 +572,9 @@ export class ProposalController {
       await db.activity.create({
         data: {
           type: 'PUBLISHED',
-          userId: req.user!.userId,
-          proposalId: id,
+          user: { connect: { id: req.user!.userId } },
+          proposal: { connect: { id } },
+          message: 'Proposal published'
         }
       });
 
@@ -638,7 +743,7 @@ export class ProposalController {
         clientEmail: proposal.clientName ? `${proposal.clientName.toLowerCase().replace(/\s+/g, '.')}@example.com` : undefined
       } as any);
 
-      // Send email
+      // Send email with tracking
       const emailResult = await emailService.sendProposalEmail(
         {
           ...proposal,
@@ -656,29 +761,64 @@ export class ProposalController {
         return;
       }
 
-      // Log the activity
-      await db.activity.create({
-        data: {
-          type: 'EMAIL_SENT',
-          userId: userId,
-          proposalId: proposalId,
-          details: `Proposal sent to ${recipientEmail}`
-        }
-      });
+      // Get existing metadata to preserve access codes
+      let existingMetadata = {};
+      try {
+        existingMetadata = proposal.metadata ? JSON.parse(proposal.metadata) : {};
+      } catch (error) {
+        existingMetadata = {};
+      }
 
-      // Update proposal status to sent
+      // Store all access codes in metadata
+      const accessCodes = existingMetadata.accessCodes || [];
+      accessCodes.push(emailResult.accessCode);
+
+      // Update proposal with tracking information
       await db.proposal.update({
         where: { id: proposalId },
         data: { 
           status: 'SENT',
+          emailSentAt: new Date(),
+          emailRecipient: recipientEmail,
+          emailMessageId: emailResult.messageId,
+          emailTrackingId: emailResult.trackingId, // Store the actual tracking ID for email tracking
+          metadata: JSON.stringify({
+            ...existingMetadata,
+            accessCodes: accessCodes,
+            lastEmailSent: {
+              accessCode: emailResult.accessCode,
+              trackingId: emailResult.trackingId,
+              sentAt: new Date().toISOString()
+            }
+          }),
           updatedAt: new Date()
+        }
+      });
+
+      // Log the activity
+      await db.activity.create({
+        data: {
+          type: 'EMAIL_SENT',
+          user: { connect: { id: userId } },
+          proposal: { connect: { id: proposalId } },
+          details: JSON.stringify({
+            action: 'email_sent',
+            recipientEmail,
+            messageId: emailResult.messageId,
+            trackingId: emailResult.trackingId,
+            accessCode: emailResult.accessCode,
+            sentAt: new Date().toISOString()
+          }),
+          message: 'Proposal email sent'
         }
       });
 
       res.json({
         success: true,
         message: 'Proposal sent successfully',
-        messageId: emailResult.messageId
+        messageId: emailResult.messageId,
+        trackingId: emailResult.trackingId,
+        accessCode: emailResult.accessCode
       });
 
     } catch (error) {

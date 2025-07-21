@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken } from '../utils/auth';
+import { authenticateToken } from '../middleware/auth';
 import { OrganizationController } from '../controllers/organizationController';
 
 const router = express.Router();

@@ -90,7 +90,7 @@ OPENAI_API_KEY="your-openai-api-key"
 JWT_SECRET="your-super-secret-jwt-key"
 
 # Server
-PORT=3001
+PORT=3000
 CORS_ORIGIN=http://localhost:3000
 ```
 
@@ -112,7 +112,7 @@ npx prisma db seed
 npm run dev
 
 # Or start separately:
-npm run dev:server  # Backend on port 3001
+npm run dev:server  # Backend on port 3000
 npm run dev:client  # Frontend on port 3000
 ```
 

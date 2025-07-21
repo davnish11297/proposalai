@@ -16,7 +16,7 @@ export default function Home() {
           </div>
           <nav className="hidden md:flex items-center gap-8 text-base font-semibold">
             <a href="#features" className="text-gray-700 hover:text-blue-700 transition">Features</a>
-            <a href="#" className="text-gray-700 hover:text-blue-700 transition">Pricing</a>
+            <button className="text-gray-700 hover:text-blue-700 transition">Pricing</button>
             <Link to="/login" className="text-gray-700 hover:text-blue-700 transition">Login</Link>
             <Link to="/register" className="ml-2 px-6 py-2 rounded-lg bg-blue-600 text-white font-bold shadow hover:bg-blue-700 transition">Get Started</Link>
           </nav>
