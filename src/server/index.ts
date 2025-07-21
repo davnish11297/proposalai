@@ -102,7 +102,8 @@ const limiter = rateLimit({
     if (process.env.NODE_ENV !== 'production') {
       return req.path === '/health' || req.path.startsWith('/api/public/') || req.path.startsWith('/api/auth/');
     }
-    return false;
+    // In production, only skip health checks and public routes
+    return req.path === '/health' || req.path.startsWith('/api/public/');
   }
 });
 
@@ -123,7 +124,20 @@ const notificationLimiter = rateLimit({
   }
 });
 
-app.use('/api/', limiter);
+// Apply rate limiting to all routes EXCEPT auth routes
+// Skip entirely if DISABLE_RATE_LIMITING_IN_DEV is set to true in development
+if (process.env.DISABLE_RATE_LIMITING_IN_DEV === 'true' && process.env.NODE_ENV !== 'production') {
+  console.log('⚠️  Rate limiting disabled in development mode');
+} else {
+  app.use('/api/', (req, res, next) => {
+    // Skip rate limiting for auth routes
+    if (req.path.startsWith('/auth/')) {
+      return next();
+    }
+    return limiter(req, res, next);
+  });
+}
+
 app.use('/api/notifications', notificationLimiter);
 
 // Compression

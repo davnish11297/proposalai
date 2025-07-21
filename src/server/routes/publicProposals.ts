@@ -3,6 +3,7 @@ import { prisma } from '../utils/database';
 import { emailService } from '../services/emailService';
 import { generateToken } from '../utils/auth';
 import { notificationController } from '../controllers/notificationController';
+import { ObjectId } from "mongodb";
 
 const router = express.Router();
 
@@ -41,36 +42,16 @@ async function verifyAccessCode(proposalId: string, accessCode: string): Promise
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    if (!ObjectId.isValid(id)) {
+      return res.status(404).json({ success: false, error: "Invalid proposal ID" });
+    }
     const { accessCode } = req.query;
 
     // Find the proposal
     const proposal = await prisma.proposal.findUnique({
       where: { id },
       include: {
-        author: {
-          select: {
-            name: true,
-            email: true
-          }
-        },
-        organization: {
-          select: {
-            name: true,
-            logo: true,
-            website: true
-          }
-        },
-        comments: {
-          include: {
-            author: {
-              select: {
-                name: true,
-                email: true
-              }
-            }
-          },
-          orderBy: { createdAt: 'desc' }
-        }
+        author: true
       }
     });
 
@@ -193,6 +174,9 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/comments', async (req, res) => {
   try {
     const { id } = req.params;
+    if (!ObjectId.isValid(id)) {
+      return res.status(404).json({ success: false, error: "Invalid proposal ID" });
+    }
     const { accessCode } = req.query;
 
     if (!accessCode) {
@@ -255,6 +239,9 @@ router.get('/:id/comments', async (req, res) => {
 router.post('/:id/comments', async (req, res) => {
   try {
     const { id } = req.params;
+    if (!ObjectId.isValid(id)) {
+      return res.status(404).json({ success: false, error: "Invalid proposal ID" });
+    }
     const { accessCode, content, authorName, authorEmail } = req.body;
 
     if (!accessCode || !content || !authorName || !authorEmail) {
@@ -394,11 +381,17 @@ router.post('/:id/comments', async (req, res) => {
 router.post('/:id/feedback', async (req, res) => {
   try {
     const { id } = req.params;
+    if (!ObjectId.isValid(id)) {
+      return res.status(404).json({ success: false, error: "Invalid proposal ID" });
+    }
     const { accessCode, action, comment } = req.body;
 
     // Find the proposal
     const proposal = await prisma.proposal.findUnique({
-      where: { id }
+      where: { id },
+      include: {
+        author: true
+      }
     });
 
     if (!proposal) {
@@ -438,15 +431,17 @@ router.post('/:id/feedback', async (req, res) => {
 
     // Send notification to proposal owner about approval/rejection
     try {
-      await emailService.sendOwnerNotificationEmail({
-        to: proposal.author.email,
-        proposalTitle: proposal.title,
-        proposalId: proposal.id,
-        type: action === 'approve' ? 'approved' : 'rejected',
-        clientName: proposal.clientName,
-        clientEmail: proposal.emailRecipient,
-        feedbackComment: comment
-      });
+      if (proposal.author && proposal.author.email) {
+        await emailService.sendOwnerNotificationEmail({
+          to: proposal.author.email,
+          proposalTitle: proposal.title,
+          proposalId: proposal.id,
+          type: action === 'approve' ? 'approved' : 'rejected',
+          clientName: proposal.clientName,
+          clientEmail: proposal.emailRecipient,
+          feedbackComment: comment
+        });
+      }
 
       // Create in-app notification
       await notificationController.createNotification({
@@ -486,6 +481,9 @@ router.post('/:id/feedback', async (req, res) => {
 router.post('/:id/request-access', async (req, res) => {
   try {
     const { id } = req.params;
+    if (!ObjectId.isValid(id)) {
+      return res.status(404).json({ success: false, error: "Invalid proposal ID" });
+    }
     const { name, email, company, reason } = req.body;
 
     if (!name || !email) {

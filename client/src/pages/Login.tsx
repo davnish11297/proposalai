@@ -44,7 +44,19 @@ export default function Login() {
       navigate('/dashboard');
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.message || 'Login failed');
+      
+      // Handle specific error types
+      if (err.response?.status === 429) {
+        setError('Too many login attempts. Please wait a few minutes and try again.');
+      } else if (err.response?.status === 401) {
+        setError('Invalid email or password. Please check your credentials.');
+      } else if (err.message?.includes('Too many requests')) {
+        setError('Too many requests from this IP. Please wait a few minutes and try again.');
+      } else if (err.response?.status >= 500) {
+        setError('Server error. Please try again in a few moments.');
+      } else {
+        setError(err.message || 'Login failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -112,7 +124,23 @@ export default function Login() {
               />
             </div>
           </div>
-          {error && <div className="text-danger-600 text-sm mb-2">{error}</div>}
+          {error && (
+            <div className="text-danger-600 text-sm mb-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <svg className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <div>
+                  <div className="font-medium">{error}</div>
+                  {error.includes('Too many requests') && (
+                    <div className="text-xs text-red-600 mt-1">
+                      💡 Try refreshing the page or waiting a few minutes before attempting again.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
           <button
             type="submit"
             className="btn btn-primary w-full mt-2 flex items-center justify-center"

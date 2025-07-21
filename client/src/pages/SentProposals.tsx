@@ -50,7 +50,10 @@ export default function SentProposals() {
     try {
       setLoading(true);
       const response = await proposalsAPI.getAll();
-      const sentProposals = response.data.data.filter((p: any) => p.status === 'SENT');
+      const sentProposals = response.data.data.filter((p: any) => {
+        const status = (p.status || '').toUpperCase();
+        return status === 'SENT' || status === 'SENT_TO_CLIENT';
+      });
       setSent(sentProposals);
       await fetchUnreadCounts(sentProposals);
     } catch (err) {

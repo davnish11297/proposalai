@@ -17,14 +17,6 @@ export class NotificationController {
           orderBy: { createdAt: 'desc' },
           skip,
           take: Number(limit),
-          include: {
-            proposal: {
-              select: {
-                id: true,
-                title: true,
-              }
-            }
-          }
         }),
         db.notification.count({
           where: {
@@ -58,7 +50,7 @@ export class NotificationController {
       const unreadCount = await db.notification.count({
         where: {
           userId: req.user!.userId,
-          isRead: false,
+          read: false,
         }
       });
 
@@ -97,7 +89,7 @@ export class NotificationController {
 
       await db.notification.update({
         where: { id },
-        data: { isRead: true }
+        data: { read: true }
       });
 
       res.json({
@@ -119,9 +111,9 @@ export class NotificationController {
       await db.notification.updateMany({
         where: {
           userId: req.user!.userId,
-          isRead: false,
+          read: false,
         },
-        data: { isRead: true }
+        data: { read: true }
       });
 
       res.json({
@@ -164,14 +156,6 @@ export class NotificationController {
           proposalId,
         },
         orderBy: { createdAt: 'desc' },
-        include: {
-          proposal: {
-            select: {
-              id: true,
-              title: true,
-            }
-          }
-        }
       });
 
       res.json({
@@ -205,7 +189,7 @@ export class NotificationController {
           message: data.message,
           proposalId: data.proposalId,
           metadata: data.metadata ? JSON.stringify(data.metadata) : null,
-          isRead: false,
+          read: false,
         }
       });
     } catch (error) {

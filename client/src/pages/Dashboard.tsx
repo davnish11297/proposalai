@@ -96,21 +96,6 @@ const Dashboard: React.FC = () => {
             </svg>,
             <svg key="icon5" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>,
-            <svg key="icon6" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>,
-            <svg key="icon7" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>,
-            <svg key="icon8" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-            </svg>,
-            <svg key="icon9" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>,
-            <svg key="icon10" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m-9 0h10m-10 0a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V6a2 2 0 00-2-2" />
             </svg>
           ];
           
@@ -222,21 +207,6 @@ const Dashboard: React.FC = () => {
             </svg>,
             <svg key="icon5" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>,
-            <svg key="icon6" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>,
-            <svg key="icon7" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>,
-            <svg key="icon8" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-            </svg>,
-            <svg key="icon9" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>,
-            <svg key="icon10" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m-9 0h10m-10 0a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V6a2 2 0 00-2-2" />
             </svg>
           ];
           
@@ -371,11 +341,18 @@ const Dashboard: React.FC = () => {
 
   // Handle suggestion bubble click (select/unselect up to 5)
   const handleSuggestionClick = (suggestion: string) => {
-    setSelectedSuggestions(prev => 
-      prev.includes(suggestion) 
-        ? prev.filter(s => s !== suggestion)
-        : [...prev, suggestion]
-    );
+    // If it's a predefined suggestion, insert the long form into the input
+    if (SUGGESTION_LONG_FORM[suggestion]) {
+      setProposalText(SUGGESTION_LONG_FORM[suggestion]);
+      setSelectedSuggestions([suggestion]);
+    } else {
+      // fallback to old behavior for refinement suggestions
+      setSelectedSuggestions(prev => 
+        prev.includes(suggestion) 
+          ? prev.filter(s => s !== suggestion)
+          : [...prev, suggestion]
+      );
+    }
   };
 
   const handleGenerateWithAI = async () => {
@@ -546,26 +523,111 @@ const Dashboard: React.FC = () => {
     window.location.href = '/login';
   };
 
-  // After proposal is generated, generate suggestions
+  // 1. Add the hardcoded generic suggestions array at the top of the component (after useState declarations)
+  const GENERIC_SUGGESTIONS = [
+    "Add Executive Summary",
+    "Include Budget Details",
+    "Add Timeline Section",
+    "Highlight Key Benefits",
+    "Clarify Project Scope",
+    "Define Success Metrics",
+    "Showcase Team Expertise",
+    "Provide Case Studies",
+    "Outline Deliverables",
+    "Specify Payment Terms",
+    "Include Visual Aids",
+    "Summarize Next Steps",
+    "Address Client Needs",
+    "Demonstrate ROI",
+    "List Project Milestones",
+    "Add Contact Information",
+    "Describe Methodology",
+    "Include Testimonials",
+    "Present Unique Value",
+    "Explain Risk Mitigation",
+    "Offer Flexible Options",
+    "Detail Project Phases",
+    "Show Compliance Info",
+    "Add Legal Disclaimers",
+    "Provide Support Plan",
+    "Include Appendices",
+    "Summarize Budget Assumptions",
+    "Highlight Innovation",
+    "Describe Communication Plan",
+    "List Required Resources"
+  ];
+
+  // Add this mapping after GENERIC_SUGGESTIONS
+  const SUGGESTION_LONG_FORM: Record<string, string> = {
+    "Add Executive Summary": "Please include a concise executive summary that outlines the main objectives, value proposition, and key points of the proposal.",
+    "Include Budget Details": "Provide a detailed budget breakdown, including all costs, fees, and payment terms associated with the project.",
+    "Add Timeline Section": "Add a clear timeline section that outlines project phases, milestones, and expected completion dates.",
+    "Highlight Key Benefits": "Emphasize the key benefits and unique selling points that make this proposal stand out for the client.",
+    "Clarify Project Scope": "Clearly define the project scope, deliverables, and boundaries to set proper expectations.",
+    "Define Success Metrics": "Specify measurable success metrics and KPIs to track the effectiveness of the project.",
+    "Showcase Team Expertise": "Highlight the relevant experience and expertise of the team members who will work on this project.",
+    "Provide Case Studies": "Include relevant case studies or examples of similar successful projects completed in the past.",
+    "Outline Deliverables": "List all deliverables that will be provided to the client upon project completion.",
+    "Specify Payment Terms": "Detail the payment terms, schedule, and accepted payment methods for the project.",
+    "Include Visual Aids": "Incorporate charts, diagrams, or images to visually support and clarify proposal content.",
+    "Summarize Next Steps": "Add a section that summarizes the next steps and actions required from both parties.",
+    "Address Client Needs": "Demonstrate a clear understanding of the client's needs and how the proposal addresses them.",
+    "Demonstrate ROI": "Explain the expected return on investment (ROI) and value the client will receive.",
+    "List Project Milestones": "Break down the project into key milestones with associated deliverables and deadlines.",
+    "Add Contact Information": "Provide up-to-date contact information for the main point of contact for this proposal.",
+    "Describe Methodology": "Describe the methodology or approach that will be used to achieve the project goals.",
+    "Include Testimonials": "Add testimonials or endorsements from previous clients to build trust and credibility.",
+    "Present Unique Value": "Clearly articulate the unique value proposition that differentiates this proposal from competitors.",
+    "Explain Risk Mitigation": "Identify potential risks and describe strategies for mitigating them throughout the project.",
+    "Offer Flexible Options": "Present flexible options or packages to accommodate different client needs or budgets.",
+    "Detail Project Phases": "Break the project into distinct phases and describe the objectives and deliverables for each.",
+    "Show Compliance Info": "Include information about compliance with relevant standards, regulations, or certifications.",
+    "Add Legal Disclaimers": "Add any necessary legal disclaimers or terms and conditions relevant to the proposal.",
+    "Provide Support Plan": "Describe the support and maintenance plan offered after project delivery.",
+    "Include Appendices": "Attach appendices with supplementary information, data, or references as needed.",
+    "Summarize Budget Assumptions": "Summarize any assumptions made in the budget and clarify what is included or excluded.",
+    "Highlight Innovation": "Highlight any innovative aspects or creative solutions proposed for the project.",
+    "Describe Communication Plan": "Describe the communication plan, including frequency and methods of updates to the client.",
+    "List Required Resources": "List any resources, materials, or information required from the client to begin the project."
+  };
+
+  // 2. Replace the useEffect that initializes suggestions with logic to randomize and set 5 unique suggestions from the array
   useEffect(() => {
-    // Initialize suggestions on component load
-    const initializeSuggestions = async () => {
-      try {
-        console.log('Initializing suggestions...');
-        setLoadingSuggestions(true);
-        
-        await generateSuggestionsFromDrafts(); // Call the new draft-based generation function
-        
-        console.log('Suggestions initialized successfully');
-      } catch (error) {
-        console.error('Error initializing suggestions:', error);
-      } finally {
-        setLoadingSuggestions(false);
-      }
-    };
-    
-    initializeSuggestions();
-  }, [generateSuggestionsFromDrafts]);
+    setLoadingSuggestions(true);
+    // Shuffle and pick 5 unique suggestions
+    const shuffled = GENERIC_SUGGESTIONS
+      .map(value => ({ value, sort: Math.random() }))
+      .sort((a, b) => a.sort - b.sort)
+      .map(({ value }) => value)
+      .slice(0, 5);
+    // Use the same icon/color logic as before
+    const colors = ['blue', 'green', 'purple', 'orange', 'red', 'yellow'];
+    const icons = [
+      <svg key="icon1" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>,
+      <svg key="icon2" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+      </svg>,
+      <svg key="icon3" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>,
+      <svg key="icon4" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+      </svg>,
+      <svg key="icon5" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+    ];
+    setPredefinedSuggestions(
+      shuffled.map((text, i) => ({
+        text,
+        icon: icons[i % icons.length],
+        color: colors[i % colors.length] as 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'yellow'
+      }))
+    );
+    setLoadingSuggestions(false);
+  }, []);
 
   // REMOVED: Auto-generation useEffect that was causing unwanted generation when typing
   // Now generation only happens when user explicitly clicks Generate/Refine button
@@ -696,9 +758,9 @@ const Dashboard: React.FC = () => {
                         return (
                           <button
                             key={`initial-${i}-${suggestion.text}`}
-                            onClick={() => !isDisabled && handleSuggestionClick(suggestion.text)}
-                            disabled={isDisabled}
-                            className={`${baseClasses} ${isDisabled ? disabledClasses : selectedClasses}`}
+                            onClick={() => !isDisabled && !generating && handleSuggestionClick(suggestion.text)}
+                            disabled={generating || isDisabled}
+                            className={`${baseClasses} ${generating || isDisabled ? disabledClasses : selectedClasses}`}
                           >
                             {suggestion.text}
                           </button>
@@ -736,9 +798,9 @@ const Dashboard: React.FC = () => {
                           return (
                             <button
                               key={`refinement-${i}-${suggestion.text}`}
-                              onClick={() => !isDisabled && handleSuggestionClick(suggestion.text)}
-                              disabled={isDisabled}
-                              className={`${baseClasses} ${isDisabled ? disabledClasses : selectedClasses}`}
+                              onClick={() => !isDisabled && !generating && handleSuggestionClick(suggestion.text)}
+                              disabled={generating || isDisabled}
+                              className={`${baseClasses} ${generating || isDisabled ? disabledClasses : selectedClasses}`}
                             >
                               {suggestion.text}
                             </button>
@@ -855,9 +917,9 @@ const Dashboard: React.FC = () => {
                   return (
                     <button
                       key={`refinement-${i}-${s.text}`}
-                      onClick={() => !isDisabled && handleSuggestionClick(s.text)}
-                      disabled={isDisabled}
-                      className={`${baseClasses} ${isDisabled ? disabledClasses : selectedClasses}`}
+                      onClick={() => !isDisabled && !generating && handleSuggestionClick(s.text)}
+                      disabled={generating || isDisabled}
+                      className={`${baseClasses} ${generating || isDisabled ? disabledClasses : selectedClasses}`}
                     >
                       {s.text}
                     </button>

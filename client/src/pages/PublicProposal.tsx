@@ -9,8 +9,7 @@ import {
   DocumentTextIcon,
   UserIcon,
   CalendarIcon,
-  BuildingOfficeIcon,
-  EnvelopeIcon
+  BuildingOfficeIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { publicAPI } from '../services/api';
@@ -35,6 +34,141 @@ interface Proposal {
   emailRecipient?: string;
   status?: string;
 }
+
+// Reusable Request Access Form Component
+const RequestAccessForm: React.FC<{
+  onSubmit: (e: React.FormEvent) => Promise<void>;
+  requestAccessData: {
+    name: string;
+    email: string;
+    company: string;
+    reason: string;
+  };
+  setRequestAccessData: React.Dispatch<React.SetStateAction<{
+    name: string;
+    email: string;
+    company: string;
+    reason: string;
+  }>>;
+  submittingRequest: boolean;
+  onCancel?: () => void;
+  isFullPage?: boolean;
+}> = ({ onSubmit, requestAccessData, setRequestAccessData, submittingRequest, onCancel, isFullPage = false }) => {
+  const formContent = (
+    <div className={`bg-white rounded-lg p-6 ${isFullPage ? 'max-w-md w-full' : 'max-w-md mx-auto'}`}>
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">Request Access</h3>
+      <p className="text-sm text-gray-600 mb-4">
+        Need to review this proposal again? Request access from the proposal owner.
+      </p>
+      
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Your Name *
+          </label>
+          <input
+            type="text"
+            required
+            value={requestAccessData.name}
+            onChange={(e) => setRequestAccessData({...requestAccessData, name: e.target.value})}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter your full name"
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Email Address *
+          </label>
+          <input
+            type="email"
+            required
+            value={requestAccessData.email}
+            onChange={(e) => setRequestAccessData({...requestAccessData, email: e.target.value})}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter your email address"
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Company
+          </label>
+          <input
+            type="text"
+            value={requestAccessData.company}
+            onChange={(e) => setRequestAccessData({...requestAccessData, company: e.target.value})}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter your company name"
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Reason for Access
+          </label>
+          <textarea
+            value={requestAccessData.reason}
+            onChange={(e) => setRequestAccessData({...requestAccessData, reason: e.target.value})}
+            rows={3}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Why do you need access to this proposal?"
+          />
+        </div>
+        
+        <div className="flex space-x-4">
+          <button
+            type="submit"
+            disabled={submittingRequest}
+            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {submittingRequest ? (
+              <span className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Sending Request...
+              </span>
+            ) : (
+              'Request Access'
+            )}
+          </button>
+          
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
+      </form>
+      
+      <p className="text-xs text-gray-500 mt-4 text-center">
+        The proposal owner will review your request and respond via email.
+      </p>
+    </div>
+  );
+
+  if (isFullPage) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
+          <div className="text-center mb-8">
+            <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+              <BuildingOfficeIcon className="h-8 w-8 text-blue-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Request Access</h1>
+            <p className="text-gray-600">Fill out the form below to request access to this proposal.</p>
+          </div>
+          {formContent}
+        </div>
+      </div>
+    );
+  }
+
+  return formContent;
+};
 
 const PublicProposal: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -316,108 +450,14 @@ const PublicProposal: React.FC = () => {
 
   if (showRequestAccess) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
-          <div className="text-center mb-8">
-            <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-              <EnvelopeIcon className="h-8 w-8 text-blue-600" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Request Access</h1>
-            <p className="text-gray-600">Fill out the form below to request access to this proposal.</p>
-          </div>
-
-          <form onSubmit={handleRequestAccess} className="space-y-6">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                Full Name *
-              </label>
-              <input
-                type="text"
-                id="name"
-                value={requestAccessData.name}
-                onChange={(e) => setRequestAccessData({...requestAccessData, name: e.target.value})}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter your full name"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address *
-              </label>
-              <input
-                type="email"
-                id="email"
-                value={requestAccessData.email}
-                onChange={(e) => setRequestAccessData({...requestAccessData, email: e.target.value})}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter your email address"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-2">
-                Company
-              </label>
-              <input
-                type="text"
-                id="company"
-                value={requestAccessData.company}
-                onChange={(e) => setRequestAccessData({...requestAccessData, company: e.target.value})}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter your company name"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="reason" className="block text-sm font-medium text-gray-700 mb-2">
-                Reason for Access
-              </label>
-              <textarea
-                id="reason"
-                value={requestAccessData.reason}
-                onChange={(e) => setRequestAccessData({...requestAccessData, reason: e.target.value})}
-                rows={3}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Please explain why you need access to this proposal..."
-              />
-            </div>
-
-            <div className="flex space-x-4">
-              <button
-                type="submit"
-                disabled={submittingRequest}
-                className="flex-1 bg-gradient-to-r from-blue-600 to-blue-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {submittingRequest ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    Sending...
-                  </div>
-                ) : (
-                  'Send Request'
-                )}
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => setShowRequestAccess(false)}
-                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-500">
-              The proposal owner will review your request and respond via email.
-            </p>
-          </div>
-        </div>
-      </div>
+      <RequestAccessForm
+        onSubmit={handleRequestAccess}
+        requestAccessData={requestAccessData}
+        setRequestAccessData={setRequestAccessData}
+        submittingRequest={submittingRequest}
+        onCancel={() => setShowRequestAccess(false)}
+        isFullPage={true}
+      />
     );
   }
 
@@ -566,10 +606,15 @@ const PublicProposal: React.FC = () => {
             <div className="text-center">
               <CheckCircleIcon className="h-16 w-16 text-green-600 mx-auto mb-4" />
               <h2 className="text-2xl font-bold text-green-900 mb-2">Proposal Approved!</h2>
-              <p className="text-green-700 mb-4">Thank you for approving this proposal. The team will be in touch soon to discuss next steps.</p>
-              <div className="bg-white rounded-lg p-4 inline-block">
-                <p className="text-sm text-gray-600">Approved on {new Date().toLocaleDateString()}</p>
-              </div>
+              <p className="text-green-700 mb-6">Thank you for approving this proposal. The team will be in touch soon to discuss next steps.</p>
+              
+              {/* Request Access Form for Approved Proposals */}
+              <RequestAccessForm
+                onSubmit={handleRequestAccess}
+                requestAccessData={requestAccessData}
+                setRequestAccessData={setRequestAccessData}
+                submittingRequest={submittingRequest}
+              />
             </div>
           </div>
         ) : proposal.status === 'REJECTED' ? (
@@ -577,21 +622,15 @@ const PublicProposal: React.FC = () => {
             <div className="text-center">
               <XCircleIcon className="h-16 w-16 text-red-600 mx-auto mb-4" />
               <h2 className="text-2xl font-bold text-red-900 mb-2">Proposal Rejected</h2>
-              <p className="text-red-700 mb-4">Thank you for your feedback. We appreciate you taking the time to review this proposal.</p>
-              <div className="bg-white rounded-lg p-4 inline-block">
-                <p className="text-sm text-gray-600">Rejected on {new Date().toLocaleDateString()}</p>
-              </div>
-            </div>
-          </div>
-        ) : proposal.status === 'REVIEWED' ? (
-          <div className="bg-gray-50 rounded-2xl shadow-lg p-8 mb-8 border border-gray-200">
-            <div className="text-center">
-              <DocumentTextIcon className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Proposal Already Reviewed</h2>
-              <p className="text-gray-700 mb-4">This proposal has already been reviewed and is no longer accessible for feedback.</p>
-              <div className="bg-white rounded-lg p-4 inline-block">
-                <p className="text-sm text-gray-600">Access expired</p>
-              </div>
+              <p className="text-red-700 mb-6">Thank you for your feedback. We appreciate you taking the time to review this proposal.</p>
+              
+              {/* Request Access Form for Rejected Proposals */}
+              <RequestAccessForm
+                onSubmit={handleRequestAccess}
+                requestAccessData={requestAccessData}
+                setRequestAccessData={setRequestAccessData}
+                submittingRequest={submittingRequest}
+              />
             </div>
           </div>
         ) : (

@@ -127,6 +127,8 @@ export const publicAPI = {
     api.get(`/public/proposals/${id}${accessCode ? `?accessCode=${accessCode}` : ''}`),
   submitFeedback: (id: string, data: { accessCode: string; action: string; comment?: string }) =>
     api.post(`/public/proposals/${id}/feedback`, data),
+  requestAccess: (id: string, data: { name: string; email: string; company?: string; reason?: string }) =>
+    api.post(`/public/proposals/${id}/request-access`, data),
 }; 
 
 export const clientsAPI = {
@@ -185,6 +187,22 @@ export const notificationAPI = {
   getByProposal: (proposalId: string) => api.get(`/notifications/proposal/${proposalId}`),
 };
 
+// OpenRouter API types
+interface OpenRouterMessage {
+  role: string;
+  content: string;
+}
+
+interface OpenRouterChoice {
+  message: {
+    content: string;
+  };
+}
+
+interface OpenRouterResponse {
+  choices: OpenRouterChoice[];
+}
+
 /**
  * Call OpenRouter's DeepSeek model (or any OpenRouter model) using OpenAI-compatible API.
  * Usage:
@@ -192,7 +210,11 @@ export const notificationAPI = {
  *     { role: 'user', content: 'Hello, who are you?' }
  *   ]);
  */
-export async function getOpenRouterChatCompletion(messages: Array<{ role: string; content: string }>, model = "deepseek/deepseek-chat") {
+export async function getOpenRouterChatCompletion(
+  messages: OpenRouterMessage[], 
+  model = "deepseek/deepseek-chat", 
+  retryCount = 0
+): Promise<OpenRouterResponse> {
   const API_BASE_URL = "https://openrouter.ai/api/v1";
   // It's best to store your API key in an environment variable for security
   const API_KEY = process.env.REACT_APP_OPENROUTER_API_KEY || "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";
@@ -208,35 +230,62 @@ export async function getOpenRouterChatCompletion(messages: Array<{ role: string
     model,
     messageCount: messages.length,
     firstMessage: messages[0]?.content?.substring(0, 50) + '...',
-    maxTokens: requestBody.max_tokens
+    maxTokens: requestBody.max_tokens,
+    retryCount
   });
 
-  const response = await fetch(`${API_BASE_URL}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${API_KEY}`,
-      "HTTP-Referer": "http://localhost:3000", // Required by OpenRouter
-      "X-Title": "ProposalAI", // Optional but recommended
-    },
-    body: JSON.stringify(requestBody),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('🚨 OpenRouter API Error Details:', {
-      status: response.status,
-      statusText: response.statusText,
-      errorText
+  try {
+    const response = await fetch(`${API_BASE_URL}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${API_KEY}`,
+        "HTTP-Referer": "http://localhost:3000", // Required by OpenRouter
+        "X-Title": "ProposalAI", // Optional but recommended
+      },
+      body: JSON.stringify(requestBody),
     });
-    
-    // Handle specific credit limit error
-    if (response.status === 402) {
-      throw new Error('OpenRouter credits exhausted. Please visit https://openrouter.ai/settings/credits to add more credits or upgrade your account.');
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('🚨 OpenRouter API Error Details:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText,
+        retryCount
+      });
+      
+      // Handle specific credit limit error
+      if (response.status === 402) {
+        throw new Error('OpenRouter credits exhausted. Please visit https://openrouter.ai/settings/credits to add more credits or upgrade your account.');
+      }
+      
+      // Handle rate limiting with exponential backoff
+      if (response.status === 429 && retryCount < 3) {
+        const backoffTime = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+        console.log(`🔄 Rate limited, retrying in ${backoffTime}ms...`);
+        await new Promise(resolve => setTimeout(resolve, backoffTime));
+        return getOpenRouterChatCompletion(messages, model, retryCount + 1);
+      }
+      
+      // Handle other rate limiting errors
+      if (response.status === 429) {
+        throw new Error('OpenRouter API rate limit exceeded. Please wait a few minutes and try again.');
+      }
+      
+      throw new Error(`OpenRouter API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
     
-    throw new Error(`OpenRouter API error: ${response.status} ${response.statusText} - ${errorText}`);
+    return response.json();
+  } catch (error: any) {
+    // Handle network errors with retry
+    if (error.name === 'TypeError' && retryCount < 2) {
+      const backoffTime = Math.pow(2, retryCount) * 1000;
+      console.log(`🔄 Network error, retrying in ${backoffTime}ms...`);
+      await new Promise(resolve => setTimeout(resolve, backoffTime));
+      return getOpenRouterChatCompletion(messages, model, retryCount + 1);
+    }
+    
+    throw error;
   }
-  
-  return response.json();
 }

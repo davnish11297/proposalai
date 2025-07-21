@@ -207,7 +207,10 @@ export class CommentController {
               }
             },
             orderBy: { createdAt: 'desc' },
-            take: 1
+            take: 1,
+            include: {
+              author: true
+            }
           }
         }
       });

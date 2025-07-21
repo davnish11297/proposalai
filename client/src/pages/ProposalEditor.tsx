@@ -4,7 +4,6 @@ import { toast } from 'react-hot-toast';
 import { proposalsAPI, getOpenRouterChatCompletion } from '../services/api';
 import ClientSelectionModal from '../components/ClientSelectionModal';
 import NotificationBell from '../components/NotificationBell';
-import ReactMarkdown from 'react-markdown';
 
 const ProposalEditor: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -12,7 +11,7 @@ const ProposalEditor: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [showClientModal, setShowClientModal] = useState(false);
-  const [selectedClientId, setSelectedClientId] = useState<string | undefined>();
+  const [selectedClientId, setSelectedClientId] = useState<string | undefined>(undefined);
   const [proposal, setProposal] = useState<any>({
     title: '',
     description: '',
@@ -24,7 +23,8 @@ const ProposalEditor: React.FC = () => {
       approach: '',
       budgetDetails: '',
       timeline: '',
-      budget: ''
+      budget: '',
+      fullProposal: '' // Added for unified editing
     },
     metadata: {
       industry: '',
@@ -32,10 +32,24 @@ const ProposalEditor: React.FC = () => {
       projectScope: ''
     }
   });
-  const [accessRequests, setAccessRequests] = useState<any[]>([]);
+  const [accessRequests, setAccessRequests] = useState<any[]>([
+    // Demo access request
+    {
+      id: 'demo-request-1',
+      name: 'John Smith',
+      email: 'john@clientcompany.com',
+      company: 'Client Company Inc.',
+      reason: 'Would like to review the proposal before final approval',
+      status: 'PENDING',
+      createdAt: new Date().toISOString()
+    }
+  ]);
   const [grantingRequestId, setGrantingRequestId] = useState<string | null>(null);
 
   const isNewProposal = !id;
+
+  // Debug log to verify access requests
+  console.log('🔍 Access requests state:', accessRequests);
 
   useEffect(() => {
     const fetchProposal = async () => {
@@ -60,6 +74,7 @@ const ProposalEditor: React.FC = () => {
         .then(({ data }) => setAccessRequests(data.data))
         .catch(() => setAccessRequests([]));
     }
+    // Keep demo request when there's no real proposal ID
   }, [id]);
 
   const handleGenerateWithAI = async () => {
@@ -265,16 +280,102 @@ const ProposalEditor: React.FC = () => {
   const handleGrantAccess = async (requestId: string) => {
     setGrantingRequestId(requestId);
     try {
-      await proposalsAPI.grantAccessRequest(id!, requestId);
-      toast.success('Access granted and email sent!');
-      // Refresh access requests
-      const { data } = await proposalsAPI.getAccessRequests(id!);
-      setAccessRequests(data.data);
+      // Handle demo request
+      if (requestId === 'demo-request-1') {
+        // Simulate API call delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Update the demo request status
+        setAccessRequests(prev => prev.map(req => 
+          req.id === requestId 
+            ? { ...req, status: 'GRANTED', accessCode: 'DEMO-12345' }
+            : req
+        ));
+        
+        toast.success('Access granted! Demo access code: DEMO-12345');
+      } else {
+        // Handle real requests
+        await proposalsAPI.grantAccessRequest(id!, requestId);
+        toast.success('Access granted and email sent!');
+        // Refresh access requests
+        const { data } = await proposalsAPI.getAccessRequests(id!);
+        setAccessRequests(data.data);
+      }
     } catch (error) {
       toast.error('Failed to grant access');
     } finally {
       setGrantingRequestId(null);
     }
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleRefineEntireProposal = async () => {
+    try {
+      setGenerating(true);
+      const messages = [
+        {
+          role: 'system',
+          content: `You are an expert proposal writer. Refine the entire proposal content. Make it more detailed, persuasive, and comprehensive.`,
+        },
+        {
+          role: 'user',
+          content: `Current Proposal Content:\n\n${proposal.content.fullProposal || getCombinedProposalContent()}`,
+        },
+      ];
+      const result = await getOpenRouterChatCompletion(messages);
+      const refinedContent = result.choices?.[0]?.message?.content || '';
+      setProposal({
+        ...proposal,
+        content: {
+          ...proposal.content,
+          fullProposal: refinedContent,
+        },
+      });
+      toast.success('Entire proposal refined successfully!');
+    } catch (error: any) {
+      console.error('❌ Refine entire proposal error:', error);
+      toast.error(error.message || 'Failed to refine entire proposal');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleFormatProposal = () => {
+    const content = proposal.content.fullProposal || getCombinedProposalContent();
+    let formattedContent = '';
+
+    // Split content into sections
+    const sections = content.split(/^(#+)\s*(.*)$/m);
+    let i = 0;
+    while (i < sections.length) {
+      const level = sections[i].match(/^#+/)?.[0].length || 0;
+      const title = sections[i + 1];
+      const text = sections[i + 2];
+
+      if (level === 1) {
+        formattedContent += `# ${title}\n\n${text}\n\n`;
+      } else if (level === 2) {
+        formattedContent += `## ${title}\n\n${text}\n\n`;
+      } else if (level === 3) {
+        formattedContent += `### ${title}\n\n${text}\n\n`;
+      } else {
+        formattedContent += `${text}\n\n`; // For paragraphs or other text
+      }
+      i += 3; // Move to the next section
+    }
+
+    setProposal({
+      ...proposal,
+      content: {
+        ...proposal.content,
+        fullProposal: formattedContent.trim(),
+      },
+    });
+    toast.success('Proposal content formatted!');
+  };
+
+  const getCombinedProposalContent = () => {
+    return `${proposal.content.executiveSummary || ''}\n\n# Approach\n\n${proposal.content.approach || ''}\n\n# Budget Details\n\n${proposal.content.budgetDetails || ''}\n\n# Timeline\n\n${proposal.content.timeline || ''}\n\n# Additional Sections\n\n${proposal.content.additionalSections || ''}`;
   };
 
   if (loading) {
@@ -513,9 +614,79 @@ const ProposalEditor: React.FC = () => {
         {/* Right Content Area */}
         <main className="flex-1 flex flex-col p-12 overflow-y-auto bg-gray-50">
           <div className="mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">AI Generated Content</h2>
-            <p className="text-gray-600">Review and customize your AI-generated proposal content</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Proposal Content</h2>
+            <p className="text-gray-600">Review, edit, and refine your proposal content</p>
           </div>
+          
+          {/* Access Requests Section */}
+          {(accessRequests.length > 0 || isNewProposal) && (
+            <div className="mb-8 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-xl font-bold mb-4 text-blue-700 flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+                Access Requests ({accessRequests.length > 0 ? accessRequests.length : 1})
+              </h3>
+              <div className="space-y-4">
+                {accessRequests.length > 0 ? (
+                  accessRequests.map((req) => (
+                    <div key={req.id} className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="font-semibold text-blue-900">{req.name} ({req.email})</div>
+                          <div className="text-sm text-gray-700">{req.company}</div>
+                          <div className="text-xs text-gray-500 mt-1">{req.reason}</div>
+                          <div className="text-xs text-gray-400 mt-1">Requested: {new Date(req.createdAt).toLocaleString()}</div>
+                          {req.status === 'GRANTED' && req.accessCode && (
+                            <div className="text-green-700 text-xs mt-1 font-medium">Access Code: {req.accessCode}</div>
+                          )}
+                        </div>
+                        <div className="ml-4">
+                          {req.status === 'PENDING' && (
+                            <button
+                              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-green-600 transition disabled:opacity-50 text-sm"
+                              disabled={grantingRequestId === req.id}
+                              onClick={() => handleGrantAccess(req.id)}
+                            >
+                              {grantingRequestId === req.id ? 'Granting...' : 'Grant Access'}
+                            </button>
+                          )}
+                          {req.status === 'GRANTED' && (
+                            <span className="text-green-600 font-semibold text-sm">✓ Granted</span>
+                          )}
+                          {req.status === 'DENIED' && (
+                            <span className="text-red-600 font-semibold text-sm">✗ Denied</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  // Fallback demo request when no real requests exist
+                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="font-semibold text-blue-900">John Smith (john@clientcompany.com)</div>
+                        <div className="text-sm text-gray-700">Client Company Inc.</div>
+                        <div className="text-xs text-gray-500 mt-1">Would like to review the proposal before final approval</div>
+                        <div className="text-xs text-gray-400 mt-1">Requested: {new Date().toLocaleString()}</div>
+                      </div>
+                      <div className="ml-4">
+                        <button
+                          className="px-4 py-2 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-green-600 transition disabled:opacity-50 text-sm"
+                          disabled={grantingRequestId === 'demo-request-1'}
+                          onClick={() => handleGrantAccess('demo-request-1')}
+                        >
+                          {grantingRequestId === 'demo-request-1' ? 'Granting...' : 'Grant Access'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="max-h-[700px] min-h-[300px] flex-1 overflow-y-auto pr-2">
               {generating ? (
                 <div className="flex flex-col items-center justify-center py-12">
@@ -548,119 +719,90 @@ const ProposalEditor: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              ) : !proposal.content.executiveSummary && !proposal.content.approach && !proposal.content.budgetDetails && !proposal.content.timeline ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <div className="relative mb-8">
-                    <div className="w-24 h-24 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mb-4 shadow-lg">
-                      <svg className="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
-                    </div>
-                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                    </div>
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-4">Ready to Generate</h3>
-                  <p className="text-gray-600 mb-6 text-lg max-w-md">Fill in the required fields and click "Generate AI Content" to create your professional proposal</p>
-                  
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 max-w-md">
-                    <div className="flex items-center gap-3 text-blue-800 mb-3">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span className="font-semibold">AI will generate:</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div className="flex items-center gap-2 text-blue-700">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        Executive Summary
-                      </div>
-                      <div className="flex items-center gap-2 text-blue-700">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        Approach
-                      </div>
-                      <div className="flex items-center gap-2 text-blue-700">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        Budget Details
-                      </div>
-                      <div className="flex items-center gap-2 text-blue-700">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        Timeline
-                      </div>
-                    </div>
-                  </div>
-                </div>
               ) : (
                 <div className="space-y-6">
-                  {/* Executive Summary */}
-                  {proposal.content.executiveSummary && (
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
-                      <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {/* Single Unified Proposal Editor */}
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                        <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
-                        Executive Summary
+                        Proposal Content Editor
                       </h3>
-                      <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed whitespace-pre-wrap">
-                        <ReactMarkdown>
-                          {proposal.content.executiveSummary}
-                        </ReactMarkdown>
+                      <div className="flex gap-3">
+                        <button 
+                          onClick={() => handleRefineEntireProposal()}
+                          className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                          </svg>
+                          Refine with AI
+                        </button>
+                        <button 
+                          onClick={() => handleFormatProposal()}
+                          className="px-4 py-2 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                          </svg>
+                          Format
+                        </button>
                       </div>
                     </div>
-                  )}
+                    
+                    <div className="mb-4">
+                      <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
+                        <span className="flex items-center gap-1">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Edit the entire proposal content below
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                          </svg>
+                          Use "Refine with AI" to improve the entire document
+                        </span>
+                      </div>
+                    </div>
 
-                  {/* Approach */}
-                  {proposal.content.approach && (
-                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border border-green-100">
-                      <h3 className="text-lg font-semibold text-green-900 mb-3 flex items-center gap-2">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
-                        Approach
-                      </h3>
-                      <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed whitespace-pre-wrap">
-                        <ReactMarkdown>
-                          {proposal.content.approach}
-                        </ReactMarkdown>
-                      </div>
-                    </div>
-                  )}
+                    <textarea
+                      value={proposal.content.fullProposal || getCombinedProposalContent()}
+                      onChange={(e) => setProposal({ 
+                        ...proposal, 
+                        content: { 
+                          ...proposal.content, 
+                          fullProposal: e.target.value 
+                        } 
+                      })}
+                      rows={25}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-all duration-200 bg-gray-50 font-mono text-sm leading-relaxed"
+                      placeholder="Enter your complete proposal content here...
 
-                  {/* Budget Details */}
-                  {proposal.content.budgetDetails && (
-                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-100">
-                      <h3 className="text-lg font-semibold text-purple-900 mb-3 flex items-center gap-2">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                        </svg>
-                        Budget Details
-                      </h3>
-                      <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed whitespace-pre-wrap">
-                        <ReactMarkdown>
-                          {proposal.content.budgetDetails}
-                        </ReactMarkdown>
-                      </div>
-                    </div>
-                  )}
+# Executive Summary
+[Your executive summary goes here]
 
-                  {/* Timeline */}
-                  {proposal.content.timeline && (
-                    <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-4 border border-yellow-100">
-                      <h3 className="text-lg font-semibold text-yellow-900 mb-3 flex items-center gap-2">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Timeline
-                      </h3>
-                      <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed whitespace-pre-wrap">
-                        <ReactMarkdown>
-                          {proposal.content.timeline}
-                        </ReactMarkdown>
-                      </div>
+# Approach
+[Your approach and methodology]
+
+# Budget Details
+[Detailed budget breakdown]
+
+# Timeline
+[Project timeline and milestones]
+
+# Additional Sections
+[Any other relevant sections]"
+                    />
+                    
+                    <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
+                      <span>Word count: {proposal.content.fullProposal?.split(/\s+/).length || 0} words</span>
+                      <span>Characters: {proposal.content.fullProposal?.length || 0}</span>
                     </div>
-                  )}
+                  </div>
 
                   {/* Success Message */}
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -670,7 +812,7 @@ const ProposalEditor: React.FC = () => {
                       </svg>
                       <span className="font-medium">Content Generated Successfully!</span>
                     </div>
-                    <p className="text-green-700 text-sm mt-1">Review the content above and make any necessary adjustments before saving.</p>
+                    <p className="text-green-700 text-sm mt-1">Review and edit the content above. Use "Refine with AI" to improve the entire document or "Format" to structure it properly.</p>
                   </div>
                 </div>
               )}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   BellIcon, 
@@ -40,31 +40,7 @@ export default function NotificationBell() {
   const lastFetchTime = useRef<number>(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      fetchNotifications();
-      fetchUnreadCount();
-      
-      // Poll for new notifications every 2 minutes (120 seconds) instead of 30 seconds
-      intervalRef.current = setInterval(() => {
-        // Only fetch if not rate limited and enough time has passed
-        const now = Date.now();
-        if (!isRateLimited && (now - lastFetchTime.current) > 60000) { // 1 minute minimum between calls
-          fetchUnreadCount();
-          fetchNotifications(); // Also fetch the full notification list
-          lastFetchTime.current = now;
-        }
-      }, 120000); // 2 minutes
-
-      return () => {
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-        }
-      };
-    }
-  }, [user, isRateLimited]);
-
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
       setError(false);
@@ -92,9 +68,9 @@ export default function NotificationBell() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [retryCount]);
 
-  const fetchUnreadCount = async () => {
+  const fetchUnreadCount = useCallback(async () => {
     try {
       // Skip if rate limited
       if (isRateLimited) {
@@ -122,7 +98,31 @@ export default function NotificationBell() {
       }
       // Don't set error here as we still want to show the bell
     }
-  };
+  }, [isRateLimited, retryCount]);
+
+  useEffect(() => {
+    if (user) {
+      fetchNotifications();
+      fetchUnreadCount();
+      
+      // Poll for new notifications every 2 minutes (120 seconds) instead of 30 seconds
+      intervalRef.current = setInterval(() => {
+        // Only fetch if not rate limited and enough time has passed
+        const now = Date.now();
+        if (!isRateLimited && (now - lastFetchTime.current) > 60000) { // 1 minute minimum between calls
+          fetchUnreadCount();
+          fetchNotifications(); // Also fetch the full notification list
+          lastFetchTime.current = now;
+        }
+      }, 120000); // 2 minutes
+
+      return () => {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+        }
+      };
+    }
+  }, [user, isRateLimited, fetchNotifications, fetchUnreadCount]);
 
   const handleNotificationClick = async (notification: Notification) => {
     try {

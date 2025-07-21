@@ -106,9 +106,10 @@ export class ProposalController {
       await db.activity.create({
         data: {
           type: 'VIEWED',
-          userId: req.user!.userId,
-          proposalId: id,
-          details: JSON.stringify({ action: 'viewed' })
+          user: { connect: { id: req.user!.userId } },
+          proposal: { connect: { id } },
+          details: JSON.stringify({ action: 'viewed' }),
+          message: 'Proposal viewed'
         }
       });
 
@@ -161,9 +162,10 @@ export class ProposalController {
       await db.activity.create({
         data: {
           type: 'CREATED',
-          userId: req.user!.userId,
-          proposalId: proposal.id,
-          details: JSON.stringify({ action: 'created' })
+          user: { connect: { id: req.user!.userId } },
+          proposal: { connect: { id: proposal.id } },
+          details: JSON.stringify({ action: 'created' }),
+          message: 'Proposal created'
         }
       });
 
@@ -224,9 +226,10 @@ export class ProposalController {
       await db.activity.create({
         data: {
           type: 'UPDATED',
-          userId: req.user!.userId,
-          proposalId: id,
-          details: JSON.stringify({ updatedFields: Object.keys(updateData) })
+          user: { connect: { id: req.user!.userId } },
+          proposal: { connect: { id } },
+          details: JSON.stringify({ updatedFields: Object.keys(updateData) }),
+          message: 'Proposal updated'
         }
       });
 
@@ -506,9 +509,10 @@ export class ProposalController {
       await db.activity.create({
         data: {
           type: 'CREATED',
-          userId: req.user!.userId,
-          proposalId: proposal.id,
-          details: JSON.stringify({ generatedWithAI: true })
+          user: { connect: { id: req.user!.userId } },
+          proposal: { connect: { id: proposal.id } },
+          details: JSON.stringify({ generatedWithAI: true }),
+          message: 'Proposal generated'
         }
       });
 
@@ -568,8 +572,9 @@ export class ProposalController {
       await db.activity.create({
         data: {
           type: 'PUBLISHED',
-          userId: req.user!.userId,
-          proposalId: id,
+          user: { connect: { id: req.user!.userId } },
+          proposal: { connect: { id } },
+          message: 'Proposal published'
         }
       });
 
@@ -794,8 +799,8 @@ export class ProposalController {
       await db.activity.create({
         data: {
           type: 'EMAIL_SENT',
-          userId: userId,
-          proposalId: proposalId,
+          user: { connect: { id: userId } },
+          proposal: { connect: { id: proposalId } },
           details: JSON.stringify({
             action: 'email_sent',
             recipientEmail,
@@ -803,7 +808,8 @@ export class ProposalController {
             trackingId: emailResult.trackingId,
             accessCode: emailResult.accessCode,
             sentAt: new Date().toISOString()
-          })
+          }),
+          message: 'Proposal email sent'
         }
       });
 
