@@ -222,7 +222,7 @@ export async function getOpenRouterChatCompletion(
   const requestBody = {
     model,
     messages,
-    max_tokens: 400, // Reduced from 800 to work within current credit limits (475 available)
+    max_tokens: 2048, // Increased to allow for longer responses and reduce truncation
     temperature: 0.7,
   };
 

@@ -341,10 +341,13 @@ const Dashboard: React.FC = () => {
 
   // Handle suggestion bubble click (select/unselect up to 5)
   const handleSuggestionClick = (suggestion: string) => {
-    // If it's a predefined suggestion, insert the long form into the input
+    // Toggle selection for predefined suggestions (allow multiple)
     if (SUGGESTION_LONG_FORM[suggestion]) {
-      setProposalText(SUGGESTION_LONG_FORM[suggestion]);
-      setSelectedSuggestions([suggestion]);
+      setSelectedSuggestions(prev =>
+        prev.includes(suggestion)
+          ? prev.filter(s => s !== suggestion)
+          : [...prev, suggestion]
+      );
     } else {
       // fallback to old behavior for refinement suggestions
       setSelectedSuggestions(prev => 
@@ -370,15 +373,17 @@ const Dashboard: React.FC = () => {
         ? `${proposalText.trim() ? proposalText.trim() + '\n\n' : ''}PDF Content:\n${uploadedPdfContent.trim()}`
         : proposalText.trim();
       
-      // If there are selected suggestions, use them to refine the proposal
-      let systemPrompt = `You are an expert proposal writer. Generate a professional proposal with these sections: Executive Summary, Approach, Budget Details, Timeline. Use clear, persuasive language.`;
+      let systemPrompt = '';
+      let userPrompt = '';
       
-      let userPrompt = `Content: ${combinedContent}\n\nGenerate a professional proposal with: 1. Executive Summary 2. Approach 3. Budget Details 4. Timeline`;
-      
-      // If there are selected suggestions, modify the prompt to include them
-      if (selectedSuggestions.length > 0) {
-        systemPrompt = `You are an expert proposal writer. Generate a professional proposal incorporating these refinements: ${selectedSuggestions.map(s => `"${s}"`).join(', ')}. Include: Executive Summary, Approach, Budget Details, Timeline.`;
-        userPrompt = `Content: ${combinedContent}\n\nRefinements: ${selectedSuggestions.join(', ')}\n\nGenerate proposal with: 1. Executive Summary 2. Approach 3. Budget Details 4. Timeline`;
+      if (uploadedPdfContent.trim()) {
+        // PDF uploaded: Only refine, do not rewrite
+        systemPrompt = `You are an expert proposal writer. Your task is to refine and improve the provided proposal content based on the user's instructions. Do NOT rewrite the entire proposal. Only make targeted improvements, edits, and enhancements. Preserve the original structure, sections, and as much of the original content as possible.`;
+        userPrompt = `Here is the current proposal content (from a PDF):\n${uploadedPdfContent.trim()}\n\nUser's refinement instructions: ${proposalText.trim() ? proposalText.trim() : ''}${selectedSuggestions.length > 0 ? '\nRefinements: ' + selectedSuggestions.map(s => SUGGESTION_LONG_FORM[s] || s).join(' | ') : ''}\n\nPlease return the improved proposal, keeping the original structure and content, but making it better according to the instructions.`;
+      } else {
+        // No PDF: Use original prompt for new proposals
+        systemPrompt = `You are an expert proposal writer. Generate a professional proposal with these sections: Executive Summary, Approach, Budget Details, Timeline. Use clear, persuasive language.`;
+        userPrompt = `Content: ${combinedContent}\n\n${proposalText.trim() ? 'Instructions: ' + proposalText.trim() + '\n' : ''}${selectedSuggestions.length > 0 ? 'Refinements: ' + selectedSuggestions.map(s => SUGGESTION_LONG_FORM[s] || s).join(' | ') + '\n' : ''}Generate a professional proposal with: 1. Executive Summary 2. Approach 3. Budget Details 4. Timeline`;
       }
       
       // Compose prompt for OpenRouter
@@ -410,18 +415,31 @@ const Dashboard: React.FC = () => {
           .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
           .replace(/\*(.*?)\*/g, '<em>$1</em>');
       };
-      setGeneratedContent({
-        executiveSummary: htmlToMarkdown(cleanContent(executiveSummary)),
-        approach: htmlToMarkdown(cleanContent(approach)),
-        budgetDetails: htmlToMarkdown(cleanContent(budgetDetails)),
-        timeline: htmlToMarkdown(cleanContent(timeline)),
-        fullContent: [
-          htmlToMarkdown(cleanContent(executiveSummary)),
-          htmlToMarkdown(cleanContent(approach)),
-          htmlToMarkdown(cleanContent(budgetDetails)),
-          htmlToMarkdown(cleanContent(timeline))
-        ].filter(Boolean).join('\n\n')
-      });
+      const fullContent = [
+        htmlToMarkdown(cleanContent(executiveSummary)),
+        htmlToMarkdown(cleanContent(approach)),
+        htmlToMarkdown(cleanContent(budgetDetails)),
+        htmlToMarkdown(cleanContent(timeline))
+      ].filter(Boolean).join('\n\n');
+
+      // Fallback: If fullContent is much shorter than aiContent, use aiContent directly
+      if (fullContent.length < aiContent.length * 0.7) {
+        setGeneratedContent({
+          executiveSummary: '',
+          approach: '',
+          budgetDetails: '',
+          timeline: '',
+          fullContent: htmlToMarkdown(cleanContent(aiContent))
+        });
+      } else {
+        setGeneratedContent({
+          executiveSummary: htmlToMarkdown(cleanContent(executiveSummary)),
+          approach: htmlToMarkdown(cleanContent(approach)),
+          budgetDetails: htmlToMarkdown(cleanContent(budgetDetails)),
+          timeline: htmlToMarkdown(cleanContent(timeline)),
+          fullContent
+        });
+      }
       setTimeout(() => {
         setShowContent(true);
       }, 500);
