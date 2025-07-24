@@ -12,17 +12,16 @@ import {
 import { notificationAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../hooks/useAuth';
+import browserNotificationService from '../services/browserNotifications';
 
 interface Notification {
   id: string;
   type: 'COMMENT' | 'PROPOSAL_OPENED' | 'PROPOSAL_APPROVED' | 'PROPOSAL_REJECTED' | 'CLIENT_REPLY' | 'ACCESS_REQUEST';
-  title: string;
   message: string;
-  isRead: boolean;
+  read: boolean;
   createdAt: string;
+  userId: string;
   proposalId?: string;
-  proposalTitle?: string;
-  clientName?: string;
 }
 
 export default function NotificationBell() {
@@ -79,9 +78,26 @@ export default function NotificationBell() {
       
       const response = await notificationAPI.getUnreadCount();
       if (response.data.success) {
-        setUnreadCount(response.data.data.unreadCount);
+        const newUnreadCount = response.data.data.unreadCount;
+        const previousUnreadCount = unreadCount;
+        
+        setUnreadCount(newUnreadCount);
         setIsRateLimited(false);
         setRetryCount(0);
+
+        // Send browser notification if we have new unread notifications
+        if (newUnreadCount > previousUnreadCount && browserNotificationService.canSendNotifications()) {
+          const newNotificationsCount = newUnreadCount - previousUnreadCount;
+          browserNotificationService.sendNotification({
+            title: 'New Notifications',
+            body: `You have ${newNotificationsCount} new notification${newNotificationsCount > 1 ? 's' : ''}`,
+            icon: '/favicon.ico',
+            tag: 'new-notifications',
+            data: {
+              navigateTo: '/dashboard'
+            }
+          });
+        }
       }
     } catch (error: any) {
       console.error('Failed to fetch unread count:', error);
@@ -98,7 +114,7 @@ export default function NotificationBell() {
       }
       // Don't set error here as we still want to show the bell
     }
-  }, [isRateLimited, retryCount]);
+  }, [isRateLimited, retryCount, unreadCount]);
 
   useEffect(() => {
     if (user) {
@@ -126,6 +142,8 @@ export default function NotificationBell() {
 
   const handleNotificationClick = async (notification: Notification) => {
     try {
+      console.log('Notification clicked:', notification);
+      
       // Mark as read first
       await markAsRead(notification.id);
       
@@ -137,10 +155,12 @@ export default function NotificationBell() {
         case 'COMMENT':
         case 'CLIENT_REPLY':
           if (notification.proposalId) {
+            console.log('Navigating to proposal comments:', notification.proposalId);
             // Navigate to proposal with comments tab
             navigate(`/proposals/${notification.proposalId}/view?tab=comments`);
             toast.success('Navigating to comments...');
           } else {
+            console.log('No proposalId found for comment notification');
             navigate('/sent-proposals');
             toast('Proposal not found, showing sent proposals');
           }
@@ -150,10 +170,12 @@ export default function NotificationBell() {
         case 'PROPOSAL_APPROVED':
         case 'PROPOSAL_REJECTED':
           if (notification.proposalId) {
+            console.log('Navigating to proposal view:', notification.proposalId);
             // Navigate to proposal view
             navigate(`/proposals/${notification.proposalId}/view`);
             toast.success('Navigating to proposal...');
           } else {
+            console.log('No proposalId found for proposal notification');
             navigate('/sent-proposals');
             toast('Proposal not found, showing sent proposals');
           }
@@ -161,37 +183,54 @@ export default function NotificationBell() {
           
         case 'ACCESS_REQUEST':
           if (notification.proposalId) {
+            console.log('Navigating to proposal activity:', notification.proposalId);
             // Navigate to proposal with activity tab
             navigate(`/proposals/${notification.proposalId}/view?tab=activity`);
             toast.success('Navigating to proposal activity...');
           } else {
+            console.log('No proposalId found for access request notification');
             navigate('/sent-proposals');
             toast('Proposal not found, showing sent proposals');
           }
           break;
           
         default:
-          // Fallback to sent proposals
-          navigate('/sent-proposals');
-          toast('Navigating to sent proposals');
-          break;
+          console.log('Unknown notification type:', notification.type);
+          navigate('/dashboard');
+          toast('Navigating to dashboard...');
       }
     } catch (error) {
-      console.error('Failed to handle notification click:', error);
-      toast.error('Failed to navigate to notification. Please try again.');
-      // Still close the dropdown even if navigation fails
-      setIsOpen(false);
+      console.error('Error handling notification click:', error);
+      toast.error('Failed to process notification');
+    }
+  };
+
+  // Test browser notification function
+  const testBrowserNotification = () => {
+    if (browserNotificationService.canSendNotifications()) {
+      browserNotificationService.sendNotification({
+        title: 'Test Notification',
+        body: 'This is a test browser notification from ProposalAI!',
+        icon: '/favicon.ico',
+        tag: 'test-notification',
+        data: {
+          navigateTo: '/dashboard'
+        }
+      });
+      toast.success('Test notification sent!');
+    } else {
+      toast.error('Browser notifications not enabled');
     }
   };
 
   const markAsRead = async (notificationId: string) => {
     try {
       await notificationAPI.markAsRead(notificationId);
-      setNotifications(prev => 
-        prev.map(notif => 
-          notif.id === notificationId ? { ...notif, isRead: true } : notif
-        )
-      );
+              setNotifications(prev => 
+          prev.map(notif => 
+            notif.id === notificationId ? { ...notif, read: true } : notif
+          )
+        );
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
@@ -201,7 +240,7 @@ export default function NotificationBell() {
   const markAllAsRead = async () => {
     try {
       await notificationAPI.markAllAsRead();
-      setNotifications(prev => prev.map(notif => ({ ...notif, isRead: true })));
+              setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
       setUnreadCount(0);
       toast.success('All notifications marked as read');
     } catch (error) {
@@ -365,7 +404,7 @@ export default function NotificationBell() {
                   <div
                     key={notification.id}
                     className={`p-4 hover:bg-blue-50 transition-colors cursor-pointer border-l-4 ${
-                      !notification.isRead ? 'bg-blue-50 border-l-blue-500' : 'border-l-transparent'
+                      !notification.read ? 'bg-blue-50 border-l-blue-500' : 'border-l-transparent'
                     } hover:border-l-blue-400`}
                     onClick={() => handleNotificationClick(notification)}
                     title={`Click to view ${notification.type.toLowerCase().replace('_', ' ')}`}
@@ -377,11 +416,11 @@ export default function NotificationBell() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <p className={`text-sm font-medium ${
-                            !notification.isRead ? 'text-gray-900' : 'text-gray-700'
+                            !notification.read ? 'text-gray-900' : 'text-gray-700'
                           }`}>
-                            {notification.title}
+                            {notification.type.replace('_', ' ')}
                           </p>
-                          {!notification.isRead && (
+                          {!notification.read && (
                             <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                           )}
                         </div>
@@ -402,19 +441,27 @@ export default function NotificationBell() {
           </div>
 
           {/* Footer */}
-          {notifications.length > 0 && !isRateLimited && (
-            <div className="p-3 border-t border-gray-200 bg-gray-50">
+          <div className="p-3 border-t border-gray-200 bg-gray-50">
+            {notifications.length > 0 && !isRateLimited && (
               <button
                 onClick={() => {
                   setIsOpen(false);
                   navigate('/sent-proposals');
                 }}
-                className="w-full text-sm text-blue-600 hover:text-blue-700 font-medium"
+                className="w-full text-sm text-blue-600 hover:text-blue-700 font-medium mb-2"
               >
                 View all proposals
               </button>
-            </div>
-          )}
+            )}
+            
+            {/* Test Browser Notification Button */}
+            <button
+              onClick={testBrowserNotification}
+              className="w-full text-sm text-green-600 hover:text-green-700 font-medium"
+            >
+              Test Browser Notification
+            </button>
+          </div>
         </div>
       )}
 

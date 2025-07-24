@@ -53,61 +53,70 @@ const RequestAccessForm: React.FC<{
   submittingRequest: boolean;
   onCancel?: () => void;
   isFullPage?: boolean;
-}> = ({ onSubmit, requestAccessData, setRequestAccessData, submittingRequest, onCancel, isFullPage = false }) => {
+  simplified?: boolean;
+}> = ({ onSubmit, requestAccessData, setRequestAccessData, submittingRequest, onCancel, isFullPage = false, simplified = false }) => {
   const formContent = (
     <div className={`bg-white rounded-lg p-6 ${isFullPage ? 'max-w-md w-full' : 'max-w-md mx-auto'}`}>
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Request Access</h3>
       <p className="text-sm text-gray-600 mb-4">
-        Need to review this proposal again? Request access from the proposal owner.
+        {simplified 
+          ? "Need to review this proposal again? Let us know why you need access."
+          : "Need to review this proposal again? Request access from the proposal owner."
+        }
       </p>
       
       <form onSubmit={onSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Your Name *
-          </label>
-          <input
-            type="text"
-            required
-            value={requestAccessData.name}
-            onChange={(e) => setRequestAccessData({...requestAccessData, name: e.target.value})}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Enter your full name"
-          />
-        </div>
+        {!simplified && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Your Name *
+              </label>
+              <input
+                type="text"
+                required={!simplified}
+                value={requestAccessData.name}
+                onChange={(e) => setRequestAccessData({...requestAccessData, name: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter your full name"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email Address *
+              </label>
+              <input
+                type="email"
+                required={!simplified}
+                value={requestAccessData.email}
+                onChange={(e) => setRequestAccessData({...requestAccessData, email: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter your email address"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Company
+              </label>
+              <input
+                type="text"
+                value={requestAccessData.company}
+                onChange={(e) => setRequestAccessData({...requestAccessData, company: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter your company name"
+              />
+            </div>
+          </>
+        )}
         
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Email Address *
-          </label>
-          <input
-            type="email"
-            required
-            value={requestAccessData.email}
-            onChange={(e) => setRequestAccessData({...requestAccessData, email: e.target.value})}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Enter your email address"
-          />
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Company
-          </label>
-          <input
-            type="text"
-            value={requestAccessData.company}
-            onChange={(e) => setRequestAccessData({...requestAccessData, company: e.target.value})}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Enter your company name"
-          />
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Reason for Access
+            Reason for Access {simplified && '*'}
           </label>
           <textarea
+            required={simplified}
             value={requestAccessData.reason}
             onChange={(e) => setRequestAccessData({...requestAccessData, reason: e.target.value})}
             rows={3}
@@ -203,20 +212,37 @@ const PublicProposal: React.FC = () => {
           return;
         }
         if (response.status === 403) {
-          // Proposal has been approved/rejected
-          setProposal({ 
-            id: id!, 
-            title: 'Proposal Reviewed', 
-            content: '{}', 
-            clientName: '', 
-            author: { name: '', email: '' }, 
-            organization: { name: '' },
-            createdAt: new Date().toISOString(),
-            status: 'REVIEWED'
-          });
-          setIsAuthenticated(true);
-          setLoading(false);
-          return;
+          if (data.requiresAccessRequest) {
+            // Access not granted for final state proposal
+            setProposal({ 
+              id: id!, 
+              title: 'Access Required', 
+              content: '{}', 
+              clientName: '', 
+              author: { name: '', email: '' }, 
+              organization: { name: '' },
+              createdAt: new Date().toISOString(),
+              status: 'ACCESS_REQUIRED'
+            });
+            setIsAuthenticated(false);
+            setLoading(false);
+            return;
+          } else {
+            // Proposal has been approved/rejected (legacy case)
+            setProposal({ 
+              id: id!, 
+              title: 'Proposal Reviewed', 
+              content: '{}', 
+              clientName: '', 
+              author: { name: '', email: '' }, 
+              organization: { name: '' },
+              createdAt: new Date().toISOString(),
+              status: 'REVIEWED'
+            });
+            setIsAuthenticated(true);
+            setLoading(false);
+            return;
+          }
         }
         // For any other error, show the access code form
         setRequiresPassword(true);
@@ -236,21 +262,38 @@ const PublicProposal: React.FC = () => {
         setLoading(false);
         return;
       }
-      if (error.response?.status === 403) {
-        // Proposal has been approved/rejected
-        setProposal({ 
-          id: id!, 
-          title: 'Proposal Reviewed', 
-          content: '{}', 
-          clientName: '', 
-          author: { name: '', email: '' }, 
-          organization: { name: '' },
-          createdAt: new Date().toISOString(),
-          status: 'REVIEWED'
-        });
-        setIsAuthenticated(true);
-        setLoading(false);
-        return;
+              if (error.response?.status === 403) {
+          if (error.response?.data?.requiresAccessRequest) {
+            // Access not granted for final state proposal
+            setProposal({ 
+              id: id!, 
+              title: 'Access Required', 
+              content: '{}', 
+              clientName: '', 
+              author: { name: '', email: '' }, 
+              organization: { name: '' },
+              createdAt: new Date().toISOString(),
+              status: 'ACCESS_REQUIRED'
+            });
+            setIsAuthenticated(false);
+            setLoading(false);
+            return;
+        } else {
+          // Proposal has been approved/rejected (legacy case)
+          setProposal({ 
+            id: id!, 
+            title: 'Proposal Reviewed', 
+            content: '{}', 
+            clientName: '', 
+            author: { name: '', email: '' }, 
+            organization: { name: '' },
+            createdAt: new Date().toISOString(),
+            status: 'REVIEWED'
+          });
+          setIsAuthenticated(true);
+          setLoading(false);
+          return;
+        }
       }
       // For any other error, show the access code form
       setRequiresPassword(true);
@@ -335,13 +378,36 @@ const PublicProposal: React.FC = () => {
   const handleRequestAccess = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!requestAccessData.name.trim() || !requestAccessData.email.trim()) {
+    // For simplified form (final state proposals), use existing client info
+    const isSimplified = proposal?.status === 'APPROVED' || proposal?.status === 'REJECTED' || proposal?.status === 'EXPIRED' || proposal?.status === 'ACCESS_REQUIRED';
+    
+
+    
+    if (!isSimplified && (!requestAccessData.name.trim() || !requestAccessData.email.trim())) {
       toast.error('Please fill in all required fields');
+      return;
+    }
+    
+    if (isSimplified && !requestAccessData.reason.trim()) {
+      toast.error('Please provide a reason for requesting access');
       return;
     }
 
     try {
       setSubmittingRequest(true);
+      
+      // Use existing client info for simplified forms, otherwise use form data
+      const requestData = isSimplified ? {
+        name: proposal?.clientName || 'Unknown',
+        email: proposal?.emailRecipient || 'Unknown',
+        company: requestAccessData.company.trim(),
+        reason: requestAccessData.reason.trim()
+      } : {
+        name: requestAccessData.name.trim(),
+        email: requestAccessData.email.trim(),
+        company: requestAccessData.company.trim(),
+        reason: requestAccessData.reason.trim()
+      };
       
       // Send request access email to the proposal author
       const response = await fetch(`http://localhost:3001/api/public/proposals/${id}/request-access`, {
@@ -349,12 +415,7 @@ const PublicProposal: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: requestAccessData.name.trim(),
-          email: requestAccessData.email.trim(),
-          company: requestAccessData.company.trim(),
-          reason: requestAccessData.reason.trim()
-        })
+        body: JSON.stringify(requestData)
       });
 
       const data = await response.json();
@@ -473,6 +534,14 @@ const PublicProposal: React.FC = () => {
   }
 
   const content = parseContent(proposal.content);
+  
+  // Check if proposal is in a final state (approved, rejected, expired, access required)
+  const isFinalState = proposal.status === 'APPROVED' || proposal.status === 'REJECTED' || proposal.status === 'EXPIRED' || proposal.status === 'ACCESS_REQUIRED';
+  
+  // Check if client has access to view content
+  // For final state proposals, we need to check if they have been granted access
+  // For active proposals, just having an access code is sufficient
+  const hasContentAccess = isAuthenticated;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -504,52 +573,56 @@ const PublicProposal: React.FC = () => {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Proposal Header */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">{proposal.title}</h1>
-            <p className="text-lg text-gray-600">Prepared for {proposal.clientName}</p>
-          </div>
+        {/* Proposal Header - Only show if client has access or proposal is not in final state */}
+        {hasContentAccess || !isFinalState ? (
+          <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold text-gray-900 mb-4">{proposal.title}</h1>
+              <p className="text-lg text-gray-600">Prepared for {proposal.clientName}</p>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="flex items-center space-x-3">
-              <UserIcon className="h-5 w-5 text-blue-600" />
-              <div>
-                <p className="text-sm text-gray-500">Prepared by</p>
-                <p className="font-medium text-gray-900">{proposal.author.name}</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="flex items-center space-x-3">
+                <UserIcon className="h-5 w-5 text-blue-600" />
+                <div>
+                  <p className="text-sm text-gray-500">Prepared by</p>
+                  <p className="font-medium text-gray-900">
+                    {proposal.author.name || proposal.author.email || 'Unknown'}
+                  </p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <CalendarIcon className="h-5 w-5 text-blue-600" />
-              <div>
-                <p className="text-sm text-gray-500">Created on</p>
-                <p className="font-medium text-gray-900">
-                  {new Date(proposal.createdAt).toLocaleDateString()}
-                </p>
+              <div className="flex items-center space-x-3">
+                <CalendarIcon className="h-5 w-5 text-blue-600" />
+                <div>
+                  <p className="text-sm text-gray-500">Created on</p>
+                  <p className="font-medium text-gray-900">
+                    {new Date(proposal.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <DocumentTextIcon className="h-5 w-5 text-blue-600" />
-              <div>
-                <p className="text-sm text-gray-500">Status</p>
-                <p className={`font-medium ${
-                  proposal.status === 'APPROVED' ? 'text-green-600' :
-                  proposal.status === 'REJECTED' ? 'text-red-600' :
-                  proposal.status === 'IN_REVIEW' ? 'text-yellow-600' :
-                  'text-gray-900'
-                }`}>
-                  {proposal.status === 'APPROVED' ? 'Approved' :
-                   proposal.status === 'REJECTED' ? 'Rejected' :
-                   proposal.status === 'IN_REVIEW' ? 'Under Review' :
-                   'Ready for Review'}
-                </p>
+              <div className="flex items-center space-x-3">
+                <DocumentTextIcon className="h-5 w-5 text-blue-600" />
+                <div>
+                  <p className="text-sm text-gray-500">Status</p>
+                  <p className={`font-medium ${
+                    proposal.status === 'APPROVED' ? 'text-green-600' :
+                    proposal.status === 'REJECTED' ? 'text-red-600' :
+                    proposal.status === 'IN_REVIEW' ? 'text-yellow-600' :
+                    'text-gray-900'
+                  }`}>
+                    {proposal.status === 'APPROVED' ? 'Approved' :
+                     proposal.status === 'REJECTED' ? 'Rejected' :
+                     proposal.status === 'IN_REVIEW' ? 'Under Review' :
+                     'Ready for Review'}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        ) : null}
 
-        {/* Proposal Content - Only show if there's actual content */}
-        {(content.executiveSummary || content.approach || content.budgetDetails || content.timeline || content.budget) && (
+        {/* Proposal Content - Only show if client has access and there's actual content */}
+        {hasContentAccess && (content.executiveSummary || content.approach || content.budgetDetails || content.timeline || content.budget) && (
           <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
             <div className="prose max-w-none">
               {content.executiveSummary && (
@@ -600,40 +673,57 @@ const PublicProposal: React.FC = () => {
           </div>
         )}
 
-        {/* Feedback Section */}
-        {proposal.status === 'APPROVED' ? (
+        {/* Content Access Required Message for Final State Proposals */}
+        {isFinalState && !hasContentAccess && (
+          <div className="bg-yellow-50 rounded-2xl shadow-lg p-8 mb-8 border border-yellow-200">
+            <div className="text-center">
+              <LockClosedIcon className="h-16 w-16 text-yellow-600 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-yellow-900 mb-2">Content Access Required</h2>
+              <p className="text-yellow-700 mb-6">
+                {proposal.status === 'ACCESS_REQUIRED' 
+                  ? 'This proposal requires special access. To view the proposal content, you need to request access from the proposal owner.'
+                  : `This proposal has been ${proposal.status?.toLowerCase() || 'reviewed'}. To view the proposal content, you need to request access from the proposal owner.`
+                }
+              </p>
+              
+              {/* Request Access Form for Final State Proposals */}
+              <RequestAccessForm
+                onSubmit={handleRequestAccess}
+                requestAccessData={requestAccessData}
+                setRequestAccessData={setRequestAccessData}
+                submittingRequest={submittingRequest}
+                simplified={true}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Feedback Section - Only show if client has access */}
+        {proposal.status === 'APPROVED' && hasContentAccess ? (
           <div className="bg-green-50 rounded-2xl shadow-lg p-8 mb-8 border border-green-200">
             <div className="text-center">
               <CheckCircleIcon className="h-16 w-16 text-green-600 mx-auto mb-4" />
               <h2 className="text-2xl font-bold text-green-900 mb-2">Proposal Approved!</h2>
               <p className="text-green-700 mb-6">Thank you for approving this proposal. The team will be in touch soon to discuss next steps.</p>
-              
-              {/* Request Access Form for Approved Proposals */}
-              <RequestAccessForm
-                onSubmit={handleRequestAccess}
-                requestAccessData={requestAccessData}
-                setRequestAccessData={setRequestAccessData}
-                submittingRequest={submittingRequest}
-              />
             </div>
           </div>
-        ) : proposal.status === 'REJECTED' ? (
+        ) : proposal.status === 'REJECTED' && hasContentAccess ? (
           <div className="bg-red-50 rounded-2xl shadow-lg p-8 mb-8 border border-red-200">
             <div className="text-center">
               <XCircleIcon className="h-16 w-16 text-red-600 mx-auto mb-4" />
               <h2 className="text-2xl font-bold text-red-900 mb-2">Proposal Rejected</h2>
               <p className="text-red-700 mb-6">Thank you for your feedback. We appreciate you taking the time to review this proposal.</p>
-              
-              {/* Request Access Form for Rejected Proposals */}
-              <RequestAccessForm
-                onSubmit={handleRequestAccess}
-                requestAccessData={requestAccessData}
-                setRequestAccessData={setRequestAccessData}
-                submittingRequest={submittingRequest}
-              />
             </div>
           </div>
-        ) : (
+        ) : proposal.status === 'EXPIRED' && hasContentAccess ? (
+          <div className="bg-orange-50 rounded-2xl shadow-lg p-8 mb-8 border border-orange-200">
+            <div className="text-center">
+              <CalendarIcon className="h-16 w-16 text-orange-600 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-orange-900 mb-2">Proposal Expired</h2>
+              <p className="text-orange-700 mb-6">This proposal has expired. Please contact the proposal owner if you need to review it again.</p>
+            </div>
+          </div>
+        ) : !isFinalState ? (
           <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Provide Your Feedback</h2>
             
@@ -710,13 +800,15 @@ const PublicProposal: React.FC = () => {
               </div>
             )}
           </div>
-        )}
+        ) : null}
 
-        {/* Comments Section - Only show if proposal is not reviewed */}
-        {isAuthenticated && proposal.status !== 'APPROVED' && proposal.status !== 'REJECTED' && proposal.status !== 'REVIEWED' && (
+        {/* Comments Section - Only show if client has access and proposal is not in final state */}
+        {hasContentAccess && !isFinalState && (
           <PublicComments 
             proposalId={proposal.id} 
             accessCode={accessCode}
+            clientName={proposal.clientName}
+            clientEmail={proposal.emailRecipient}
           />
         )}
       </div>

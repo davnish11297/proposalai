@@ -703,7 +703,7 @@ export class ProposalController {
   async sendProposalEmail(req: Request, res: Response): Promise<void> {
     try {
       const { id: proposalId } = req.params;
-      const { recipientEmail, customMessage } = req.body;
+      const { recipientEmail, clientName, customMessage } = req.body;
       const userId = (req as any).user?.userId;
 
       if (!userId) {
@@ -713,6 +713,11 @@ export class ProposalController {
 
       if (!recipientEmail) {
         res.status(400).json({ error: 'Recipient email is required' });
+        return;
+      }
+
+      if (!clientName) {
+        res.status(400).json({ error: 'Client name is required' });
         return;
       }
 
@@ -737,17 +742,44 @@ export class ProposalController {
         return;
       }
 
+      // Find or create client
+      let client = await db.client.findFirst({
+        where: {
+          email: recipientEmail,
+          organizationId: (req as any).user?.organizationId
+        }
+      });
+
+      if (!client) {
+        // Create new client
+        client = await db.client.create({
+          data: {
+            name: clientName,
+            email: recipientEmail,
+            organizationId: (req as any).user?.organizationId
+          }
+        });
+      } else {
+        // Update existing client with new name if different
+        if (client.name !== clientName) {
+          client = await db.client.update({
+            where: { id: client.id },
+            data: { name: clientName }
+          });
+        }
+      }
+
       // Generate PDF
       const pdfBuffer = await pdfService.generatePDFBuffer({
         ...proposal,
-        clientEmail: proposal.clientName ? `${proposal.clientName.toLowerCase().replace(/\s+/g, '.')}@example.com` : undefined
+        clientEmail: recipientEmail
       } as any);
 
       // Send email with tracking
       const emailResult = await emailService.sendProposalEmail(
         {
           ...proposal,
-          clientEmail: proposal.clientName ? `${proposal.clientName.toLowerCase().replace(/\s+/g, '.')}@example.com` : undefined
+          clientEmail: recipientEmail
         } as any,
         recipientEmail,
         pdfBuffer
@@ -773,22 +805,22 @@ export class ProposalController {
       const accessCodes = existingMetadata.accessCodes || [];
       accessCodes.push(emailResult.accessCode);
 
-      // Update proposal with tracking information
+      // Update proposal with client relationship and tracking information
       await db.proposal.update({
         where: { id: proposalId },
         data: { 
           status: 'SENT',
-          emailSentAt: new Date(),
-          emailRecipient: recipientEmail,
-          emailMessageId: emailResult.messageId,
-          emailTrackingId: emailResult.trackingId, // Store the actual tracking ID for email tracking
+          clientId: client.id,
+          clientName: clientName,
           metadata: JSON.stringify({
             ...existingMetadata,
             accessCodes: accessCodes,
             lastEmailSent: {
               accessCode: emailResult.accessCode,
               trackingId: emailResult.trackingId,
-              sentAt: new Date().toISOString()
+              sentAt: new Date().toISOString(),
+              recipientEmail: recipientEmail,
+              messageId: emailResult.messageId
             }
           }),
           updatedAt: new Date()
@@ -804,6 +836,8 @@ export class ProposalController {
           details: JSON.stringify({
             action: 'email_sent',
             recipientEmail,
+            clientName,
+            clientId: client.id,
             messageId: emailResult.messageId,
             trackingId: emailResult.trackingId,
             accessCode: emailResult.accessCode,
@@ -818,7 +852,8 @@ export class ProposalController {
         message: 'Proposal sent successfully',
         messageId: emailResult.messageId,
         trackingId: emailResult.trackingId,
-        accessCode: emailResult.accessCode
+        accessCode: emailResult.accessCode,
+        clientId: client.id
       });
 
     } catch (error) {

@@ -185,10 +185,8 @@ export class NotificationController {
         data: {
           userId: data.userId,
           type: data.type,
-          title: data.title,
           message: data.message,
           proposalId: data.proposalId,
-          metadata: data.metadata ? JSON.stringify(data.metadata) : null,
           read: false,
         }
       });

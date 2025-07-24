@@ -5,6 +5,14 @@ import remarkGfm from 'remark-gfm';
 import { getOpenRouterChatCompletion } from '../services/api';
 import { proposalsAPI } from '../services/api';
 import NotificationBell from '../components/NotificationBell';
+import BrowserNotificationPrompt from '../components/BrowserNotificationPrompt';
+import { 
+  HomeIcon, 
+  DocumentTextIcon, 
+  PaperAirplaneIcon, 
+  UsersIcon, 
+  UserIcon 
+} from '@heroicons/react/24/outline';
 import '../ProposalMarkdown.css';
 
 // Utility to convert HTML tags to markdown
@@ -35,11 +43,13 @@ const Dashboard: React.FC = () => {
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [email, setEmail] = useState('');
+  const [clientName, setClientName] = useState('');
   const [proposalId, setProposalId] = useState<string | null>(null);
   const [selectedSuggestions, setSelectedSuggestions] = useState<string[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [uploadedPdfContent, setUploadedPdfContent] = useState<string>('');
+  const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
 
   // State for suggestions
   const [predefinedSuggestions, setPredefinedSuggestions] = useState<Array<{
@@ -53,6 +63,15 @@ const Dashboard: React.FC = () => {
     icon: React.ReactNode;
     color: 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'yellow';
   }>>([]);
+
+  // Show notification prompt after a delay
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowNotificationPrompt(true);
+    }, 3000); // Show after 3 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Generate AI-based suggestions (generic)
   const generateSuggestions = useCallback(async () => {
@@ -493,16 +512,26 @@ const Dashboard: React.FC = () => {
       toast.error('Please enter a valid email address.');
       return;
     }
+
+    if (!clientName) {
+      toast.error('Please enter a client name.');
+      return;
+    }
+
     if (!proposalId) {
       toast.error('Please save the proposal as draft first.');
       return;
     }
     setSendingEmail(true);
     try {
-      await proposalsAPI.sendEmail(proposalId, { recipientEmail: email });
+      await proposalsAPI.sendEmail(proposalId, { 
+        recipientEmail: email,
+        clientName: clientName
+      });
       toast.success('Proposal sent via email!');
       setShowEmailModal(false);
       setEmail('');
+      setClientName('');
     } catch (error) {
       toast.error('Failed to send email.');
     } finally {
@@ -660,10 +689,26 @@ const Dashboard: React.FC = () => {
               <h1 className="text-xl font-extrabold text-white tracking-wider drop-shadow">ProposalAI</h1>
             </div>
             <div className="flex items-center space-x-8">
-              <a href="/dashboard" className="text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">Dashboard</a>
-              <a href="/drafts" className="text-white/80 hover:text-white transition-colors">Drafts</a>
-              <a href="/sent-proposals" className="text-white/80 hover:text-white transition-colors">Sent Proposals</a>
-              <a href="/profile" className="text-white/80 hover:text-white transition-colors">Profile</a>
+              <a href="/dashboard" className="flex items-center space-x-1 text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">
+                <HomeIcon className="w-5 h-5" />
+                <span>Dashboard</span>
+              </a>
+              <a href="/drafts" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <DocumentTextIcon className="w-5 h-5" />
+                <span>Drafts</span>
+              </a>
+              <a href="/sent-proposals" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <PaperAirplaneIcon className="w-5 h-5" />
+                <span>Sent Proposals</span>
+              </a>
+              <a href="/clients" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <UsersIcon className="w-5 h-5" />
+                <span>Clients</span>
+              </a>
+              <a href="/profile" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <UserIcon className="w-5 h-5" />
+                <span>Profile</span>
+              </a>
               <NotificationBell />
               <button 
                 onClick={handleLogout}
@@ -1088,29 +1133,70 @@ const Dashboard: React.FC = () => {
           <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
               <h2 className="text-lg font-semibold mb-4">Send Proposal via Email</h2>
-              <input
-                type="email"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                placeholder="Recipient's email address"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                disabled={sendingEmail}
-              />
-              <div className="flex gap-3 justify-end">
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Client Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="Enter client's full name"
+                    value={clientName}
+                    onChange={e => setClientName(e.target.value)}
+                    disabled={sendingEmail}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email Address <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="Recipient's email address"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    disabled={sendingEmail}
+                  />
+                </div>
+              </div>
+              
+              <div className="flex gap-3 justify-end mt-6">
                 <button
-                  onClick={() => setShowEmailModal(false)}
+                  onClick={() => {
+                    setShowEmailModal(false);
+                    setEmail('');
+                    setClientName('');
+                  }}
                   className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition"
                   disabled={sendingEmail}
                 >Cancel</button>
                 <button
                   onClick={handleSendEmail}
                   className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 transition disabled:opacity-60"
-                  disabled={sendingEmail}
+                  disabled={sendingEmail || !email.trim() || !clientName.trim()}
                 >{sendingEmail ? 'Sending...' : 'Send'}</button>
               </div>
             </div>
           </div>
         )}
+        
+        {/* Browser Notification Prompt */}
+        <BrowserNotificationPrompt 
+          showPrompt={showNotificationPrompt}
+          onClose={() => setShowNotificationPrompt(false)}
+          onPermissionGranted={() => {
+            setShowNotificationPrompt(false);
+            toast.success('Browser notifications enabled!');
+          }}
+          onPermissionDenied={() => {
+            setShowNotificationPrompt(false);
+            toast('You can enable notifications manually in your browser settings');
+          }}
+        />
       </div>
       <style>{`
         .custom-scrollbar::-webkit-scrollbar {

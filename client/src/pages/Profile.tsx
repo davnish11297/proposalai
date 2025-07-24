@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
 import NotificationBell from '../components/NotificationBell';
+import { 
+  HomeIcon, 
+  DocumentTextIcon, 
+  PaperAirplaneIcon, 
+  UsersIcon, 
+  UserIcon 
+} from '@heroicons/react/24/outline';
 
 const Profile: React.FC = () => {
   const [profile, setProfile] = useState({
@@ -34,10 +41,26 @@ const Profile: React.FC = () => {
               <h1 className="text-xl font-extrabold text-white tracking-wider drop-shadow">ProposalAI</h1>
             </div>
             <div className="flex items-center space-x-8">
-              <a href="/dashboard" className="text-white/80 hover:text-white transition-colors">Dashboard</a>
-              <a href="/drafts" className="text-white/80 hover:text-white transition-colors">Drafts</a>
-              <a href="/sent-proposals" className="text-white/80 hover:text-white transition-colors">Sent Proposals</a>
-              <a href="/profile" className="text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">Profile</a>
+              <a href="/dashboard" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <HomeIcon className="w-5 h-5" />
+                <span>Dashboard</span>
+              </a>
+              <a href="/drafts" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <DocumentTextIcon className="w-5 h-5" />
+                <span>Drafts</span>
+              </a>
+              <a href="/sent-proposals" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <PaperAirplaneIcon className="w-5 h-5" />
+                <span>Sent Proposals</span>
+              </a>
+              <a href="/clients" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <UsersIcon className="w-5 h-5" />
+                <span>Clients</span>
+              </a>
+              <a href="/profile" className="flex items-center space-x-1 text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">
+                <UserIcon className="w-5 h-5" />
+                <span>Profile</span>
+              </a>
               <NotificationBell />
               <button 
                 onClick={handleLogout}
