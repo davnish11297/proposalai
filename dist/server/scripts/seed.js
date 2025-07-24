@@ -22,14 +22,10 @@ async function main() {
     console.log('📝 Login credentials:');
     console.log('   Email: test@example.com');
     console.log('   Password: password123');
-    const organization = await prisma.organization.upsert({
-        where: { id: 'test-org' },
-        update: {},
-        create: {
-            id: 'test-org',
+    const organization = await prisma.organization.create({
+        data: {
             name: 'Test Organization',
-            description: 'A test organization for development',
-            industry: 'Technology'
+            valueProps: ['Quality', 'Innovation', 'Reliability']
         },
     });
     console.log('✅ Created test organization:', organization.name);

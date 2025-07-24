@@ -16,9 +16,15 @@ const teams_1 = __importDefault(require("./routes/teams"));
 const express_session_1 = __importDefault(require("express-session"));
 const passport_1 = __importDefault(require("passport"));
 require("./services/authService");
+const pdfService_1 = require("./services/pdfService");
+const multer_1 = __importDefault(require("multer"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3000;
+app.use((req, res, next) => {
+    console.log(`[${req.method}] ${req.originalUrl}`);
+    next();
+});
 app.set('trust proxy', 1);
 app.use((0, helmet_1.default)({
     contentSecurityPolicy: {
@@ -75,13 +81,44 @@ const corsOptions = process.env.NODE_ENV === 'production'
 app.use((0, cors_1.default)(corsOptions));
 const limiter = (0, express_rate_limit_1.default)({
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),
-    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
+    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || process.env.NODE_ENV === 'production' ? '100' : '10000'),
     message: {
         success: false,
         error: 'Too many requests from this IP, please try again later.'
+    },
+    skip: (req) => {
+        if (process.env.NODE_ENV !== 'production') {
+            return req.path === '/health' || req.path.startsWith('/api/public/') || req.path.startsWith('/api/auth/');
+        }
+        return req.path === '/health' || req.path.startsWith('/api/public/');
     }
 });
-app.use('/api/', limiter);
+const notificationLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 2 * 60 * 1000,
+    max: process.env.NODE_ENV === 'production' ? 30 : 1000,
+    message: {
+        success: false,
+        error: 'Too many notification requests, please try again later.'
+    },
+    skip: (req) => {
+        if (process.env.NODE_ENV !== 'production') {
+            return true;
+        }
+        return false;
+    }
+});
+if (process.env.DISABLE_RATE_LIMITING_IN_DEV === 'true' && process.env.NODE_ENV !== 'production') {
+    console.log('⚠️  Rate limiting disabled in development mode');
+}
+else {
+    app.use('/api/', (req, res, next) => {
+        if (req.path.startsWith('/auth/')) {
+            return next();
+        }
+        return limiter(req, res, next);
+    });
+}
+app.use('/api/notifications', notificationLimiter);
 app.use((0, compression_1.default)());
 app.use(express_1.default.json({ limit: '10mb' }));
 app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
@@ -106,7 +143,30 @@ app.use('/api/users', require('./routes/users').default);
 app.use('/api/analytics', require('./routes/analytics').default);
 app.use('/api/clients', require('./routes/clients').default);
 app.use('/api/email-tracking', require('./routes/emailTracking').default);
+app.use('/api/notifications', require('./routes/notifications').default);
 app.use('/api/public/proposals', require('./routes/publicProposals').default);
+const pdfService = new pdfService_1.PDFService();
+const upload = (0, multer_1.default)({ storage: multer_1.default.memoryStorage() });
+app.post('/proposals/extract-pdf', upload.single('pdf'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No PDF file uploaded' });
+        }
+        const extractedText = await pdfService.extractTextFromBuffer(req.file.buffer);
+        return res.json({
+            success: true,
+            content: extractedText,
+            message: 'PDF text extracted successfully'
+        });
+    }
+    catch (error) {
+        console.error('PDF extraction error:', error);
+        return res.status(500).json({
+            error: 'Failed to extract text from PDF',
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
 app.use((err, req, res, next) => {
     console.error('Unhandled error:', err);
     res.status(err.status || 500).json({

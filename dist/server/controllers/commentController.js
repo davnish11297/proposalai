@@ -2,6 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.commentController = exports.CommentController = void 0;
 const database_1 = require("../utils/database");
+const emailService_1 = require("../services/emailService");
+const notificationController_1 = require("./notificationController");
 class CommentController {
     async getComments(req, res) {
         try {
@@ -42,16 +44,6 @@ class CommentController {
                 where: { id: proposalId },
                 select: { authorId: true }
             });
-            if (proposalOwner && proposalOwner.authorId === req.user.userId) {
-                await database_1.prisma.comment.updateMany({
-                    where: {
-                        proposalId,
-                        isRead: false,
-                        authorId: { not: req.user.userId }
-                    },
-                    data: { isRead: true }
-                });
-            }
             res.json({
                 success: true,
                 data: comments,
@@ -74,13 +66,13 @@ class CommentController {
     async getUnreadCount(req, res) {
         try {
             const { proposalId } = req.params;
-            const proposalAccess = await database_1.prisma.proposal.findFirst({
+            const proposal = await database_1.prisma.proposal.findFirst({
                 where: {
                     id: proposalId,
                     organizationId: req.user.organizationId,
                 }
             });
-            if (!proposalAccess) {
+            if (!proposal) {
                 res.status(404).json({
                     success: false,
                     error: 'Proposal not found'
@@ -90,7 +82,6 @@ class CommentController {
             const unreadCount = await database_1.prisma.comment.count({
                 where: {
                     proposalId,
-                    isRead: false,
                     authorId: { not: req.user.userId }
                 }
             });
@@ -127,7 +118,6 @@ class CommentController {
             const comment = await database_1.prisma.comment.create({
                 data: {
                     content: commentData.content,
-                    position: commentData.position || null,
                     authorId: req.user.userId,
                     proposalId,
                 },
@@ -143,11 +133,72 @@ class CommentController {
             await database_1.prisma.activity.create({
                 data: {
                     type: 'COMMENTED',
+                    message: `User commented on proposal`,
                     userId: req.user.userId,
                     proposalId,
                     details: JSON.stringify({ commentId: comment.id })
                 }
             });
+            const proposal = await database_1.prisma.proposal.findFirst({
+                where: { id: proposalId },
+                include: { author: true }
+            });
+            if (proposal && proposal.authorId !== req.user.userId) {
+                await notificationController_1.notificationController.createNotification({
+                    userId: proposal.authorId,
+                    type: 'COMMENT',
+                    title: 'New Client Comment',
+                    message: `A client commented on your proposal "${proposal.title}"`,
+                    proposalId,
+                    metadata: {
+                        commentId: comment.id,
+                        clientName: req.user.name || req.user.email
+                    }
+                });
+            }
+            const proposalWithComments = await database_1.prisma.proposal.findFirst({
+                where: { id: proposalId },
+                include: {
+                    comments: {
+                        where: {
+                            author: {
+                                isPublicUser: true
+                            }
+                        },
+                        orderBy: { createdAt: 'desc' },
+                        take: 1,
+                        include: {
+                            author: true
+                        }
+                    }
+                }
+            });
+            if (proposalWithComments && proposalWithComments.comments.length > 0 && proposalWithComments.authorId === req.user.userId) {
+                const latestClientComment = proposalWithComments.comments[0];
+                let accessCode = '';
+                try {
+                    const metadata = proposalWithComments.metadata ? JSON.parse(proposalWithComments.metadata) : {};
+                    accessCode = metadata.accessCodes?.[0] || '';
+                }
+                catch (error) {
+                    console.error('Error parsing proposal metadata for access code:', error);
+                }
+                if (accessCode && latestClientComment.author.email) {
+                    try {
+                        await emailService_1.emailService.sendClientReplyNotificationEmail({
+                            to: latestClientComment.author.email,
+                            proposalTitle: proposalWithComments.title,
+                            proposalId: proposalWithComments.id,
+                            ownerName: req.user.name || 'Proposal Owner',
+                            replyContent: commentData.content,
+                            accessCode
+                        });
+                    }
+                    catch (emailError) {
+                        console.error('Failed to send client reply notification:', emailError);
+                    }
+                }
+            }
             res.status(201).json({
                 success: true,
                 data: comment,

@@ -12,6 +12,8 @@ export declare class AIService {
     private generateWithOpenAI;
     private generateWithHuggingFace;
     private generateWithOllama;
+    private generateWithOpenRouter;
+    private generateWithAnthropic;
     private generateWithDeepSeek;
     private generateWithTemplate;
     private generateTemplateContent;

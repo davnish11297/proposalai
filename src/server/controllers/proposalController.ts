@@ -212,8 +212,7 @@ export class ProposalController {
           clientName: updateData.clientName,
           status: updateData.status ?? undefined,
           content: typeof updateData.content === 'string' ? updateData.content : JSON.stringify(updateData.content || {}),
-          metadata: typeof updateData.metadata === 'string' ? updateData.metadata : JSON.stringify(updateData.metadata || {}),
-          version: { increment: 1 }
+          metadata: typeof updateData.metadata === 'string' ? updateData.metadata : JSON.stringify(updateData.metadata || {})
         },
         include: {
           author: {

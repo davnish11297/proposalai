@@ -83,7 +83,6 @@ export interface IProposal {
   type: ProposalType;
   content: any;
   metadata?: any;
-  version: number;
   isPublic: boolean;
   publicUrl?: string;
   userId: string;

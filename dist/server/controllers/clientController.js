@@ -6,9 +6,31 @@ class ClientController {
     async getClients(req, res) {
         try {
             const clients = await database_1.prisma.client.findMany({
+                where: {
+                    organizationId: req.user.organizationId
+                },
                 orderBy: { updatedAt: 'desc' },
+                include: {
+                    proposals: {
+                        select: {
+                            id: true
+                        }
+                    }
+                }
             });
-            res.json({ success: true, data: clients });
+            const clientsWithCounts = clients.map(client => ({
+                ...client,
+                _count: {
+                    proposals: client.proposals.length
+                },
+                proposals: undefined
+            }));
+            console.log('Clients with proposal counts:', clientsWithCounts.map(client => ({
+                id: client.id,
+                name: client.name,
+                proposalCount: client._count.proposals
+            })));
+            res.json({ success: true, data: clientsWithCounts });
         }
         catch (error) {
             console.error('Get clients error:', error);
@@ -20,12 +42,50 @@ class ClientController {
             const { id } = req.params;
             const client = await database_1.prisma.client.findFirst({
                 where: { id },
+                include: {
+                    proposals: {
+                        orderBy: { updatedAt: 'desc' },
+                        select: {
+                            id: true,
+                            title: true,
+                            description: true,
+                            type: true,
+                            status: true,
+                            createdAt: true,
+                            updatedAt: true,
+                            clientName: true,
+                            metadata: true
+                        }
+                    }
+                }
             });
             if (!client) {
                 res.status(404).json({ success: false, error: 'Client not found' });
                 return;
             }
-            res.json({ success: true, data: client });
+            const transformedClient = {
+                ...client,
+                proposals: client.proposals.map(proposal => {
+                    let emailSentAt, emailRecipient;
+                    if (proposal.metadata) {
+                        try {
+                            const metadata = JSON.parse(proposal.metadata);
+                            if (metadata.lastEmailSent) {
+                                emailSentAt = metadata.lastEmailSent.sentAt;
+                                emailRecipient = metadata.lastEmailSent.recipientEmail;
+                            }
+                        }
+                        catch (e) {
+                        }
+                    }
+                    return {
+                        ...proposal,
+                        emailSentAt,
+                        emailRecipient
+                    };
+                })
+            };
+            res.json({ success: true, data: transformedClient });
         }
         catch (error) {
             console.error('Get client error:', error);
@@ -35,6 +95,18 @@ class ClientController {
     async createClient(req, res) {
         try {
             const { name, email, phone, company, industry, notes } = req.body;
+            const existingClient = await database_1.prisma.client.findFirst({
+                where: {
+                    email: email,
+                    organizationId: req.user.organizationId
+                }
+            });
+            if (existingClient) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Client with this email already exists in your organization'
+                });
+            }
             const client = await database_1.prisma.client.create({
                 data: {
                     name,
@@ -43,6 +115,7 @@ class ClientController {
                     company,
                     industry,
                     notes,
+                    organizationId: req.user.organizationId,
                 },
             });
             res.status(201).json({ success: true, data: client, message: 'Client created successfully' });
@@ -55,10 +128,17 @@ class ClientController {
     async updateClient(req, res) {
         try {
             const { id } = req.params;
-            const { name, email } = req.body;
+            const { name, email, phone, company, industry, notes } = req.body;
             const client = await database_1.prisma.client.update({
                 where: { id },
-                data: { name, email },
+                data: {
+                    name,
+                    email,
+                    phone,
+                    company,
+                    industry,
+                    notes
+                },
             });
             res.json({ success: true, data: client, message: 'Client updated successfully' });
         }
