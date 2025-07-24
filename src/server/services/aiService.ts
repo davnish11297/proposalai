@@ -1,8 +1,9 @@
 import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import { IGenerateProposalRequest, IProposal, ISnippet, IOrganization } from '../types';
 
 // AI Provider types
-type AIProvider = 'openai' | 'huggingface' | 'ollama' | 'deepseek' | 'template';
+type AIProvider = 'openrouter' | 'openai' | 'anthropic' | 'huggingface' | 'ollama' | 'deepseek' | 'template';
 
 interface AIResponse {
   content: string;
@@ -43,13 +44,34 @@ const getDeepSeekClient = () => {
   };
 };
 
+// Anthropic API client
+const getAnthropicClient = () => {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error('ANTHROPIC_API_KEY environment variable is required for Anthropic features');
+  }
+  return new Anthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY,
+  });
+};
+
+// OpenRouter API client
+const getOpenRouterClient = () => {
+  if (!process.env.OPENROUTER_API_KEY) {
+    throw new Error('OPENROUTER_API_KEY environment variable is required for OpenRouter features');
+  }
+  return {
+    apiKey: process.env.OPENROUTER_API_KEY,
+    baseURL: 'https://openrouter.ai/api/v1'
+  };
+};
+
 export class AIService {
   private static instance: AIService;
   private preferredProvider: AIProvider = 'openai';
 
   private constructor() {
-    // Use template-based generation since DeepSeek has insufficient balance
-    this.preferredProvider = 'template';
+    // Use OpenRouter as the preferred provider (supports multiple AI models)
+    this.preferredProvider = 'openrouter';
   }
 
   public static getInstance(): AIService {
@@ -69,8 +91,8 @@ export class AIService {
     const systemPrompt = this.buildSystemPrompt(organization, snippets, caseStudies, pricingModels);
     const userPrompt = this.buildUserPrompt(request);
 
-    // Use template-based generation since DeepSeek has insufficient balance
-    const providers: AIProvider[] = ['template'];
+    // Use OpenRouter as primary (supports multiple AI models), with fallbacks
+    const providers: AIProvider[] = ['openrouter', 'anthropic', 'openai', 'template'];
     
     for (const provider of providers) {
       try {
@@ -115,6 +137,10 @@ export class AIService {
     userPrompt: string
   ): Promise<AIResponse> {
     switch (provider) {
+      case 'openrouter':
+        return this.generateWithOpenRouter(systemPrompt, userPrompt);
+      case 'anthropic':
+        return this.generateWithAnthropic(systemPrompt, userPrompt);
       case 'openai':
         return this.generateWithOpenAI(systemPrompt, userPrompt);
       case 'huggingface':
@@ -235,6 +261,101 @@ export class AIService {
         content: '',
         success: false,
         provider: 'ollama',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  private async generateWithOpenRouter(systemPrompt: string, userPrompt: string): Promise<AIResponse> {
+    try {
+      const client = getOpenRouterClient();
+      
+      console.log('🌐 Attempting OpenRouter API call with Claude Sonnet 4...');
+      
+      const response = await fetch(`${client.baseURL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${client.apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'http://localhost:3000',
+          'X-Title': 'ProposalAI'
+        },
+        body: JSON.stringify({
+          model: 'anthropic/claude-3-5-sonnet-20241022',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 4000,
+        })
+      });
+
+      console.log(`🌐 OpenRouter API response status: ${response.status}`);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`🌐 OpenRouter API error: ${response.status} - ${errorText}`);
+        throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json() as any;
+      console.log('🌐 OpenRouter API response data:', JSON.stringify(data, null, 2));
+      
+      const content = data.choices?.[0]?.message?.content;
+      console.log('🌐 OpenRouter generated content:', content);
+      
+      return {
+        content: content || '',
+        success: !!content,
+        provider: 'openrouter'
+      };
+    } catch (error) {
+      console.error('🌐 OpenRouter generation error:', error);
+      return {
+        content: '',
+        success: false,
+        provider: 'openrouter',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  private async generateWithAnthropic(systemPrompt: string, userPrompt: string): Promise<AIResponse> {
+    try {
+      const client = getAnthropicClient();
+      
+      console.log('🤖 Attempting Anthropic Claude Sonnet 4 API call...');
+      
+      const response = await client.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 4000,
+        temperature: 0.7,
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: userPrompt
+          }
+        ]
+      });
+
+      console.log(`🤖 Anthropic API response status: ${response.stop_reason}`);
+
+      const content = response.content[0]?.text;
+      console.log('🤖 Anthropic generated content:', content);
+      
+      return {
+        content: content || '',
+        success: !!content,
+        provider: 'anthropic'
+      };
+    } catch (error) {
+      console.error('🤖 Anthropic generation error:', error);
+      return {
+        content: '',
+        success: false,
+        provider: 'anthropic',
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }

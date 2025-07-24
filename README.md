@@ -1,254 +1,174 @@
-# ProposalAI - Smart Client Proposal & RFP Response Generator
+# ProposalAI
 
-> AI-powered proposal generation platform for the B2B teams
+A comprehensive proposal management system with AI-powered content generation, client management, and collaboration features.
 
-ProposalAI is a comprehensive SaaS solution that helps B2B teams create professional proposals, sales decks,
- and RFP responses using AI. It combines your company's knowledge base with GPT-4 to generate tailored, on-b
-rand proposals in minutes. 
+## Features
 
-## 🚀 Features
+- 🤖 **AI-Powered Proposal Generation** - Generate professional proposals using Anthropic Claude Sonnet 4
+- 📧 **Email Integration** - Send proposals directly to clients via email
+- 👥 **Client Management** - Organize and track client relationships
+- 📊 **Analytics & Tracking** - Monitor proposal engagement and effectiveness
+- 💬 **Real-time Comments** - Collaborate with team members on proposals
+- 🔐 **Secure Access Control** - Control who can view and edit proposals
+- 📱 **Responsive Design** - Works seamlessly on desktop and mobile devices
 
-### Core Features
-- **AI-Powered Proposal Builder**: Generate proposals in minutes with GPT-4
-- **Brand & Tone Locking**: Maintain consistent brand voice across all content
-- **Smart Snippet Reuse**: AI suggests relevant content snippets contextually
-- **Multi-format Export**: PDF, Word, PowerPoint, and HTML exports
-- **Collaboration Workflow**: Real-time editing, commenting, and approval
-- **Template Library**: Pre-built templates for different proposal types
-- **Analytics Dashboard**: Track proposal effectiveness and engagement
+## Tech Stack
 
-### Advanced Features
-- **Case Study Integration**: Automatically include relevant case studies
-- **Pricing Model Management**: Dynamic pricing based on project scope
-- **Version Control**: Track changes and maintain proposal history
-- **Public Sharing**: Share proposals via secure public URLs
-- **Activity Tracking**: Monitor team activity and proposal lifecycle
-- **Custom Branding**: Full control over colors, fonts, and styling
+- **Frontend**: React 18, TypeScript, Tailwind CSS
+- **Backend**: Node.js, Express.js, TypeScript
+- **Database**: MongoDB with Prisma ORM
+- **AI**: Anthropic Claude Sonnet 4 (primary), OpenAI GPT-4 (fallback)
+- **Email**: SendGrid
+- **Authentication**: JWT
 
-## 🛠 Tech Stack
-
-### Backend
-- **Node.js** with TypeScript
-- **Express.js** for API framework
-- **PostgreSQL** with Prisma ORM
-- **OpenAI GPT-4** for AI generation
-- **JWT** for authentication
-- **Multer** for file uploads
-
-### Frontend
-- **React 18** with TypeScript
-- **Tailwind CSS** for styling
-- **React Query** for state management
-- **React Router** for navigation
-- **Framer Motion** for animations
-- **Monaco Editor** for rich text editing
-
-## 📋 Prerequisites
+## Prerequisites
 
 - Node.js 18+ 
-- PostgreSQL 12+
-- OpenAI API key
-- npm or yarn
+- MongoDB database
+- Anthropic API key (recommended) or OpenAI API key
 
-## 🚀 Quick Start
+## Quick Start
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/yourusername/proposalai.git
-cd proposalai
-```
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd proposalai
+   ```
 
-### 2. Install Dependencies
-```bash
-# Install backend dependencies
-npm install
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-# Install frontend dependencies
-cd client
-npm install
-cd ..
-```
+3. **Set up environment variables**
+   ```bash
+   cp env.example .env
+   ```
+   
+   Edit `.env` and add your configuration:
+   ```env
+   # Database
+   DATABASE_URL="mongodb://localhost:27017/proposalai"
+   
+   # AI Provider (Choose one)
+   ANTHROPIC_API_KEY=your-anthropic-api-key-here  # Recommended
+   # OPENAI_API_KEY=your-openai-api-key-here     # Alternative
+   
+   # Email (Optional)
+   SENDGRID_API_KEY=your-sendgrid-api-key-here
+   EMAIL_FROM=ProposalAI <noreply@proposalai.com>
+   
+   # JWT
+   JWT_SECRET=your-super-secret-jwt-key-here
+   ```
 
-### 3. Environment Setup
-```bash
-# Copy environment template
-cp env.example .env
+4. **Set up the database**
+   ```bash
+   npx prisma generate
+   npx prisma db push
+   npx prisma db seed
+   ```
 
-# Edit .env with your configuration
-nano .env
-```
+5. **Start the development servers**
+   ```bash
+   npm run dev
+   ```
 
-Required environment variables:
-```env
-# Database
-DATABASE_URL="postgresql://username:password@localhost:5432/proposalai"
+6. **Open your browser**
+   - Frontend: http://localhost:3000
+   - Backend: http://localhost:3001
 
-# OpenAI
-OPENAI_API_KEY="your-openai-api-key"
+## AI Provider Setup
 
-# JWT
-JWT_SECRET="your-super-secret-jwt-key"
+### OpenRouter (Recommended - Multiple AI Models)
 
-# Server
-PORT=3000
-CORS_ORIGIN=http://localhost:3000
-```
+1. **Get an API key** from [OpenRouter Console](https://openrouter.ai/keys)
+2. **Add to your `.env` file**:
+   ```env
+   OPENROUTER_API_KEY=your-openrouter-api-key-here
+   ```
+3. **The system will automatically use Claude Sonnet 4** via OpenRouter for all AI operations
+4. **Benefits**: Access to multiple AI models (Claude, GPT-4, etc.) through a single API
 
-### 4. Database Setup
-```bash
-# Generate Prisma client
-npx prisma generate
+### Anthropic Claude Sonnet 4 (Direct)
 
-# Run database migrations
-npx prisma migrate dev
+1. **Get an API key** from [Anthropic Console](https://console.anthropic.com/)
+2. **Add to your `.env` file**:
+   ```env
+   ANTHROPIC_API_KEY=your-anthropic-api-key-here
+   ```
+3. **The system will use Claude Sonnet 4 directly** for all AI operations
 
-# (Optional) Seed with sample data
-npx prisma db seed
-```
+### OpenAI GPT-4 (Direct)
 
-### 5. Start Development Servers
-```bash
-# Start both frontend and backend
-npm run dev
+1. **Get an API key** from [OpenAI Platform](https://platform.openai.com/)
+2. **Add to your `.env` file**:
+   ```env
+   OPENAI_API_KEY=your-openai-api-key-here
+   ```
+3. **The system will use GPT-4 directly** for all AI operations
 
-# Or start separately:
-npm run dev:server  # Backend on port 3000
-npm run dev:client  # Frontend on port 3000
-```
+## Usage
 
-## 📁 Project Structure
+1. **Create an account** and set up your organization profile
+2. **Generate proposals** using AI or start from templates
+3. **Send proposals** to clients via email
+4. **Track engagement** and receive notifications
+5. **Manage clients** and their proposal history
 
-```
-proposalai/
-├── src/server/                 # Backend source
-│   ├── controllers/           # API controllers
-│   ├── middleware/            # Express middleware
-│   ├── routes/                # API routes
-│   ├── services/              # Business logic
-│   ├── types/                 # TypeScript types
-│   ├── utils/                 # Utility functions
-│   └── index.ts              # Server entry point
-├── client/                    # Frontend source
-│   ├── src/
-│   │   ├── components/        # React components
-│   │   ├── hooks/            # Custom hooks
-│   │   ├── pages/            # Page components
-│   │   ├── services/         # API services
-│   │   ├── stores/           # State management
-│   │   └── types/            # TypeScript types
-│   └── public/               # Static assets
-├── prisma/                   # Database schema
-├── uploads/                  # File uploads
-└── docs/                     # Documentation
-```
-
-## 🔧 API Endpoints
-
-### Authentication
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
-- `POST /api/auth/logout` - User logout
+## API Endpoints
 
 ### Proposals
+- `POST /api/proposals/generate` - Generate AI proposal
 - `GET /api/proposals` - List proposals
-- `POST /api/proposals` - Create proposal
-- `GET /api/proposals/:id` - Get proposal
-- `PUT /api/proposals/:id` - Update proposal
-- `DELETE /api/proposals/:id` - Delete proposal
-- `POST /api/proposals/generate` - Generate with AI
-- `POST /api/proposals/:id/publish` - Publish proposal
+- `POST /api/proposals/:id/send-email` - Send proposal via email
+- `GET /api/public/proposals/:id` - Public proposal view
 
-### Templates
-- `GET /api/templates` - List templates
-- `POST /api/templates` - Create template
-- `GET /api/templates/:id` - Get template
-- `PUT /api/templates/:id` - Update template
+### Clients
+- `GET /api/clients` - List clients
+- `POST /api/clients` - Create client
+- `GET /api/clients/:id` - Get client details
 
-### Snippets
-- `GET /api/snippets` - List snippets
-- `POST /api/snippets` - Create snippet
-- `PUT /api/snippets/:id` - Update snippet
+### Comments
+- `GET /api/comments/proposal/:proposalId` - Get proposal comments
+- `POST /api/comments` - Add comment
 
-### Analytics
-- `GET /api/analytics/dashboard` - Dashboard metrics
-- `GET /api/analytics/proposals` - Proposal analytics
+## Development
 
-## 🎨 Customization
-
-### Branding
-Update your organization's branding in the settings:
-- Primary and secondary colors
-- Font family
-- Brand voice and tone
-- Logo and styling
-
-### Templates
-Create custom templates for different proposal types:
-- Sales proposals
-- RFP responses
-- Pitch decks
-- Statements of work
-
-### AI Prompts
-Customize AI generation prompts in `src/server/services/aiService.ts`:
-- System prompts for different proposal types
-- Brand voice instructions
-- Content structure preferences
-
-## 🚀 Deployment
-
-### Production Build
-```bash
-# Build both frontend and backend
-npm run build
-
-# Start production server
-npm start
+### Project Structure
+```
+├── client/                 # React frontend
+│   ├── src/
+│   │   ├── components/     # Reusable components
+│   │   ├── pages/         # Page components
+│   │   ├── services/      # API services
+│   │   └── types/         # TypeScript types
+├── src/
+│   ├── server/
+│   │   ├── controllers/   # Route controllers
+│   │   ├── routes/        # API routes
+│   │   ├── services/      # Business logic
+│   │   └── types/         # TypeScript types
+├── prisma/
+│   └── schema.prisma      # Database schema
+└── package.json
 ```
 
-### Docker Deployment
-```bash
-# Build Docker image
-docker build -t proposalai .
+### Available Scripts
+- `npm run dev` - Start development servers
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run db:push` - Push database schema
+- `npm run db:seed` - Seed database with sample data
 
-# Run with Docker Compose
-docker-compose up -d
-```
-
-### Environment Variables for Production
-```env
-NODE_ENV=production
-DATABASE_URL="your-production-database-url"
-OPENAI_API_KEY="your-openai-api-key"
-JWT_SECRET="your-production-jwt-secret"
-CORS_ORIGIN="https://yourdomain.com"
-```
-
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
-## 📝 License
+## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-- **Documentation**: [docs.proposalai.com](https://docs.proposalai.com)
-- **Issues**: [GitHub Issues](https://github.com/yourusername/proposalai/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/proposalai/discussions)
-
-## 🙏 Acknowledgments
-
-- OpenAI for GPT-4 API
-- Prisma for excellent ORM
-- Tailwind CSS for styling framework
-- React team for the amazing framework
-
----
-
-**ProposalAI** - Transform your proposal process with AI-powered automation. 
+MIT License - see LICENSE file for details. 

@@ -34,6 +34,7 @@
   "author": "ProposalAI Team",
   "license": "MIT",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.57.0",
     "@prisma/client": "^6.12.0",
     "@sendgrid/mail": "^8.1.5",
     "@types/bcrypt": "^5.0.2",
