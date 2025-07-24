@@ -4,6 +4,13 @@ import { toast } from 'react-hot-toast';
 import { proposalsAPI, getOpenRouterChatCompletion } from '../services/api';
 import ClientSelectionModal from '../components/ClientSelectionModal';
 import NotificationBell from '../components/NotificationBell';
+import { 
+  HomeIcon, 
+  DocumentTextIcon, 
+  PaperAirplaneIcon, 
+  UsersIcon, 
+  UserIcon 
+} from '@heroicons/react/24/outline';
 
 const ProposalEditor: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -32,18 +39,7 @@ const ProposalEditor: React.FC = () => {
       projectScope: ''
     }
   });
-  const [accessRequests, setAccessRequests] = useState<any[]>([
-    // Demo access request
-    {
-      id: 'demo-request-1',
-      name: 'John Smith',
-      email: 'john@clientcompany.com',
-      company: 'Client Company Inc.',
-      reason: 'Would like to review the proposal before final approval',
-      status: 'PENDING',
-      createdAt: new Date().toISOString()
-    }
-  ]);
+  const [accessRequests, setAccessRequests] = useState<any[]>([]);
   const [grantingRequestId, setGrantingRequestId] = useState<string | null>(null);
 
   const isNewProposal = !id;
@@ -74,7 +70,6 @@ const ProposalEditor: React.FC = () => {
         .then(({ data }) => setAccessRequests(data.data))
         .catch(() => setAccessRequests([]));
     }
-    // Keep demo request when there's no real proposal ID
   }, [id]);
 
   const handleGenerateWithAI = async () => {
@@ -280,27 +275,11 @@ const ProposalEditor: React.FC = () => {
   const handleGrantAccess = async (requestId: string) => {
     setGrantingRequestId(requestId);
     try {
-      // Handle demo request
-      if (requestId === 'demo-request-1') {
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Update the demo request status
-        setAccessRequests(prev => prev.map(req => 
-          req.id === requestId 
-            ? { ...req, status: 'GRANTED', accessCode: 'DEMO-12345' }
-            : req
-        ));
-        
-        toast.success('Access granted! Demo access code: DEMO-12345');
-      } else {
-        // Handle real requests
-        await proposalsAPI.grantAccessRequest(id!, requestId);
-        toast.success('Access granted and email sent!');
-        // Refresh access requests
-        const { data } = await proposalsAPI.getAccessRequests(id!);
-        setAccessRequests(data.data);
-      }
+      await proposalsAPI.grantAccessRequest(id!, requestId);
+      toast.success('Access granted and email sent!');
+      // Refresh access requests
+      const { data } = await proposalsAPI.getAccessRequests(id!);
+      setAccessRequests(data.data);
     } catch (error) {
       toast.error('Failed to grant access');
     } finally {
@@ -396,10 +375,26 @@ const ProposalEditor: React.FC = () => {
               <h1 className="text-xl font-extrabold text-white tracking-wider drop-shadow">ProposalAI</h1>
             </div>
             <div className="flex items-center space-x-8">
-              <a href="/dashboard" className="text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">Dashboard</a>
-              <a href="/drafts" className="text-white/80 hover:text-white transition-colors">Drafts</a>
-              <a href="/sent-proposals" className="text-white/80 hover:text-white transition-colors">Sent Proposals</a>
-              <a href="/profile" className="text-white/80 hover:text-white transition-colors">Profile</a>
+              <a href="/dashboard" className="flex items-center space-x-1 text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">
+                <HomeIcon className="w-5 h-5" />
+                <span>Dashboard</span>
+              </a>
+              <a href="/drafts" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <DocumentTextIcon className="w-5 h-5" />
+                <span>Drafts</span>
+              </a>
+              <a href="/sent-proposals" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <PaperAirplaneIcon className="w-5 h-5" />
+                <span>Sent Proposals</span>
+              </a>
+              <a href="/clients" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <UsersIcon className="w-5 h-5" />
+                <span>Clients</span>
+              </a>
+              <a href="/profile" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <UserIcon className="w-5 h-5" />
+                <span>Profile</span>
+              </a>
               <NotificationBell />
               <button 
                 onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = '/login'; }}
@@ -662,25 +657,9 @@ const ProposalEditor: React.FC = () => {
                     </div>
                   ))
                 ) : (
-                  // Fallback demo request when no real requests exist
-                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="font-semibold text-blue-900">John Smith (john@clientcompany.com)</div>
-                        <div className="text-sm text-gray-700">Client Company Inc.</div>
-                        <div className="text-xs text-gray-500 mt-1">Would like to review the proposal before final approval</div>
-                        <div className="text-xs text-gray-400 mt-1">Requested: {new Date().toLocaleString()}</div>
-                      </div>
-                      <div className="ml-4">
-                        <button
-                          className="px-4 py-2 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-green-600 transition disabled:opacity-50 text-sm"
-                          disabled={grantingRequestId === 'demo-request-1'}
-                          onClick={() => handleGrantAccess('demo-request-1')}
-                        >
-                          {grantingRequestId === 'demo-request-1' ? 'Granting...' : 'Grant Access'}
-                        </button>
-                      </div>
-                    </div>
+                  <div className="text-center py-8 text-gray-500">
+                    <div className="text-lg font-medium mb-2">No Access Requests</div>
+                    <div className="text-sm">When clients request access to this proposal, they will appear here.</div>
                   </div>
                 )}
               </div>

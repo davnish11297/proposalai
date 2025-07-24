@@ -17,11 +17,32 @@ export class EmailTrackingService {
       emailTrackingId?: string;
     }
   ): Promise<void> {
+    // Get existing metadata
+    const proposal = await db.proposal.findUnique({
+      where: { id: proposalId },
+      select: { metadata: true }
+    });
+
+    const existingMetadata = proposal?.metadata ? JSON.parse(proposal.metadata) : {};
+    
+    // Update metadata with email tracking data
+    const updatedMetadata = {
+      ...existingMetadata,
+      lastEmailSent: {
+        ...existingMetadata.lastEmailSent,
+        sentAt: trackingData.emailSentAt?.toISOString(),
+        recipientEmail: trackingData.emailRecipient,
+        messageId: trackingData.emailMessageId,
+        trackingId: trackingData.emailTrackingId,
+        status: 'SENT'
+      }
+    };
+
     await db.proposal.update({
       where: { id: proposalId },
       data: {
-        ...trackingData,
-        emailStatus: 'SENT'
+        metadata: JSON.stringify(updatedMetadata),
+        updatedAt: new Date()
       }
     });
   }
@@ -29,19 +50,41 @@ export class EmailTrackingService {
   // Track email open
   async trackEmailOpen(trackingId: string): Promise<{ success: boolean; proposalId?: string }> {
     try {
-      const proposal = await db.proposal.findUnique({
-        where: { emailTrackingId: trackingId }
+      // Find proposal by tracking ID in metadata
+      const proposals = await db.proposal.findMany({
+        where: { metadata: { not: null } },
+        select: { id: true, metadata: true, authorId: true }
+      });
+
+      const proposal = proposals.find(p => {
+        try {
+          const metadata = JSON.parse(p.metadata || '{}');
+          return metadata.lastEmailSent?.trackingId === trackingId;
+        } catch {
+          return false;
+        }
       });
 
       if (!proposal) {
         return { success: false };
       }
 
+      // Update metadata with open tracking
+      const existingMetadata = JSON.parse(proposal.metadata || '{}');
+      const updatedMetadata = {
+        ...existingMetadata,
+        lastEmailSent: {
+          ...existingMetadata.lastEmailSent,
+          openedAt: new Date().toISOString(),
+          status: 'OPENED'
+        }
+      };
+
       await db.proposal.update({
         where: { id: proposal.id },
         data: {
-          emailOpenedAt: new Date(),
-          emailStatus: 'OPENED'
+          metadata: JSON.stringify(updatedMetadata),
+          updatedAt: new Date()
         }
       });
 
@@ -68,19 +111,41 @@ export class EmailTrackingService {
   // Track email click
   async trackEmailClick(trackingId: string, linkType: string = 'proposal'): Promise<{ success: boolean; proposalId?: string }> {
     try {
-      const proposal = await db.proposal.findUnique({
-        where: { emailTrackingId: trackingId }
+      // Find proposal by tracking ID in metadata
+      const proposals = await db.proposal.findMany({
+        where: { metadata: { not: null } },
+        select: { id: true, metadata: true, authorId: true }
+      });
+
+      const proposal = proposals.find(p => {
+        try {
+          const metadata = JSON.parse(p.metadata || '{}');
+          return metadata.lastEmailSent?.trackingId === trackingId;
+        } catch {
+          return false;
+        }
       });
 
       if (!proposal) {
         return { success: false };
       }
 
+      // Update metadata with click tracking
+      const existingMetadata = JSON.parse(proposal.metadata || '{}');
+      const updatedMetadata = {
+        ...existingMetadata,
+        lastEmailSent: {
+          ...existingMetadata.lastEmailSent,
+          clickedAt: new Date().toISOString(),
+          status: 'CLICKED'
+        }
+      };
+
       await db.proposal.update({
         where: { id: proposal.id },
         data: {
-          emailClickedAt: new Date(),
-          emailStatus: 'CLICKED'
+          metadata: JSON.stringify(updatedMetadata),
+          updatedAt: new Date()
         }
       });
 
@@ -108,19 +173,41 @@ export class EmailTrackingService {
   // Track email reply
   async trackEmailReply(trackingId: string): Promise<{ success: boolean; proposalId?: string }> {
     try {
-      const proposal = await db.proposal.findUnique({
-        where: { emailTrackingId: trackingId }
+      // Find proposal by tracking ID in metadata
+      const proposals = await db.proposal.findMany({
+        where: { metadata: { not: null } },
+        select: { id: true, metadata: true, authorId: true }
+      });
+
+      const proposal = proposals.find(p => {
+        try {
+          const metadata = JSON.parse(p.metadata || '{}');
+          return metadata.lastEmailSent?.trackingId === trackingId;
+        } catch {
+          return false;
+        }
       });
 
       if (!proposal) {
         return { success: false };
       }
 
+      // Update metadata with reply tracking
+      const existingMetadata = JSON.parse(proposal.metadata || '{}');
+      const updatedMetadata = {
+        ...existingMetadata,
+        lastEmailSent: {
+          ...existingMetadata.lastEmailSent,
+          repliedAt: new Date().toISOString(),
+          status: 'REPLIED'
+        }
+      };
+
       await db.proposal.update({
         where: { id: proposal.id },
         data: {
-          emailRepliedAt: new Date(),
-          emailStatus: 'REPLIED'
+          metadata: JSON.stringify(updatedMetadata),
+          updatedAt: new Date()
         }
       });
 
@@ -159,35 +246,45 @@ export class EmailTrackingService {
     const proposal = await db.proposal.findUnique({
       where: { id: proposalId },
       select: {
-        emailSentAt: true,
-        emailRecipient: true,
-        emailOpenedAt: true,
-        emailRepliedAt: true,
-        emailClickedAt: true,
-        emailStatus: true
+        metadata: true
       }
     });
 
-    if (!proposal) {
+    if (!proposal || !proposal.metadata) {
       return {};
     }
 
-    const stats: any = { ...proposal };
+    try {
+      const metadata = JSON.parse(proposal.metadata);
+      const lastEmailSent = metadata.lastEmailSent || {};
+      
+      const stats = {
+        emailSentAt: lastEmailSent.sentAt ? new Date(lastEmailSent.sentAt) : undefined,
+        emailRecipient: lastEmailSent.recipientEmail,
+        emailOpenedAt: lastEmailSent.openedAt ? new Date(lastEmailSent.openedAt) : undefined,
+        emailRepliedAt: lastEmailSent.repliedAt ? new Date(lastEmailSent.repliedAt) : undefined,
+        emailClickedAt: lastEmailSent.clickedAt ? new Date(lastEmailSent.clickedAt) : undefined,
+        emailStatus: lastEmailSent.status
+      };
 
-    // Calculate time differences
-    if (proposal.emailSentAt) {
-      if (proposal.emailOpenedAt) {
-        stats.timeToOpen = Math.round((proposal.emailOpenedAt.getTime() - proposal.emailSentAt.getTime()) / (1000 * 60));
+      // Calculate time differences
+      if (stats.emailSentAt) {
+        if (stats.emailOpenedAt) {
+          stats.timeToOpen = Math.round((stats.emailOpenedAt.getTime() - stats.emailSentAt.getTime()) / (1000 * 60));
+        }
+        if (stats.emailRepliedAt) {
+          stats.timeToReply = Math.round((stats.emailRepliedAt.getTime() - stats.emailSentAt.getTime()) / (1000 * 60));
+        }
+        if (stats.emailClickedAt) {
+          stats.timeToClick = Math.round((stats.emailClickedAt.getTime() - stats.emailSentAt.getTime()) / (1000 * 60));
+        }
       }
-      if (proposal.emailRepliedAt) {
-        stats.timeToReply = Math.round((proposal.emailRepliedAt.getTime() - proposal.emailSentAt.getTime()) / (1000 * 60));
-      }
-      if (proposal.emailClickedAt) {
-        stats.timeToClick = Math.round((proposal.emailClickedAt.getTime() - proposal.emailSentAt.getTime()) / (1000 * 60));
-      }
+
+      return stats;
+    } catch (error) {
+      console.error('Error parsing proposal metadata for email tracking stats:', error);
+      return {};
     }
-
-    return stats;
   }
 
   // Get email tracking statistics for all proposals in an organization
@@ -205,28 +302,43 @@ export class EmailTrackingService {
     const proposals = await db.proposal.findMany({
       where: { 
         organizationId,
-        emailSentAt: { not: null }
+        metadata: { not: null }
       },
       select: {
-        emailSentAt: true,
-        emailOpenedAt: true,
-        emailRepliedAt: true,
-        emailClickedAt: true
+        metadata: true
       }
     });
 
-    const totalSent = proposals.length;
-    const totalOpened = proposals.filter(p => p.emailOpenedAt).length;
-    const totalReplied = proposals.filter(p => p.emailRepliedAt).length;
-    const totalClicked = proposals.filter(p => p.emailClickedAt).length;
+    // Parse metadata and extract email tracking data
+    const emailTrackingData = proposals
+      .map(p => {
+        try {
+          const metadata = JSON.parse(p.metadata || '{}');
+          const lastEmailSent = metadata.lastEmailSent || {};
+          return {
+            emailSentAt: lastEmailSent.sentAt ? new Date(lastEmailSent.sentAt) : null,
+            emailOpenedAt: lastEmailSent.openedAt ? new Date(lastEmailSent.openedAt) : null,
+            emailRepliedAt: lastEmailSent.repliedAt ? new Date(lastEmailSent.repliedAt) : null,
+            emailClickedAt: lastEmailSent.clickedAt ? new Date(lastEmailSent.clickedAt) : null
+          };
+        } catch (error) {
+          return null;
+        }
+      })
+      .filter(Boolean);
+
+    const totalSent = emailTrackingData.filter(p => p.emailSentAt).length;
+    const totalOpened = emailTrackingData.filter(p => p.emailOpenedAt).length;
+    const totalReplied = emailTrackingData.filter(p => p.emailRepliedAt).length;
+    const totalClicked = emailTrackingData.filter(p => p.emailClickedAt).length;
 
     const openRate = totalSent > 0 ? (totalOpened / totalSent) * 100 : 0;
     const replyRate = totalSent > 0 ? (totalReplied / totalSent) * 100 : 0;
     const clickRate = totalSent > 0 ? (totalClicked / totalSent) * 100 : 0;
 
     // Calculate average times
-    const openedProposals = proposals.filter(p => p.emailOpenedAt && p.emailSentAt);
-    const repliedProposals = proposals.filter(p => p.emailRepliedAt && p.emailSentAt);
+    const openedProposals = emailTrackingData.filter(p => p.emailOpenedAt && p.emailSentAt);
+    const repliedProposals = emailTrackingData.filter(p => p.emailRepliedAt && p.emailSentAt);
 
     const averageTimeToOpen = openedProposals.length > 0 
       ? openedProposals.reduce((sum, p) => {

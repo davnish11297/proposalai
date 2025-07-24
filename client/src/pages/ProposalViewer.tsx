@@ -12,7 +12,11 @@ import {
   ChartBarIcon,
   CurrencyDollarIcon,
   ClockIcon,
-  PaperAirplaneIcon
+  PaperAirplaneIcon,
+  HomeIcon,
+  DocumentTextIcon,
+  UsersIcon,
+  UserIcon
 } from '@heroicons/react/24/outline';
 import { getOpenRouterChatCompletion } from '../services/api';
 
@@ -51,14 +55,17 @@ const ProposalViewer: React.FC = () => {
   const { user } = useAuth();
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'comments' | 'activity' | 'analytics' | 'email-tracking'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'comments' | 'activity' | 'analytics' | 'email-tracking' | 'access-requests'>('overview');
   const [showSendModal, setShowSendModal] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState('');
+  const [clientName, setClientName] = useState('');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState('');
   const [analytics, setAnalytics] = useState<any>(null);
   const [generatingAnalytics, setGeneratingAnalytics] = useState(false);
   const [hasVisitedAnalytics, setHasVisitedAnalytics] = useState(false);
+  const [accessRequests, setAccessRequests] = useState<any[]>([]);
+  const [grantingRequestId, setGrantingRequestId] = useState<string | null>(null);
 
   const fetchProposal = useCallback(async () => {
     try {
@@ -187,6 +194,14 @@ Return ONLY the JSON object, no other text.`;
       fetchProposal();
     }
   }, [id, fetchProposal]);
+
+  useEffect(() => {
+    if (id) {
+      proposalsAPI.getAccessRequests(id)
+        .then(({ data }) => setAccessRequests(data.data))
+        .catch(() => setAccessRequests([]));
+    }
+  }, [id]);
 
   // Handle tab parameter from URL
   useEffect(() => {
@@ -389,13 +404,34 @@ Return ONLY the JSON object, no other text.`;
 
   const handleSend = () => {
     setRecipientEmail('');
+    setClientName('');
     setSendError('');
     setShowSendModal(true);
+  };
+
+  const handleGrantAccess = async (requestId: string) => {
+    setGrantingRequestId(requestId);
+    try {
+      await proposalsAPI.grantAccessRequest(id!, requestId);
+      toast.success('Access granted and email sent!');
+      // Refresh access requests
+      const { data } = await proposalsAPI.getAccessRequests(id!);
+      setAccessRequests(data.data);
+    } catch (error) {
+      toast.error('Failed to grant access');
+    } finally {
+      setGrantingRequestId(null);
+    }
   };
 
   const handleSendProposal = async () => {
     if (!recipientEmail.trim()) {
       setSendError('Please enter a recipient email');
+      return;
+    }
+
+    if (!clientName.trim()) {
+      setSendError('Please enter a client name');
       return;
     }
 
@@ -405,11 +441,15 @@ Return ONLY the JSON object, no other text.`;
       setSending(true);
       setSendError('');
       
-      await proposalsAPI.sendEmail(proposal.id, { recipientEmail: recipientEmail.trim() });
+      await proposalsAPI.sendEmail(proposal.id, { 
+        recipientEmail: recipientEmail.trim(),
+        clientName: clientName.trim()
+      });
       
       // Close modal
       setShowSendModal(false);
       setRecipientEmail('');
+      setClientName('');
       
       // Show success message
       toast.success('Proposal sent successfully! It has been moved to Sent Proposals.');
@@ -650,10 +690,26 @@ Return ONLY the JSON object, no other text.`;
                 <h1 className="text-xl font-extrabold text-white tracking-wider drop-shadow">ProposalAI</h1>
               </div>
               <div className="flex items-center space-x-8">
-                <a href="/dashboard" className="text-white/80 hover:text-white transition-colors">Dashboard</a>
-                <a href="/drafts" className="text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">Drafts</a>
-                <a href="/sent-proposals" className="text-white/80 hover:text-white transition-colors">Sent Proposals</a>
-                <a href="/profile" className="text-white/80 hover:text-white transition-colors">Profile</a>
+                <a href="/dashboard" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                  <HomeIcon className="w-5 h-5" />
+                  <span>Dashboard</span>
+                </a>
+                <a href="/drafts" className="flex items-center space-x-1 text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">
+                  <DocumentTextIcon className="w-5 h-5" />
+                  <span>Drafts</span>
+                </a>
+                <a href="/sent-proposals" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                  <PaperAirplaneIcon className="w-5 h-5" />
+                  <span>Sent Proposals</span>
+                </a>
+                <a href="/clients" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                  <UsersIcon className="w-5 h-5" />
+                  <span>Clients</span>
+                </a>
+                <a href="/profile" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                  <UserIcon className="w-5 h-5" />
+                  <span>Profile</span>
+                </a>
                 <NotificationBell />
                 <button 
                   onClick={handleLogout}
@@ -683,10 +739,26 @@ Return ONLY the JSON object, no other text.`;
                 <h1 className="text-xl font-extrabold text-white tracking-wider drop-shadow">ProposalAI</h1>
               </div>
               <div className="flex items-center space-x-8">
-                <a href="/dashboard" className="text-white/80 hover:text-white transition-colors">Dashboard</a>
-                <a href="/drafts" className="text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">Drafts</a>
-                <a href="/sent-proposals" className="text-white/80 hover:text-white transition-colors">Sent Proposals</a>
-                <a href="/profile" className="text-white/80 hover:text-white transition-colors">Profile</a>
+                <a href="/dashboard" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                  <HomeIcon className="w-5 h-5" />
+                  <span>Dashboard</span>
+                </a>
+                <a href="/drafts" className="flex items-center space-x-1 text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">
+                  <DocumentTextIcon className="w-5 h-5" />
+                  <span>Drafts</span>
+                </a>
+                <a href="/sent-proposals" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                  <PaperAirplaneIcon className="w-5 h-5" />
+                  <span>Sent Proposals</span>
+                </a>
+                <a href="/clients" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                  <UsersIcon className="w-5 h-5" />
+                  <span>Clients</span>
+                </a>
+                <a href="/profile" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                  <UserIcon className="w-5 h-5" />
+                  <span>Profile</span>
+                </a>
                 <NotificationBell />
                 <button 
                   onClick={handleLogout}
@@ -724,10 +796,26 @@ Return ONLY the JSON object, no other text.`;
               <h1 className="text-xl font-extrabold text-white tracking-wider drop-shadow">ProposalAI</h1>
             </div>
             <div className="flex items-center space-x-8">
-              <a href="/dashboard" className="text-white/80 hover:text-white transition-colors">Dashboard</a>
-              <a href="/drafts" className="text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">Drafts</a>
-              <a href="/sent-proposals" className="text-white/80 hover:text-white transition-colors">Sent Proposals</a>
-              <a href="/profile" className="text-white/80 hover:text-white transition-colors">Profile</a>
+              <a href="/dashboard" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <HomeIcon className="w-5 h-5" />
+                <span>Dashboard</span>
+              </a>
+              <a href="/drafts" className="flex items-center space-x-1 text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">
+                <DocumentTextIcon className="w-5 h-5" />
+                <span>Drafts</span>
+              </a>
+              <a href="/sent-proposals" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <PaperAirplaneIcon className="w-5 h-5" />
+                <span>Sent Proposals</span>
+              </a>
+              <a href="/clients" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <UsersIcon className="w-5 h-5" />
+                <span>Clients</span>
+              </a>
+              <a href="/profile" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <UserIcon className="w-5 h-5" />
+                <span>Profile</span>
+              </a>
               <NotificationBell />
               <button 
                 onClick={handleLogout}
@@ -758,7 +846,7 @@ Return ONLY the JSON object, no other text.`;
                 <div className="flex items-center gap-4 text-sm text-gray-600">
                   <span>Client: {proposal.clientName}</span>
                   <span>•</span>
-                  <span>Created by {proposal.author.name}</span>
+                  <span>Created by {proposal.author.name || proposal.author.email || 'Unknown'}</span>
                   <span>•</span>
                   <span>{formatDate(proposal.createdAt)}</span>
                 </div>
@@ -795,7 +883,8 @@ Return ONLY the JSON object, no other text.`;
                   { id: 'comments', label: `Comments (${proposal._count?.comments || 0})`, icon: '💬' },
                   { id: 'activity', label: 'Activity', icon: '📊' },
                   { id: 'analytics', label: 'Analytics', icon: '📈' },
-                  { id: 'email-tracking', label: 'Email Tracking', icon: '📧' }
+                  { id: 'email-tracking', label: 'Email Tracking', icon: '📧' },
+                  { id: 'access-requests', label: `Access Requests (${accessRequests.length})`, icon: '🔐' }
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -1065,6 +1154,83 @@ Return ONLY the JSON object, no other text.`;
               {activeTab === 'email-tracking' && (
                 <EmailTracking proposalId={proposal.id} />
               )}
+
+              {activeTab === 'access-requests' && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-semibold text-gray-900">Access Requests</h3>
+                    <div className="text-sm text-gray-500">
+                      {accessRequests.length} request{accessRequests.length !== 1 ? 's' : ''}
+                    </div>
+                  </div>
+
+                  {accessRequests.length > 0 ? (
+                    <div className="space-y-4">
+                      {accessRequests.map((req) => (
+                        <div key={req.id} className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <h4 className="font-semibold text-gray-900">{req.name}</h4>
+                                <span className="text-sm text-gray-500">({req.email})</span>
+                                {req.status === 'PENDING' && (
+                                  <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">
+                                    Pending
+                                  </span>
+                                )}
+                                {req.status === 'GRANTED' && (
+                                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                                    Granted
+                                  </span>
+                                )}
+                                {req.status === 'DENIED' && (
+                                  <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">
+                                    Denied
+                                  </span>
+                                )}
+                              </div>
+                              {req.company && (
+                                <p className="text-sm text-gray-600 mb-2">{req.company}</p>
+                              )}
+                              {req.reason && (
+                                <p className="text-sm text-gray-700 mb-2">{req.reason}</p>
+                              )}
+                              <div className="text-xs text-gray-400">
+                                Requested: {new Date(req.createdAt).toLocaleString()}
+                              </div>
+                              {req.status === 'GRANTED' && req.accessCode && (
+                                <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
+                                  <span className="font-medium text-green-800">Access Code: </span>
+                                  <span className="font-mono text-green-700">{req.accessCode}</span>
+                                </div>
+                              )}
+                            </div>
+                            {req.status === 'PENDING' && (
+                              <button
+                                onClick={() => handleGrantAccess(req.id)}
+                                disabled={grantingRequestId === req.id}
+                                className="ml-4 px-4 py-2 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {grantingRequestId === req.id ? 'Granting...' : 'Grant Access'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="text-gray-400 mb-4">
+                        <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">No Access Requests</h3>
+                      <p className="text-gray-600">When clients request access to this proposal, they will appear here.</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1081,14 +1247,37 @@ Return ONLY the JSON object, no other text.`;
             
             <div className="mb-4">
               <p className="text-gray-600 mb-2">Send "{proposal?.title}" to:</p>
-              <input
-                type="email"
-                placeholder="recipient@example.com"
-                value={recipientEmail}
-                onChange={(e) => setRecipientEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                disabled={sending}
-              />
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Client Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter client's full name"
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    disabled={sending}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email Address <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="recipient@example.com"
+                    value={recipientEmail}
+                    onChange={(e) => setRecipientEmail(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    disabled={sending}
+                  />
+                </div>
+              </div>
+              
               {sendError && (
                 <p className="text-red-500 text-sm mt-2">{sendError}</p>
               )}
@@ -1104,7 +1293,7 @@ Return ONLY the JSON object, no other text.`;
               </button>
               <button
                 onClick={handleSendProposal}
-                disabled={sending || !recipientEmail.trim()}
+                disabled={sending || !recipientEmail.trim() || !clientName.trim()}
                 className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-500 to-purple-400 text-white font-semibold rounded-lg hover:from-purple-600 hover:to-purple-500 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {sending ? (

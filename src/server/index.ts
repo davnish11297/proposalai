@@ -11,12 +11,20 @@ import teamsRouter from './routes/teams';
 import session from 'express-session';
 import passport from 'passport';
 import './services/authService';
+import { PDFService } from './services/pdfService';
+import multer from 'multer';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Add request logging middleware for debugging
+app.use((req, res, next) => {
+  console.log(`[${req.method}] ${req.originalUrl}`);
+  next();
+});
 
 // Trust proxy for rate limiting and X-Forwarded-For
 app.set('trust proxy', 1);
@@ -175,6 +183,29 @@ app.use('/api/notifications', require('./routes/notifications').default);
 
 // Public proposal route
 app.use('/api/public/proposals', require('./routes/publicProposals').default);
+
+// Add direct /proposals/extract-pdf route to handle proxy issues
+const pdfService = new PDFService();
+const upload = multer({ storage: multer.memoryStorage() });
+app.post('/proposals/extract-pdf', upload.single('pdf'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No PDF file uploaded' });
+    }
+    const extractedText = await pdfService.extractTextFromBuffer(req.file.buffer);
+    return res.json({
+      success: true,
+      content: extractedText,
+      message: 'PDF text extracted successfully'
+    });
+  } catch (error) {
+    console.error('PDF extraction error:', error);
+    return res.status(500).json({
+      error: 'Failed to extract text from PDF',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import { 
   ChatBubbleLeftIcon, 
-  UserIcon, 
   CalendarIcon, 
   PaperAirplaneIcon,
   BuildingOfficeIcon
@@ -21,6 +20,8 @@ interface Comment {
 interface PublicCommentsProps {
   proposalId: string;
   accessCode: string;
+  clientName?: string;
+  clientEmail?: string;
   className?: string;
 }
 
@@ -48,13 +49,11 @@ const getAvatarColor = (str: string): string => {
   return colors[index];
 };
 
-export default function PublicComments({ proposalId, accessCode, className = '' }: PublicCommentsProps) {
+export default function PublicComments({ proposalId, accessCode, clientName, clientEmail, className = '' }: PublicCommentsProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [authorName, setAuthorName] = useState('');
-  const [authorEmail, setAuthorEmail] = useState('');
 
   const fetchComments = useCallback(async () => {
     try {
@@ -83,8 +82,13 @@ export default function PublicComments({ proposalId, accessCode, className = '' 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim() || !authorName.trim() || !authorEmail.trim()) {
-      toast.error('Please fill in all fields');
+    if (!newComment.trim()) {
+      toast.error('Please enter a comment');
+      return;
+    }
+
+    if (!clientName || !clientEmail) {
+      toast.error('Client information is missing');
       return;
     }
 
@@ -99,8 +103,8 @@ export default function PublicComments({ proposalId, accessCode, className = '' 
         body: JSON.stringify({
           accessCode,
           content: newComment.trim(),
-          authorName: authorName.trim(),
-          authorEmail: authorEmail.trim()
+          authorName: clientName,
+          authorEmail: clientEmail
         })
       });
 
@@ -156,30 +160,13 @@ export default function PublicComments({ proposalId, accessCode, className = '' 
         <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
           <div className="flex gap-3">
             <div className="flex-shrink-0">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm ${getAvatarColor(authorEmail || 'guest')}`}>
-                {getAvatarInitials(authorName, authorEmail || 'guest')}
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm ${getAvatarColor(clientEmail || 'guest')}`}>
+                {getAvatarInitials(clientName || 'Guest', clientEmail || 'guest')}
               </div>
             </div>
             <div className="flex-1 space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <input
-                  type="text"
-                  value={authorName}
-                  onChange={(e) => setAuthorName(e.target.value)}
-                  placeholder="Your name"
-                  className="p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                  disabled={submitting}
-                  required
-                />
-                <input
-                  type="email"
-                  value={authorEmail}
-                  onChange={(e) => setAuthorEmail(e.target.value)}
-                  placeholder="Your email"
-                  className="p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                  disabled={submitting}
-                  required
-                />
+              <div className="text-sm text-gray-600 mb-2">
+                Commenting as: <span className="font-medium text-gray-900">{clientName || 'Guest User'}</span>
               </div>
               <textarea
                 value={newComment}
@@ -193,7 +180,7 @@ export default function PublicComments({ proposalId, accessCode, className = '' 
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  disabled={!newComment.trim() || !authorName.trim() || !authorEmail.trim() || submitting}
+                  disabled={!newComment.trim() || submitting}
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium transition-colors"
                 >
                   {submitting ? (

@@ -12,11 +12,15 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
   ArrowPathIcon,
-  ChatBubbleLeftIcon
+  ChatBubbleLeftIcon,
+  HomeIcon,
+  DocumentTextIcon,
+  UsersIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import Comments from '../components/Comments';
 import NotificationBell from '../components/NotificationBell';
+import BrowserNotificationPrompt from '../components/BrowserNotificationPrompt';
 
 export default function SentProposals() {
   const navigate = useNavigate();
@@ -83,6 +87,7 @@ export default function SentProposals() {
         setResending(proposal.id);
         await proposalsAPI.sendEmail(proposal.id, {
           recipientEmail: proposal.emailRecipient,
+          clientName: proposal.clientName || 'Client', // Use existing client name or fallback
           customMessage: `Hi there,\n\nI'm resending the proposal for ${proposal.title}.\n\nPlease let me know if you have any questions.\n\nBest regards`
         });
         toast.success('Proposal resent successfully!');
@@ -162,10 +167,26 @@ export default function SentProposals() {
               <h1 className="text-xl font-extrabold text-white tracking-wider drop-shadow">ProposalAI</h1>
             </div>
             <div className="flex items-center space-x-8">
-              <a href="/dashboard" className="text-white/80 hover:text-white transition-colors">Dashboard</a>
-              <a href="/drafts" className="text-white/80 hover:text-white transition-colors">Drafts</a>
-              <a href="/sent-proposals" className="text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">Sent Proposals</a>
-              <a href="/profile" className="text-white/80 hover:text-white transition-colors">Profile</a>
+              <a href="/dashboard" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <HomeIcon className="w-5 h-5" />
+                <span>Dashboard</span>
+              </a>
+              <a href="/drafts" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <DocumentTextIcon className="w-5 h-5" />
+                <span>Drafts</span>
+              </a>
+              <a href="/sent-proposals" className="flex items-center space-x-1 text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">
+                <PaperAirplaneIcon className="w-5 h-5" />
+                <span>Sent Proposals</span>
+              </a>
+              <a href="/clients" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <UsersIcon className="w-5 h-5" />
+                <span>Clients</span>
+              </a>
+              <a href="/profile" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <UserIcon className="w-5 h-5" />
+                <span>Profile</span>
+              </a>
               <NotificationBell />
               <button 
                 onClick={handleLogout}
@@ -284,6 +305,18 @@ export default function SentProposals() {
             </div>
           )}
         </div>
+        
+        {/* Browser Notification Prompt */}
+        <BrowserNotificationPrompt 
+          showPrompt={false} // Don't show automatically on this page
+          onClose={() => {}}
+          onPermissionGranted={() => {
+            toast.success('Browser notifications enabled!');
+          }}
+          onPermissionDenied={() => {
+            toast('You can enable notifications manually in your browser settings');
+          }}
+        />
       </div>
     </div>
   );

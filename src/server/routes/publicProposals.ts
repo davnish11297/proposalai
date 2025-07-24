@@ -38,6 +38,25 @@ async function verifyAccessCode(proposalId: string, accessCode: string): Promise
   }
 }
 
+// Helper function to check if client has been granted access for final state proposals
+async function hasGrantedAccess(proposalId: string, accessCode: string): Promise<boolean> {
+  try {
+    // Check if there's a granted access request with this access code
+    const accessRequest = await prisma.accessRequest.findFirst({
+      where: {
+        proposalId: proposalId,
+        accessCode: accessCode,
+        status: 'GRANTED'
+      }
+    });
+    
+    return !!accessRequest;
+  } catch (error) {
+    console.error('Error checking granted access:', error);
+    return false;
+  }
+}
+
 // Get public proposal with password protection
 router.get('/:id', async (req, res) => {
   try {
@@ -51,7 +70,8 @@ router.get('/:id', async (req, res) => {
     const proposal = await prisma.proposal.findUnique({
       where: { id },
       include: {
-        author: true
+        author: true,
+        organization: true
       }
     });
 
@@ -62,14 +82,27 @@ router.get('/:id', async (req, res) => {
       });
     }
 
+    // Parse metadata once for the entire function
+    const existingMetadata = proposal.metadata ? JSON.parse(proposal.metadata) : {};
+    const lastEmailSent = existingMetadata.lastEmailSent || {};
+
     // If no access code provided, return proposal preview with password prompt
     if (!accessCode) {
       // Update tracking - proposal viewed
+      const updatedMetadata = {
+        ...existingMetadata,
+        lastEmailSent: {
+          ...lastEmailSent,
+          openedAt: new Date().toISOString(),
+          status: 'OPENED'
+        }
+      };
+
       await prisma.proposal.update({
         where: { id },
         data: {
-          emailOpenedAt: new Date(),
-          emailStatus: 'OPENED'
+          metadata: JSON.stringify(updatedMetadata),
+          updatedAt: new Date()
         }
       });
 
@@ -98,25 +131,41 @@ router.get('/:id', async (req, res) => {
       });
     }
 
-    // Check if proposal has been approved or rejected - if so, invalidate access
-    if (proposal.status === 'APPROVED' || proposal.status === 'REJECTED') {
-      return res.status(403).json({
-        success: false,
-        error: 'This proposal has already been reviewed and is no longer accessible'
-      });
+    // Check if proposal is in final state (approved, rejected, expired)
+    const isFinalState = proposal.status === 'APPROVED' || proposal.status === 'REJECTED' || proposal.status === 'EXPIRED';
+    
+    // For final state proposals, check if client has been granted access
+    if (isFinalState) {
+      const hasGranted = await hasGrantedAccess(id, accessCode as string);
+      if (!hasGranted) {
+        return res.status(403).json({
+          success: false,
+          error: 'Access not granted for this proposal',
+          requiresAccessRequest: true
+        });
+      }
     }
 
-    // Update tracking - proposal opened with valid access code
-    if (!proposal.emailOpenedAt) {
+    // Update tracking - proposal opened with valid access code (only for unreviewed proposals)
+    if (!lastEmailSent.openedAt && !isFinalState) {
+      const updatedMetadata = {
+        ...existingMetadata,
+        lastEmailSent: {
+          ...lastEmailSent,
+          openedAt: new Date().toISOString(),
+          status: 'OPENED'
+        }
+      };
+
       await prisma.proposal.update({
         where: { id },
         data: {
-          emailOpenedAt: new Date(),
-          emailStatus: 'OPENED'
+          metadata: JSON.stringify(updatedMetadata),
+          updatedAt: new Date()
         }
       });
 
-      // Send notification to proposal owner
+      // Send notification to proposal owner (only for unreviewed proposals)
       try {
         await emailService.sendOwnerNotificationEmail({
           to: proposal.author.email,
@@ -124,7 +173,7 @@ router.get('/:id', async (req, res) => {
           proposalId: proposal.id,
           type: 'opened',
           clientName: proposal.clientName,
-          clientEmail: proposal.emailRecipient
+          clientEmail: lastEmailSent.recipientEmail || 'Unknown'
         });
 
         // Create in-app notification
@@ -136,7 +185,7 @@ router.get('/:id', async (req, res) => {
           proposalId: proposal.id,
           metadata: {
             clientName: proposal.clientName,
-            clientEmail: proposal.emailRecipient
+            clientEmail: lastEmailSent.recipientEmail || 'Unknown'
           }
         });
       } catch (emailError) {
@@ -155,8 +204,8 @@ router.get('/:id', async (req, res) => {
         author: proposal.author,
         organization: proposal.organization,
         createdAt: proposal.createdAt,
-        emailSentAt: proposal.emailSentAt,
-        emailRecipient: proposal.emailRecipient,
+        emailSentAt: lastEmailSent.sentAt,
+        emailRecipient: lastEmailSent.recipientEmail,
         status: proposal.status,
         comments: proposal.comments
       }
@@ -311,18 +360,31 @@ router.post('/:id/comments', async (req, res) => {
     await prisma.activity.create({
       data: {
         type: 'COMMENTED',
+        message: `Client ${authorName} commented on proposal`,
         userId: user.id,
         proposalId: id,
         details: JSON.stringify({ commentId: comment.id, isPublicComment: true })
       }
     });
 
-    // Update proposal to set emailRepliedAt and emailStatus
+    // Update proposal to set reply tracking in metadata
+    const existingMetadata = proposal.metadata ? JSON.parse(proposal.metadata) : {};
+    const lastEmailSent = existingMetadata.lastEmailSent || {};
+    
+    const updatedMetadata = {
+      ...existingMetadata,
+      lastEmailSent: {
+        ...lastEmailSent,
+        repliedAt: new Date().toISOString(),
+        status: 'REPLIED'
+      }
+    };
+
     await prisma.proposal.update({
       where: { id },
       data: {
-        emailRepliedAt: new Date(),
-        emailStatus: 'REPLIED'
+        metadata: JSON.stringify(updatedMetadata),
+        updatedAt: new Date()
       }
     });
 
@@ -390,7 +452,8 @@ router.post('/:id/feedback', async (req, res) => {
     const proposal = await prisma.proposal.findUnique({
       where: { id },
       include: {
-        author: true
+        author: true,
+        organization: true
       }
     });
 
@@ -412,20 +475,29 @@ router.post('/:id/feedback', async (req, res) => {
     }
 
     // Update proposal with client feedback
+    const existingMetadata = proposal.metadata ? JSON.parse(proposal.metadata) : {};
+    const lastEmailSent = existingMetadata.lastEmailSent || {};
+    
+    const updatedMetadata = {
+      ...existingMetadata,
+      lastEmailSent: {
+        ...lastEmailSent,
+        repliedAt: new Date().toISOString(),
+        status: 'REPLIED'
+      },
+      clientFeedback: {
+        action,
+        comment,
+        submittedAt: new Date().toISOString()
+      }
+    };
+
     const updatedProposal = await prisma.proposal.update({
       where: { id },
       data: {
         status: action === 'approve' ? 'APPROVED' : action === 'reject' ? 'REJECTED' : 'IN_REVIEW',
-        emailRepliedAt: new Date(),
-        emailStatus: 'REPLIED',
-        metadata: JSON.stringify({
-          ...JSON.parse(proposal.metadata || '{}'),
-          clientFeedback: {
-            action,
-            comment,
-            submittedAt: new Date().toISOString()
-          }
-        })
+        metadata: JSON.stringify(updatedMetadata),
+        updatedAt: new Date()
       }
     });
 
@@ -438,7 +510,7 @@ router.post('/:id/feedback', async (req, res) => {
           proposalId: proposal.id,
           type: action === 'approve' ? 'approved' : 'rejected',
           clientName: proposal.clientName,
-          clientEmail: proposal.emailRecipient,
+          clientEmail: lastEmailSent.recipientEmail || 'Unknown',
           feedbackComment: comment
         });
       }
@@ -456,7 +528,7 @@ router.post('/:id/feedback', async (req, res) => {
           action,
           comment,
           clientName: proposal.clientName,
-          clientEmail: proposal.emailRecipient
+          clientEmail: lastEmailSent.recipientEmail || 'Unknown'
         }
       });
     } catch (emailError) {
@@ -509,6 +581,18 @@ router.post('/:id/request-access', async (req, res) => {
       });
     }
 
+    // Create access request record
+    const accessRequest = await prisma.accessRequest.create({
+      data: {
+        name,
+        email,
+        company: company || null,
+        reason: reason || null,
+        proposalId: id,
+        status: 'PENDING'
+      }
+    });
+
     // Send email to proposal author
     try {
       await emailService.sendAccessRequestEmail({
@@ -519,6 +603,21 @@ router.post('/:id/request-access', async (req, res) => {
         requesterCompany: company || 'Not specified',
         reason: reason || 'No reason provided',
         proposalId: id
+      });
+
+      // Create in-app notification for the proposal owner
+      await notificationController.createNotification({
+        userId: proposal.authorId,
+        type: 'ACCESS_REQUEST',
+        title: 'New Access Request',
+        message: `${name} has requested access to your proposal "${proposal.title}"`,
+        proposalId: id,
+        metadata: {
+          requesterName: name,
+          requesterEmail: email,
+          requesterCompany: company || 'Not specified',
+          reason: reason || 'No reason provided'
+        }
       });
 
       return res.json({

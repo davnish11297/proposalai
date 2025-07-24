@@ -5,6 +5,14 @@ import remarkGfm from 'remark-gfm';
 import { getOpenRouterChatCompletion } from '../services/api';
 import { proposalsAPI } from '../services/api';
 import NotificationBell from '../components/NotificationBell';
+import BrowserNotificationPrompt from '../components/BrowserNotificationPrompt';
+import { 
+  HomeIcon, 
+  DocumentTextIcon, 
+  PaperAirplaneIcon, 
+  UsersIcon, 
+  UserIcon 
+} from '@heroicons/react/24/outline';
 import '../ProposalMarkdown.css';
 
 // Utility to convert HTML tags to markdown
@@ -35,11 +43,13 @@ const Dashboard: React.FC = () => {
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [email, setEmail] = useState('');
+  const [clientName, setClientName] = useState('');
   const [proposalId, setProposalId] = useState<string | null>(null);
   const [selectedSuggestions, setSelectedSuggestions] = useState<string[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [uploadedPdfContent, setUploadedPdfContent] = useState<string>('');
+  const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
 
   // State for suggestions
   const [predefinedSuggestions, setPredefinedSuggestions] = useState<Array<{
@@ -53,6 +63,15 @@ const Dashboard: React.FC = () => {
     icon: React.ReactNode;
     color: 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'yellow';
   }>>([]);
+
+  // Show notification prompt after a delay
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowNotificationPrompt(true);
+    }, 3000); // Show after 3 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Generate AI-based suggestions (generic)
   const generateSuggestions = useCallback(async () => {
@@ -341,10 +360,13 @@ const Dashboard: React.FC = () => {
 
   // Handle suggestion bubble click (select/unselect up to 5)
   const handleSuggestionClick = (suggestion: string) => {
-    // If it's a predefined suggestion, insert the long form into the input
+    // Toggle selection for predefined suggestions (allow multiple)
     if (SUGGESTION_LONG_FORM[suggestion]) {
-      setProposalText(SUGGESTION_LONG_FORM[suggestion]);
-      setSelectedSuggestions([suggestion]);
+      setSelectedSuggestions(prev =>
+        prev.includes(suggestion)
+          ? prev.filter(s => s !== suggestion)
+          : [...prev, suggestion]
+      );
     } else {
       // fallback to old behavior for refinement suggestions
       setSelectedSuggestions(prev => 
@@ -370,15 +392,17 @@ const Dashboard: React.FC = () => {
         ? `${proposalText.trim() ? proposalText.trim() + '\n\n' : ''}PDF Content:\n${uploadedPdfContent.trim()}`
         : proposalText.trim();
       
-      // If there are selected suggestions, use them to refine the proposal
-      let systemPrompt = `You are an expert proposal writer. Generate a professional proposal with these sections: Executive Summary, Approach, Budget Details, Timeline. Use clear, persuasive language.`;
+      let systemPrompt = '';
+      let userPrompt = '';
       
-      let userPrompt = `Content: ${combinedContent}\n\nGenerate a professional proposal with: 1. Executive Summary 2. Approach 3. Budget Details 4. Timeline`;
-      
-      // If there are selected suggestions, modify the prompt to include them
-      if (selectedSuggestions.length > 0) {
-        systemPrompt = `You are an expert proposal writer. Generate a professional proposal incorporating these refinements: ${selectedSuggestions.map(s => `"${s}"`).join(', ')}. Include: Executive Summary, Approach, Budget Details, Timeline.`;
-        userPrompt = `Content: ${combinedContent}\n\nRefinements: ${selectedSuggestions.join(', ')}\n\nGenerate proposal with: 1. Executive Summary 2. Approach 3. Budget Details 4. Timeline`;
+      if (uploadedPdfContent.trim()) {
+        // PDF uploaded: Only refine, do not rewrite
+        systemPrompt = `You are an expert proposal writer. Your task is to refine and improve the provided proposal content based on the user's instructions. Do NOT rewrite the entire proposal. Only make targeted improvements, edits, and enhancements. Preserve the original structure, sections, and as much of the original content as possible.`;
+        userPrompt = `Here is the current proposal content (from a PDF):\n${uploadedPdfContent.trim()}\n\nUser's refinement instructions: ${proposalText.trim() ? proposalText.trim() : ''}${selectedSuggestions.length > 0 ? '\nRefinements: ' + selectedSuggestions.map(s => SUGGESTION_LONG_FORM[s] || s).join(' | ') : ''}\n\nPlease return the improved proposal, keeping the original structure and content, but making it better according to the instructions.`;
+      } else {
+        // No PDF: Use original prompt for new proposals
+        systemPrompt = `You are an expert proposal writer. Generate a professional proposal with these sections: Executive Summary, Approach, Budget Details, Timeline. Use clear, persuasive language.`;
+        userPrompt = `Content: ${combinedContent}\n\n${proposalText.trim() ? 'Instructions: ' + proposalText.trim() + '\n' : ''}${selectedSuggestions.length > 0 ? 'Refinements: ' + selectedSuggestions.map(s => SUGGESTION_LONG_FORM[s] || s).join(' | ') + '\n' : ''}Generate a professional proposal with: 1. Executive Summary 2. Approach 3. Budget Details 4. Timeline`;
       }
       
       // Compose prompt for OpenRouter
@@ -410,18 +434,31 @@ const Dashboard: React.FC = () => {
           .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
           .replace(/\*(.*?)\*/g, '<em>$1</em>');
       };
-      setGeneratedContent({
-        executiveSummary: htmlToMarkdown(cleanContent(executiveSummary)),
-        approach: htmlToMarkdown(cleanContent(approach)),
-        budgetDetails: htmlToMarkdown(cleanContent(budgetDetails)),
-        timeline: htmlToMarkdown(cleanContent(timeline)),
-        fullContent: [
-          htmlToMarkdown(cleanContent(executiveSummary)),
-          htmlToMarkdown(cleanContent(approach)),
-          htmlToMarkdown(cleanContent(budgetDetails)),
-          htmlToMarkdown(cleanContent(timeline))
-        ].filter(Boolean).join('\n\n')
-      });
+      const fullContent = [
+        htmlToMarkdown(cleanContent(executiveSummary)),
+        htmlToMarkdown(cleanContent(approach)),
+        htmlToMarkdown(cleanContent(budgetDetails)),
+        htmlToMarkdown(cleanContent(timeline))
+      ].filter(Boolean).join('\n\n');
+
+      // Fallback: If fullContent is much shorter than aiContent, use aiContent directly
+      if (fullContent.length < aiContent.length * 0.7) {
+        setGeneratedContent({
+          executiveSummary: '',
+          approach: '',
+          budgetDetails: '',
+          timeline: '',
+          fullContent: htmlToMarkdown(cleanContent(aiContent))
+        });
+      } else {
+        setGeneratedContent({
+          executiveSummary: htmlToMarkdown(cleanContent(executiveSummary)),
+          approach: htmlToMarkdown(cleanContent(approach)),
+          budgetDetails: htmlToMarkdown(cleanContent(budgetDetails)),
+          timeline: htmlToMarkdown(cleanContent(timeline)),
+          fullContent
+        });
+      }
       setTimeout(() => {
         setShowContent(true);
       }, 500);
@@ -475,16 +512,26 @@ const Dashboard: React.FC = () => {
       toast.error('Please enter a valid email address.');
       return;
     }
+
+    if (!clientName) {
+      toast.error('Please enter a client name.');
+      return;
+    }
+
     if (!proposalId) {
       toast.error('Please save the proposal as draft first.');
       return;
     }
     setSendingEmail(true);
     try {
-      await proposalsAPI.sendEmail(proposalId, { recipientEmail: email });
+      await proposalsAPI.sendEmail(proposalId, { 
+        recipientEmail: email,
+        clientName: clientName
+      });
       toast.success('Proposal sent via email!');
       setShowEmailModal(false);
       setEmail('');
+      setClientName('');
     } catch (error) {
       toast.error('Failed to send email.');
     } finally {
@@ -642,10 +689,26 @@ const Dashboard: React.FC = () => {
               <h1 className="text-xl font-extrabold text-white tracking-wider drop-shadow">ProposalAI</h1>
             </div>
             <div className="flex items-center space-x-8">
-              <a href="/dashboard" className="text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">Dashboard</a>
-              <a href="/drafts" className="text-white/80 hover:text-white transition-colors">Drafts</a>
-              <a href="/sent-proposals" className="text-white/80 hover:text-white transition-colors">Sent Proposals</a>
-              <a href="/profile" className="text-white/80 hover:text-white transition-colors">Profile</a>
+              <a href="/dashboard" className="flex items-center space-x-1 text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">
+                <HomeIcon className="w-5 h-5" />
+                <span>Dashboard</span>
+              </a>
+              <a href="/drafts" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <DocumentTextIcon className="w-5 h-5" />
+                <span>Drafts</span>
+              </a>
+              <a href="/sent-proposals" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <PaperAirplaneIcon className="w-5 h-5" />
+                <span>Sent Proposals</span>
+              </a>
+              <a href="/clients" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <UsersIcon className="w-5 h-5" />
+                <span>Clients</span>
+              </a>
+              <a href="/profile" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
+                <UserIcon className="w-5 h-5" />
+                <span>Profile</span>
+              </a>
               <NotificationBell />
               <button 
                 onClick={handleLogout}
@@ -1070,29 +1133,70 @@ const Dashboard: React.FC = () => {
           <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
               <h2 className="text-lg font-semibold mb-4">Send Proposal via Email</h2>
-              <input
-                type="email"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                placeholder="Recipient's email address"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                disabled={sendingEmail}
-              />
-              <div className="flex gap-3 justify-end">
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Client Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="Enter client's full name"
+                    value={clientName}
+                    onChange={e => setClientName(e.target.value)}
+                    disabled={sendingEmail}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email Address <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="Recipient's email address"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    disabled={sendingEmail}
+                  />
+                </div>
+              </div>
+              
+              <div className="flex gap-3 justify-end mt-6">
                 <button
-                  onClick={() => setShowEmailModal(false)}
+                  onClick={() => {
+                    setShowEmailModal(false);
+                    setEmail('');
+                    setClientName('');
+                  }}
                   className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition"
                   disabled={sendingEmail}
                 >Cancel</button>
                 <button
                   onClick={handleSendEmail}
                   className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 transition disabled:opacity-60"
-                  disabled={sendingEmail}
+                  disabled={sendingEmail || !email.trim() || !clientName.trim()}
                 >{sendingEmail ? 'Sending...' : 'Send'}</button>
               </div>
             </div>
           </div>
         )}
+        
+        {/* Browser Notification Prompt */}
+        <BrowserNotificationPrompt 
+          showPrompt={showNotificationPrompt}
+          onClose={() => setShowNotificationPrompt(false)}
+          onPermissionGranted={() => {
+            setShowNotificationPrompt(false);
+            toast.success('Browser notifications enabled!');
+          }}
+          onPermissionDenied={() => {
+            setShowNotificationPrompt(false);
+            toast('You can enable notifications manually in your browser settings');
+          }}
+        />
       </div>
       <style>{`
         .custom-scrollbar::-webkit-scrollbar {

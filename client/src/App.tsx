@@ -10,6 +10,8 @@ import ProposalViewer from './pages/ProposalViewer';
 import Drafts from './pages/Drafts';
 import SentProposals from './pages/SentProposals';
 import Profile from './pages/Profile';
+import Clients from './pages/Clients';
+import ClientDetail from './pages/ClientDetail';
 import Home from './pages/Home';
 import PublicProposal from './pages/PublicProposal';
 import './index.css';
@@ -45,13 +47,14 @@ function App() {
       <Route path="/drafts" element={<Drafts />} />
       <Route path="/sent-proposals" element={<SentProposals />} />
       <Route path="/profile" element={<Profile />} />
+      <Route path="/clients" element={<Clients />} />
+      <Route path="/clients/:id" element={<ClientDetail />} />
       {/* <Route path="/proposals" element={<Proposals />} /> */}
       <Route path="/proposals/new" element={<ProposalEditor />} />
       <Route path="/proposals/:id" element={<ProposalEditor />} />
       <Route path="/proposals/:id/view" element={<ProposalViewer />} />
       <Route path="/proposal/:id" element={<PublicProposal />} />
       {/* <Route path="/teams" element={<Teams />} /> */}
-      {/* <Route path="/clients" element={<Clients />} /> */}
       {/* <Route path="/templates" element={<Templates />} /> */}
       {/* <Route path="/snippets" element={<Snippets />} /> */}
       {/* <Route path="/case-studies" element={<CaseStudies />} /> */}

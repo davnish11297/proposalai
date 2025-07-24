@@ -53,16 +53,9 @@ export class CommentController {
         select: { authorId: true }
       });
 
-      if (proposalOwner && proposalOwner.authorId === req.user!.userId) {
-        await db.comment.updateMany({
-          where: { 
-            proposalId,
-            isRead: false,
-            authorId: { not: req.user!.userId } // Don't mark own comments as read
-          },
-          data: { isRead: true }
-        });
-      }
+      // Note: Comment read status is not implemented in the current schema
+      // This would require adding an isRead field to the Comment model
+      // For now, we'll just return the comments without marking them as read
 
       res.json({
         success: true,
@@ -89,14 +82,14 @@ export class CommentController {
       const { proposalId } = req.params;
 
       // Verify proposal exists and user has access
-      const proposalAccess = await db.proposal.findFirst({
+      const proposal = await db.proposal.findFirst({
         where: {
           id: proposalId,
           organizationId: req.user!.organizationId,
         }
       });
 
-      if (!proposalAccess) {
+      if (!proposal) {
         res.status(404).json({
           success: false,
           error: 'Proposal not found'
@@ -104,10 +97,10 @@ export class CommentController {
         return;
       }
 
+      // Count comments from other users (not the current user)
       const unreadCount = await db.comment.count({
         where: { 
           proposalId,
-          isRead: false,
           authorId: { not: req.user!.userId } // Don't count own comments
         }
       });
@@ -150,7 +143,6 @@ export class CommentController {
       const comment = await db.comment.create({
         data: {
           content: commentData.content,
-          position: commentData.position || null,
           authorId: req.user!.userId,
           proposalId,
         },
@@ -168,6 +160,7 @@ export class CommentController {
       await db.activity.create({
         data: {
           type: 'COMMENTED',
+          message: `User commented on proposal`,
           userId: req.user!.userId,
           proposalId,
           details: JSON.stringify({ commentId: comment.id })
