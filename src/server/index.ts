@@ -22,7 +22,7 @@ const PORT = process.env.PORT || 3000;
 
 // Add request logging middleware for debugging
 app.use((req, res, next) => {
-  console.log(`[${req.method}] ${req.originalUrl}`);
+  console.log(`[${req.method}] ${req.originalUrl} - Origin: ${req.headers.origin || 'No origin'}`);
   next();
 });
 
@@ -57,6 +57,7 @@ app.use(passport.session());
 // CORS configuration
 const allowedOrigins = [
   'http://localhost:3000',
+  'http://localhost:3001',
   'http://localhost:3002',
   'http://localhost:3003',
   'http://localhost:3004',
@@ -65,35 +66,44 @@ const allowedOrigins = [
   'http://localhost:3007',
   'http://localhost:3008',
   'http://localhost:3009',
-  'http://localhost:3010'
+  'http://localhost:3010',
+  // Netlify domains
+  'https://proposalai-app.netlify.app',
+  'https://688697ba702b508862421f57--proposalai-app.netlify.app',
+  // Add your Vercel domain when you deploy there
+  'https://proposalai.vercel.app'
 ];
-if (process.env.CORS_ORIGIN) allowedOrigins.push(process.env.CORS_ORIGIN);
 
-// In development, allow all localhost origins
-const corsOptions = process.env.NODE_ENV === 'production' 
-  ? {
-      origin: allowedOrigins,
-      credentials: true,
+// Add environment variable origins
+if (process.env.CORS_ORIGIN) {
+  const envOrigins = process.env.CORS_ORIGIN.split(',').map(origin => origin.trim());
+  allowedOrigins.push(...envOrigins);
+}
+
+// CORS options for both development and production
+const corsOptions = {
+  origin: function (origin: string | undefined, callback: Function) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow localhost origins (for local development)
+    if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
+      return callback(null, true);
     }
-  : {
-      origin: function (origin: string | undefined, callback: Function) {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-        
-        // Allow localhost origins
-        if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
-          return callback(null, true);
-        }
-        
-        // Allow specific origins
-        if (allowedOrigins.includes(origin)) {
-          return callback(null, true);
-        }
-        
-        callback(new Error('Not allowed by CORS'));
-      },
-      credentials: true,
-    };
+    
+    // Allow specific origins
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // Log blocked origins for debugging
+    console.log(`CORS blocked origin: ${origin}`);
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+};
 
 app.use(cors(corsOptions));
 
