@@ -8,7 +8,7 @@
     "dev:server": "PORT=3001 nodemon --exec tsx src/server/index.ts",
     "dev:client": "cd client && PORT=3000 npm start",
     "build": "npm run build:server && npm run build:client",
-    "build:server": "tsc -p tsconfig.server.json",
+    "build:server": "npx prisma generate && tsc -p tsconfig.server.json",
     "build:client": "cd client && npm run build",
     "start": "node dist/server/index.js",
     "install:all": "npm install && cd client && npm install",
