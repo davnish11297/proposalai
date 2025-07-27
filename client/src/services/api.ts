@@ -1,11 +1,11 @@
 import axios from 'axios';
 
 // API Base URL configuration
-// For local development: use localhost:3000 (backend port)
+// For local development: use proxy (relative URL)
 // For production: use environment variable or fallback to localhost
 const API_BASE_URL = process.env.NODE_ENV === 'production' 
   ? (process.env.REACT_APP_API_URL || 'https://your-backend-url.vercel.app/api')
-  : 'http://localhost:3000/api';
+  : '/api'; // Use proxy for local development
 
 console.log('🔧 API Configuration:', {
   NODE_ENV: process.env.NODE_ENV,
