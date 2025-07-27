@@ -1,15 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import ReactMarkdown from 'react-markdown';
 import { proposalsAPI, getOpenRouterChatCompletion } from '../services/api';
 import ClientSelectionModal from '../components/ClientSelectionModal';
-import NotificationBell from '../components/NotificationBell';
 import { 
-  HomeIcon, 
   DocumentTextIcon, 
-  PaperAirplaneIcon, 
-  UsersIcon, 
-  UserIcon 
+  UserIcon, 
+  SparklesIcon, 
+  CogIcon, 
+  CheckCircleIcon,
+  ClockIcon,
+  CurrencyDollarIcon,
+  BuildingOfficeIcon,
+  LightBulbIcon,
+  ChartBarIcon,
+  ArrowPathIcon,
+  EyeIcon,
+  PencilIcon,
+  PlusIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 
 const ProposalEditor: React.FC = () => {
@@ -41,6 +51,7 @@ const ProposalEditor: React.FC = () => {
   });
   const [accessRequests, setAccessRequests] = useState<any[]>([]);
   const [grantingRequestId, setGrantingRequestId] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState(false);
 
   const isNewProposal = !id;
 
@@ -51,7 +62,26 @@ const ProposalEditor: React.FC = () => {
     const fetchProposal = async () => {
       try {
         const { data } = await proposalsAPI.getById(id!);
-        setProposal(data.data);
+        // Ensure metadata exists with default values
+        const proposalData = {
+          ...data.data,
+          metadata: {
+            industry: '',
+            companySize: '',
+            projectScope: '',
+            ...data.data.metadata
+          },
+          content: {
+            executiveSummary: '',
+            approach: '',
+            budgetDetails: '',
+            timeline: '',
+            budget: '',
+            fullProposal: '',
+            ...data.data.content
+          }
+        };
+        setProposal(proposalData);
         setSelectedClientId(data.data.clientId);
       } catch (error) {
         console.error('Failed to fetch proposal:', error);
@@ -73,6 +103,36 @@ const ProposalEditor: React.FC = () => {
   }, [id]);
 
   const handleGenerateWithAI = async () => {
+    console.log('🚀 handleGenerateWithAI function called!');
+    console.log('🔍 Environment check:', {
+      NODE_ENV: process.env.NODE_ENV,
+      REACT_APP_OPENROUTER_API_KEY: process.env.REACT_APP_OPENROUTER_API_KEY ? 'SET' : 'NOT SET'
+    });
+    
+    // Simple test to see if the function is working
+    console.log('🧪 Simple test - function is working!');
+    
+    // Test with a simple prompt first to see if the AI is working
+    console.log('🧪 Testing AI with simple prompt...');
+    try {
+      const testMessages = [
+        {
+          role: 'system',
+          content: 'You are a helpful assistant that writes detailed, specific content.'
+        },
+        {
+          role: 'user',
+          content: 'Write a short paragraph about web development services. Be specific and detailed, not generic.'
+        }
+      ];
+      
+      const testResponse = await getOpenRouterChatCompletion(testMessages);
+      console.log('🧪 Test response:', testResponse);
+    } catch (error) {
+      console.error('🧪 Test failed:', error);
+    }
+
+    // Validate required fields
     // Validate required fields
     console.log('🔍 Current proposal state:', {
       clientName: proposal.clientName,
@@ -89,187 +149,176 @@ const ProposalEditor: React.FC = () => {
       return;
     }
 
+    setGenerating(true);
     try {
-      setGenerating(true);
-      
-      // Compose prompt for OpenRouter
       const messages = [
         {
           role: 'system',
-          content: `You are an expert proposal writer. Generate a detailed, professional proposal for the following client and project. Structure your response with clear sections: Executive Summary, Approach, Budget Details, and Timeline. Use clear, persuasive language and make each section comprehensive.`,
+          content: 'You are an expert business proposal writer. Write detailed, specific content based on the project information provided. Never use generic placeholder text like "Feature 1" or "Benefit 1". Always provide concrete, actionable content.'
         },
         {
           role: 'user',
-          content: `Client Name: ${proposal.clientName}\nIndustry: ${proposal.metadata?.industry || ''}\nCompany Size: ${proposal.metadata?.companySize || ''}\nProject Description: ${proposal.description}\nBudget: ${proposal.content?.budget || ''}\nTimeline: ${proposal.content?.timeline || ''}\n\nPlease provide a professional proposal with the following sections:\n1. Executive Summary\n2. Approach\n3. Budget Details\n4. Timeline`,
-        },
-      ];
-      
-      console.log('🚀 Sending AI generation request with messages:', messages);
-      
-      const result = await getOpenRouterChatCompletion(messages);
-      console.log('✅ AI response received:', result);
-      
-      const aiContent = result.choices?.[0]?.message?.content || '';
-      console.log('📝 AI generated content:', aiContent);
-      
-      // Parse the AI response into sections
-      console.log('�� Raw AI response:', aiContent);
-      
-      // Improved parsing with better regex patterns
-      let executiveSummary = '', approach = '', budgetDetails = '', timeline = '';
-      
-      // More flexible regex patterns that handle various formats
-      const execMatch = aiContent.match(/(?:Executive Summary|EXECUTIVE SUMMARY)[:\s\n]*([\s\S]*?)(?=\n\s*(?:Approach|APPROACH|Budget|BUDGET|Timeline|TIMELINE|Next Steps|NEXT STEPS)[:\s\n]|$)/i);
-      const approachMatch = aiContent.match(/(?:Approach|APPROACH|Methodology|METHODOLOGY)[:\s\n]*([\s\S]*?)(?=\n\s*(?:Budget|BUDGET|Timeline|TIMELINE|Next Steps|NEXT STEPS)[:\s\n]|$)/i);
-      const budgetMatch = aiContent.match(/(?:Budget Details?|BUDGET DETAILS?|Budget|BUDGET)[:\s\n]*([\s\S]*?)(?=\n\s*(?:Timeline|TIMELINE|Next Steps|NEXT STEPS)[:\s\n]|$)/i);
-      const timelineMatch = aiContent.match(/(?:Timeline|TIMELINE|Schedule|SCHEDULE)[:\s\n]*([\s\S]*?)(?=\n\s*(?:Next Steps|NEXT STEPS|Conclusion|CONCLUSION)[:\s\n]|$)/i);
-      
-      executiveSummary = execMatch?.[1]?.trim() || '';
-      approach = approachMatch?.[1]?.trim() || '';
-      budgetDetails = budgetMatch?.[1]?.trim() || '';
-      timeline = timelineMatch?.[1]?.trim() || '';
-      
-      // If regex parsing didn't work well, try alternative parsing
-      if (!executiveSummary && !approach && !budgetDetails && !timeline) {
-        console.log('⚠️ Primary regex parsing failed, trying alternative parsing');
-        
-        // Split by numbered sections or headers
-        const sections = aiContent.split(/\n\s*(?:\d+\.\s*)?(?:Executive Summary|Approach|Budget|Timeline|Methodology|Schedule)/i);
-        
-        if (sections.length > 1) {
-          executiveSummary = sections[1]?.trim() || '';
-          approach = sections[2]?.trim() || '';
-          budgetDetails = sections[3]?.trim() || '';
-          timeline = sections[4]?.trim() || '';
-        } else {
-          // Last resort: use the full content as executive summary
-          console.log('⚠️ Alternative parsing failed, using full content as executive summary');
-          executiveSummary = aiContent;
+          content: `Write a professional business proposal for this project:
+
+Client: ${proposal.clientName}
+Project: ${proposal.description}
+Budget: ${proposal.budget || 'To be determined'}
+Timeline: ${proposal.timeline || 'To be determined'}
+
+Create a detailed proposal with these sections:
+
+# Executive Summary
+[Write a compelling overview of the project and its value]
+
+# Project Overview  
+[Detailed analysis of requirements and objectives]
+
+# Our Approach
+[Step-by-step methodology and processes]
+
+# Project Deliverables
+Create a detailed list of specific deliverables with descriptions and timelines. Format as:
+- **Deliverable Name**: Brief description. Timeline: X weeks/days
+
+# Project Timeline
+Create a detailed timeline with specific phases, dates, and milestones. Format exactly as:
+1. **Phase Name** (YYYY-MM-DD)
+   Description of what will be completed in this phase.
+
+2. **Phase Name** (YYYY-MM-DD)
+   Description of what will be completed in this phase.
+
+3. **Phase Name** (YYYY-MM-DD)
+   Description of what will be completed in this phase.
+
+IMPORTANT: Each timeline item must be on a new line with the number, then the phase name in bold, then the date in parentheses, then the description on the next line.
+
+# Investment
+[Pricing and payment terms]
+
+# Why Choose Us
+[Experience and competitive advantages]
+
+# Next Steps
+[Clear action items and contact info]
+
+IMPORTANT: 
+- Write specific, detailed content for each section based on the project description
+- Do not use generic text like "Feature 1"
+- Make it professional and compelling
+- Include realistic timelines and deliverables based on the project scope
+- Use specific dates and milestones for the timeline section`
         }
+      ];
+
+      console.log('🚀 Sending AI generation request with messages:', messages);
+      console.log('🔗 About to call getOpenRouterChatCompletion...');
+      
+      const response = await getOpenRouterChatCompletion(messages);
+      
+      console.log('✅ AI response received:', response);
+      
+      if (response && response.choices && response.choices[0] && response.choices[0].message) {
+        const aiContent = response.choices[0].message.content;
+        console.log('📝 AI generated content:', aiContent);
+        
+        const cleanContent = (content: string) => {
+          // Remove any markdown formatting that might interfere
+          return content
+            .replace(/```markdown/g, '')
+            .replace(/```/g, '')
+            .trim();
+        };
+
+        const cleanedContent = cleanContent(aiContent);
+        console.log('🧹 Cleaned content:', cleanedContent);
+        
+        setProposal((prev: any) => ({
+          ...prev,
+          content: {
+            ...prev.content,
+            fullProposal: cleanedContent
+          }
+        }));
+        
+        toast.success('Proposal content generated successfully!');
+      } else {
+        console.error('❌ Invalid response structure:', response);
+        toast.error('Invalid response from AI service');
       }
-      
-      // Clean up the content by removing extra whitespace and formatting
-      const cleanContent = (content: string) => {
-        return content
-          .replace(/\n\s*\n\s*\n/g, '\n\n') // Remove excessive line breaks
-          .replace(/^\s+|\s+$/g, '') // Trim whitespace
-          .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold formatting
-          .replace(/\*(.*?)\*/g, '$1'); // Remove italic formatting
-      };
-      
-      executiveSummary = cleanContent(executiveSummary);
-      approach = cleanContent(approach);
-      budgetDetails = cleanContent(budgetDetails);
-      timeline = cleanContent(timeline);
-      
-      console.log('📋 Parsed sections:', {
-        executiveSummary: executiveSummary.substring(0, 150) + (executiveSummary.length > 150 ? '...' : ''),
-        approach: approach.substring(0, 150) + (approach.length > 150 ? '...' : ''),
-        budgetDetails: budgetDetails.substring(0, 150) + (budgetDetails.length > 150 ? '...' : ''),
-        timeline: timeline.substring(0, 150) + (timeline.length > 150 ? '...' : '')
-      });
-      
-      setProposal({
-        ...proposal,
-        content: {
-          ...proposal.content,
-          executiveSummary,
-          approach,
-          budgetDetails,
-          timeline,
-        },
-      });
-      
-      toast.success('Proposal content generated successfully!');
-    } catch (error: any) {
-      console.error('❌ Content generation error:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        stack: error.stack,
-        response: error.response
-      });
-      toast.error(error.message || 'Failed to generate proposal content');
+    } catch (error) {
+      console.error('Error generating content:', error);
+      toast.error('Failed to generate content. Please try again.');
     } finally {
       setGenerating(false);
     }
   };
 
   const handleSave = async () => {
+    if (!proposal.title || !proposal.clientName || !proposal.description) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    setLoading(true);
     try {
-      setLoading(true);
-      
-      const proposalData = {
-        ...proposal,
-        // teamId: selectedTeamId, // teamId is not used
-      };
-      
       if (isNewProposal) {
-        // Create new proposal
-        await proposalsAPI.create(proposalData);
-        toast.success('Proposal created successfully!');
-        navigate('/proposals');
+        await proposalsAPI.create(proposal);
+        toast.success('Proposal saved as draft!');
+        navigate('/drafts');
       } else {
-        // Update existing proposal
-        await proposalsAPI.update(id!, proposalData);
+        await proposalsAPI.update(id, proposal);
         toast.success('Proposal updated successfully!');
       }
-      
-      navigate('/proposals');
-    } catch (error: any) {
-      console.error('Save error:', error);
-      toast.error(error.response?.data?.error || 'Failed to save proposal');
+    } catch (error) {
+      console.error('Error saving proposal:', error);
+      toast.error('Failed to save proposal');
     } finally {
       setLoading(false);
     }
   };
 
   const handleSubmit = async () => {
+    if (!proposal.title || !proposal.clientName || !proposal.description) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    setLoading(true);
     try {
-      setLoading(true);
-      
-      const proposalData = {
-        ...proposal,
-        // teamId: selectedTeamId, // teamId is not used
-        status: 'IN_REVIEW'
-      };
-      
+      const updatedProposal = { ...proposal, status: 'SENT' };
       if (isNewProposal) {
-        // Create and submit new proposal
-        await proposalsAPI.create(proposalData);
-        toast.success('Proposal submitted successfully!');
-        navigate('/proposals');
+        await proposalsAPI.create(updatedProposal);
       } else {
-        // Update and submit existing proposal
-        await proposalsAPI.update(id!, proposalData);
-        toast.success('Proposal submitted successfully!');
-        navigate('/proposals');
+        await proposalsAPI.update(id, updatedProposal);
       }
-    } catch (error: any) {
-      console.error('Submit error:', error);
-      toast.error(error.response?.data?.error || 'Failed to submit proposal');
+      toast.success('Proposal submitted successfully!');
+      navigate('/sent-proposals');
+    } catch (error) {
+      console.error('Error submitting proposal:', error);
+      toast.error('Failed to submit proposal');
     } finally {
       setLoading(false);
     }
   };
 
   const handleClientSelect = (client: any) => {
-    setProposal({
-      ...proposal,
+    setProposal((prev: any) => ({
+      ...prev,
       clientName: client.name,
-      clientEmail: client.email || '',
-    });
+      clientEmail: client.email
+    }));
     setSelectedClientId(client.id);
-    toast.success(`Selected client: ${client.name}`);
+    setShowClientModal(false);
   };
 
   const handleClearClient = () => {
-    setProposal({
-      ...proposal,
+    setProposal((prev: any) => ({
+      ...prev,
       clientName: '',
-      clientEmail: '',
-    });
+      clientEmail: ''
+    }));
     setSelectedClientId(undefined);
-    toast.success('Client selection cleared');
   };
 
   const handleGrantAccess = async (requestId: string) => {
@@ -287,516 +336,431 @@ const ProposalEditor: React.FC = () => {
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleRefineEntireProposal = async () => {
+    if (!proposal?.content?.fullProposal) {
+      toast.error('No content to refine. Please generate or add content first.');
+      return;
+    }
+
+    setGenerating(true);
     try {
-      setGenerating(true);
       const messages = [
         {
           role: 'system',
-          content: `You are an expert proposal writer. Refine the entire proposal content. Make it more detailed, persuasive, and comprehensive.`,
+          content: `You are an expert proposal writer with 15+ years of experience in refining and improving business proposals. Your expertise includes:
+
+- Enhancing clarity and professional tone
+- Strengthening value propositions and benefits
+- Improving persuasive language and calls-to-action
+- Adding specific details and concrete examples
+- Ensuring industry-specific terminology and best practices
+- Maintaining professional structure while improving content quality
+
+When refining proposals, you focus on making the content more compelling, specific, and actionable while preserving the existing structure and key information.`
         },
         {
           role: 'user',
-          content: `Current Proposal Content:\n\n${proposal.content.fullProposal || getCombinedProposalContent()}`,
-        },
+          content: `Please refine and improve the following proposal content. Make it more compelling, professional, and persuasive while maintaining the same structure and sections.
+
+CURRENT PROPOSAL CONTENT:
+${proposal.content.fullProposal}
+
+Please enhance the following aspects:
+1. Clarity and readability - Make the content easier to understand
+2. Professional tone - Ensure it sounds authoritative and trustworthy
+3. Persuasive language - Strengthen the value proposition and benefits
+4. Specific details - Add concrete examples, metrics, and actionable items
+5. Call-to-action - Make the next steps clear and compelling
+
+IMPORTANT GUIDELINES:
+- Maintain the existing structure and sections
+- Keep all key information and client details
+- Add specific, relevant details where appropriate
+- Avoid generic placeholder text
+- Make the content more engaging and professional
+- Ensure each section provides clear value and next steps
+
+Return the improved version with enhanced content while maintaining the same overall structure.`
+        }
       ];
-      const result = await getOpenRouterChatCompletion(messages);
-      const refinedContent = result.choices?.[0]?.message?.content || '';
-      setProposal({
-        ...proposal,
-        content: {
-          ...proposal.content,
-          fullProposal: refinedContent,
-        },
-      });
-      toast.success('Entire proposal refined successfully!');
-    } catch (error: any) {
-      console.error('❌ Refine entire proposal error:', error);
-      toast.error(error.message || 'Failed to refine entire proposal');
+
+      const response = await getOpenRouterChatCompletion(messages);
+      
+      if (response && response.choices && response.choices[0] && response.choices[0].message) {
+        setProposal((prev: any) => ({
+          ...prev,
+          content: {
+            ...prev.content,
+            fullProposal: response.choices[0].message.content.trim()
+          }
+        }));
+        
+        toast.success('Proposal refined successfully!');
+      }
+    } catch (error) {
+      console.error('Error refining content:', error);
+      toast.error('Failed to refine content. Please try again.');
     } finally {
       setGenerating(false);
     }
   };
 
   const handleFormatProposal = () => {
-    const content = proposal.content.fullProposal || getCombinedProposalContent();
-    let formattedContent = '';
-
-    // Split content into sections
-    const sections = content.split(/^(#+)\s*(.*)$/m);
-    let i = 0;
-    while (i < sections.length) {
-      const level = sections[i].match(/^#+/)?.[0].length || 0;
-      const title = sections[i + 1];
-      const text = sections[i + 2];
-
-      if (level === 1) {
-        formattedContent += `# ${title}\n\n${text}\n\n`;
-      } else if (level === 2) {
-        formattedContent += `## ${title}\n\n${text}\n\n`;
-      } else if (level === 3) {
-        formattedContent += `### ${title}\n\n${text}\n\n`;
-      } else {
-        formattedContent += `${text}\n\n`; // For paragraphs or other text
-      }
-      i += 3; // Move to the next section
+    if (!proposal?.content?.fullProposal) {
+      toast.error('No content to format. Please add content first.');
+      return;
     }
 
-    setProposal({
-      ...proposal,
+    const content = proposal.content.fullProposal;
+    const formattedContent = content
+      .replace(/([A-Z][a-z]+:)/g, '\n## $1') // Add markdown headers
+      .replace(/(\d+\.\s)/g, '\n$1') // Add line breaks before numbered lists
+      .replace(/(•\s)/g, '\n$1') // Add line breaks before bullet points
+      .trim();
+
+    setProposal((prev: any) => ({
+      ...prev,
       content: {
-        ...proposal.content,
-        fullProposal: formattedContent.trim(),
-      },
-    });
-    toast.success('Proposal content formatted!');
+        ...prev.content,
+        fullProposal: formattedContent
+      }
+    }));
+
+    toast.success('Proposal formatted successfully!');
   };
 
   const getCombinedProposalContent = () => {
-    return `${proposal.content.executiveSummary || ''}\n\n# Approach\n\n${proposal.content.approach || ''}\n\n# Budget Details\n\n${proposal.content.budgetDetails || ''}\n\n# Timeline\n\n${proposal.content.timeline || ''}\n\n# Additional Sections\n\n${proposal.content.additionalSections || ''}`;
+    const sections = [];
+    if (proposal?.content?.executiveSummary) sections.push(`# Executive Summary\n${proposal.content.executiveSummary}`);
+    if (proposal?.content?.approach) sections.push(`# Approach\n${proposal.content.approach}`);
+    if (proposal?.content?.budgetDetails) sections.push(`# Budget Details\n${proposal.content.budgetDetails}`);
+    if (proposal?.content?.timeline) sections.push(`# Timeline\n${proposal.content.timeline}`);
+    return sections.join('\n\n');
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-20 w-20 border-b-4 border-blue-600"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Top Navigation Bar */}
-      <nav className="bg-gradient-to-r from-blue-600 to-blue-400 shadow-lg w-full z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-extrabold text-white tracking-wider drop-shadow">ProposalAI</h1>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl flex items-center justify-center shadow-lg">
+              <DocumentTextIcon className="w-5 h-5 text-white" />
             </div>
-            <div className="flex items-center space-x-8">
-              <a href="/dashboard" className="flex items-center space-x-1 text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">
-                <HomeIcon className="w-5 h-5" />
-                <span>Dashboard</span>
-              </a>
-              <a href="/drafts" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <DocumentTextIcon className="w-5 h-5" />
-                <span>Drafts</span>
-              </a>
-              <a href="/sent-proposals" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <PaperAirplaneIcon className="w-5 h-5" />
-                <span>Sent Proposals</span>
-              </a>
-              <a href="/clients" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <UsersIcon className="w-5 h-5" />
-                <span>Clients</span>
-              </a>
-              <a href="/profile" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <UserIcon className="w-5 h-5" />
-                <span>Profile</span>
-              </a>
-              <NotificationBell />
-              <button 
-                onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = '/login'; }}
-                className="text-white/80 hover:text-white transition-colors"
-              >
-                Logout
-              </button>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {isNewProposal ? 'Create New Proposal' : 'Edit Proposal'}
+              </h1>
+              <p className="text-sm text-gray-600">
+                {isNewProposal ? 'Build a compelling proposal from scratch' : 'Refine and perfect your proposal'}
+              </p>
             </div>
           </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSave}
+              disabled={loading}
+              className="btn-secondary flex items-center gap-2"
+            >
+              <PencilIcon className="w-4 h-4" />
+              Save Draft
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="btn-primary flex items-center gap-2"
+            >
+              <CheckCircleIcon className="w-4 h-4" />
+              Submit Proposal
+            </button>
+          </div>
         </div>
-      </nav>
-      {/* Main Content Flex Layout */}
-      <div className="flex flex-1 min-h-0">
-        {/* Left Sidebar */}
-        <aside className="w-[380px] min-w-[380px] max-w-[380px] bg-white border-r border-gray-200 flex flex-col p-8">
-          {/* Access Requests UI (for owner) */}
-          {accessRequests.length > 0 && (
-            <div className="mt-8">
-              <h3 className="text-lg font-bold mb-2 text-blue-700">Access Requests</h3>
-              <ul className="space-y-4">
-                {accessRequests.map((req) => (
-                  <li key={req.id} className="bg-blue-50 rounded-lg p-4 flex flex-col md:flex-row md:items-center md:justify-between border border-blue-100">
-                    <div>
-                      <div className="font-semibold text-blue-900">{req.name} ({req.email})</div>
-                      <div className="text-sm text-gray-700">{req.company}</div>
-                      <div className="text-xs text-gray-500">{req.reason}</div>
-                      <div className="text-xs text-gray-400 mt-1">Requested: {new Date(req.createdAt).toLocaleString()}</div>
-                      {req.status === 'GRANTED' && req.accessCode && (
-                        <div className="text-green-700 text-xs mt-1">Granted: {req.accessCode}</div>
-                      )}
-                    </div>
-                    {req.status === 'PENDING' && (
-                      <button
-                        className="mt-2 md:mt-0 px-4 py-2 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-green-600 transition disabled:opacity-50"
-                        disabled={grantingRequestId === req.id}
-                        onClick={() => handleGrantAccess(req.id)}
-                      >
-                        {grantingRequestId === req.id ? 'Granting...' : 'Grant Access'}
-                      </button>
-                    )}
-                    {req.status === 'GRANTED' && (
-                      <span className="ml-2 text-green-600 font-semibold">Granted</span>
-                    )}
-                    {req.status === 'DENIED' && (
-                      <span className="ml-2 text-red-600 font-semibold">Denied</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <h2 className="text-2xl font-bold text-gray-900 mb-8">
-            {isNewProposal ? 'Create New Proposal' : 'Edit Proposal'}
-          </h2>
-          <form className="space-y-8">
-                              <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Panel - Form */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sticky top-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-100 to-blue-200 rounded-lg flex items-center justify-center">
+                  <CogIcon className="w-4 h-4 text-blue-600" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900">Proposal Details</h2>
+              </div>
+
+              <form className="space-y-6">
+                {/* Proposal Title */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">
                     Proposal Title <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    value={proposal.title}
+                    value={proposal?.title || ''}
                     onChange={(e) => setProposal({ ...proposal, title: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
                     placeholder="Enter proposal title"
                   />
                 </div>
-                              <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">
-                    Client Name <span className="text-red-500">*</span>
+
+                {/* Client Selection */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Client <span className="text-red-500">*</span>
                   </label>
-                  <div className="flex gap-3">
-                    <input
-                      type="text"
-                      value={proposal.clientName}
-                      onChange={(e) => setProposal({ ...proposal, clientName: e.target.value })}
-                      className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                      placeholder="Enter client name"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowClientModal(true)}
-                      className={`px-6 py-3 rounded-xl transition-all duration-200 flex items-center gap-2 whitespace-nowrap font-medium ${
-                        selectedClientId 
-                          ? 'bg-green-600 text-white hover:bg-green-700 shadow-md' 
-                          : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
-                      }`}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                      </svg>
-                      {selectedClientId ? 'Change' : 'Select'}
-                    </button>
-                  </div>
-                {selectedClientId && (
-                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-sm text-green-800">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        Client selected from database
-                      </div>
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={proposal?.clientName || ''}
+                        onChange={(e) => setProposal({ ...proposal, clientName: e.target.value })}
+                        className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
+                        placeholder="Enter client name"
+                      />
                       <button
                         type="button"
-                        onClick={handleClearClient}
-                        className="text-red-600 hover:text-red-800 text-sm font-medium"
+                        onClick={() => setShowClientModal(true)}
+                        className={`px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-2 whitespace-nowrap font-medium ${
+                          selectedClientId 
+                            ? 'bg-green-600 text-white hover:bg-green-700 shadow-md' 
+                            : 'bg-primary-600 text-white hover:bg-primary-700 shadow-md'
+                        }`}
                       >
-                        Clear
+                        <UserIcon className="w-4 h-4" />
+                        {selectedClientId ? 'Change' : 'Select'}
                       </button>
                     </div>
+                    
+                    {selectedClientId && (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-xl">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-sm text-green-800">
+                            <CheckCircleIcon className="w-4 h-4" />
+                            Client selected from database
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleClearClient}
+                            className="text-red-600 hover:text-red-800 text-sm font-medium"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-                              <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">
-                    Description <span className="text-red-500">*</span>
+                </div>
+
+                {/* Project Description */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Project Description <span className="text-red-500">*</span>
                   </label>
                   <textarea
-                    value={proposal.description}
+                    value={proposal?.description || ''}
                     onChange={(e) => setProposal({ ...proposal, description: e.target.value })}
-                    rows={6}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-all duration-200"
+                    rows={4}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white resize-none"
                     placeholder="Describe the project, requirements, and objectives..."
                   />
                 </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">Budget</label>
-                  <input
-                    type="text"
-                    value={proposal.content.budget}
-                    onChange={(e) => setProposal({ ...proposal, content: { ...proposal.content, budget: e.target.value } })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    placeholder="e.g., $50,000"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">Timeline</label>
-                  <input
-                    type="text"
-                    value={proposal.content.timeline}
-                    onChange={(e) => setProposal({ ...proposal, content: { ...proposal.content, timeline: e.target.value } })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    placeholder="e.g., 3 months"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">Industry</label>
-                <input
-                  type="text"
-                  value={proposal.metadata.industry}
-                  onChange={(e) => setProposal({ ...proposal, metadata: { ...proposal.metadata, industry: e.target.value } })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="e.g., Technology, Healthcare, Finance"
-                />
-              </div>
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-6">
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={loading}
-                  className="flex-1 px-4 py-3 bg-gray-600 text-white font-medium rounded-xl hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 transition-all duration-200"
-                >
-                  Save Draft
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={loading}
-                  className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-300 transform hover:scale-105"
-                >
-                  Submit Proposal
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={handleGenerateWithAI}
-                disabled={generating || loading || !proposal.clientName || !proposal.description}
-                className={`w-full mt-8 py-4 px-6 rounded-xl font-semibold text-white transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 shadow-lg ${
-                  generating || loading || !proposal.clientName || !proposal.description
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:ring-blue-500'
-                }`}
-              >
-                {generating ? (
-                  <div className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Generating Content...
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center">
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    Generate AI Content
-                  </div>
-                )}
-              </button>
-              {(!proposal.clientName || !proposal.description) && (
-                <p className="text-sm text-gray-500 text-center mt-2">
-                  Enter client name and description to enable AI generation
-                </p>
-              )}
-          </form>
-        </aside>
-        {/* Right Content Area */}
-        <main className="flex-1 flex flex-col p-12 overflow-y-auto bg-gray-50">
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Proposal Content</h2>
-            <p className="text-gray-600">Review, edit, and refine your proposal content</p>
-          </div>
-          
-          {/* Access Requests Section */}
-          {(accessRequests.length > 0 || isNewProposal) && (
-            <div className="mb-8 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-xl font-bold mb-4 text-blue-700 flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                </svg>
-                Access Requests ({accessRequests.length > 0 ? accessRequests.length : 1})
-              </h3>
-              <div className="space-y-4">
-                {accessRequests.length > 0 ? (
-                  accessRequests.map((req) => (
-                    <div key={req.id} className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="font-semibold text-blue-900">{req.name} ({req.email})</div>
-                          <div className="text-sm text-gray-700">{req.company}</div>
-                          <div className="text-xs text-gray-500 mt-1">{req.reason}</div>
-                          <div className="text-xs text-gray-400 mt-1">Requested: {new Date(req.createdAt).toLocaleString()}</div>
-                          {req.status === 'GRANTED' && req.accessCode && (
-                            <div className="text-green-700 text-xs mt-1 font-medium">Access Code: {req.accessCode}</div>
-                          )}
-                        </div>
-                        <div className="ml-4">
-                          {req.status === 'PENDING' && (
-                            <button
-                              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-green-600 transition disabled:opacity-50 text-sm"
-                              disabled={grantingRequestId === req.id}
-                              onClick={() => handleGrantAccess(req.id)}
-                            >
-                              {grantingRequestId === req.id ? 'Granting...' : 'Grant Access'}
-                            </button>
-                          )}
-                          {req.status === 'GRANTED' && (
-                            <span className="text-green-600 font-semibold text-sm">✓ Granted</span>
-                          )}
-                          {req.status === 'DENIED' && (
-                            <span className="text-red-600 font-semibold text-sm">✗ Denied</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <div className="text-lg font-medium mb-2">No Access Requests</div>
-                    <div className="text-sm">When clients request access to this proposal, they will appear here.</div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
-          <div className="max-h-[700px] min-h-[300px] flex-1 overflow-y-auto pr-2">
-              {generating ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <div className="relative">
-                    {/* Animated circles */}
-                    <div className="absolute inset-0 animate-ping">
-                      <div className="w-16 h-16 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full opacity-20"></div>
-                    </div>
-                    <div className="absolute inset-0 animate-ping" style={{ animationDelay: '0.5s' }}>
-                      <div className="w-16 h-16 bg-gradient-to-r from-green-400 to-blue-500 rounded-full opacity-20"></div>
-                    </div>
+                {/* Budget & Timeline */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Budget
+                    </label>
                     <div className="relative">
-                      <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                        <svg className="w-8 h-8 text-white animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                      </div>
+                      <CurrencyDollarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="text"
+                        value={proposal?.budget || ''}
+                        onChange={(e) => setProposal({ ...proposal, budget: e.target.value })}
+                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
+                        placeholder="e.g. $50,000"
+                      />
                     </div>
                   </div>
                   
-                  <div className="mt-6 text-center">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Generating Your Proposal</h3>
-                    <p className="text-gray-600">Our AI is crafting a professional proposal tailored to your needs...</p>
-                    
-                    {/* Animated dots */}
-                    <div className="flex justify-center mt-4 space-x-1">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Timeline
+                    </label>
+                    <div className="relative">
+                      <ClockIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="text"
+                        value={proposal?.timeline || ''}
+                        onChange={(e) => setProposal({ ...proposal, timeline: e.target.value })}
+                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
+                        placeholder="e.g. 2 months"
+                      />
                     </div>
                   </div>
                 </div>
-              ) : (
-                <div className="space-y-6">
-                  {/* Single Unified Proposal Editor */}
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                    <div className="flex justify-between items-center mb-6">
-                      <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                        <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        Proposal Content Editor
-                      </h3>
-                      <div className="flex gap-3">
-                        <button 
-                          onClick={() => handleRefineEntireProposal()}
-                          className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition flex items-center gap-2"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                          </svg>
-                          Refine with AI
-                        </button>
-                        <button 
-                          onClick={() => handleFormatProposal()}
-                          className="px-4 py-2 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition flex items-center gap-2"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                          </svg>
-                          Format
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div className="mb-4">
-                      <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
-                        <span className="flex items-center gap-1">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          Edit the entire proposal content below
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                          </svg>
-                          Use "Refine with AI" to improve the entire document
-                        </span>
-                      </div>
-                    </div>
 
-                    <textarea
-                      value={proposal.content.fullProposal || getCombinedProposalContent()}
-                      onChange={(e) => setProposal({ 
-                        ...proposal, 
-                        content: { 
-                          ...proposal.content, 
-                          fullProposal: e.target.value 
-                        } 
-                      })}
-                      rows={25}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-all duration-200 bg-gray-50 font-mono text-sm leading-relaxed"
-                      placeholder="Enter your complete proposal content here...
+                {/* AI Generation Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    console.log('🔘 Button clicked!');
+                    console.log('📊 Current state:', {
+                      generating,
+                      loading,
+                      clientName: proposal?.clientName,
+                      description: proposal?.description,
+                      isDisabled: generating || loading || !proposal?.clientName || !proposal?.description
+                    });
+                    handleGenerateWithAI();
+                  }}
+                  disabled={generating || loading || !proposal?.clientName || !proposal?.description}
+                  className={`w-full py-4 px-6 rounded-xl font-semibold text-white transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 shadow-lg ${
+                    generating || loading || !proposal?.clientName || !proposal?.description
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-primary-600 to-purple-600 hover:from-primary-700 hover:to-purple-700 focus:ring-primary-500'
+                  }`}
+                >
+                  {generating ? (
+                    <div className="flex items-center justify-center">
+                      <ArrowPathIcon className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
+                      Generating Content...
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center">
+                      <SparklesIcon className="w-5 h-5 mr-2" />
+                      Generate AI Content
+                    </div>
+                  )}
+                </button>
+                
+                {(!proposal?.clientName || !proposal?.description) && (
+                  <p className="text-sm text-gray-500 text-center">
+                    Enter client name and description to enable AI generation
+                  </p>
+                )}
+              </form>
+            </div>
+          </div>
+
+          {/* Right Panel - Content Editor */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 mb-1">Proposal Content</h2>
+                  <p className="text-gray-600">Review, edit, and refine your proposal content</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setPreviewMode(!previewMode)}
+                    className="btn-secondary flex items-center gap-2"
+                  >
+                    {previewMode ? <PencilIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
+                    {previewMode ? 'Edit Mode' : 'Preview Mode'}
+                  </button>
+                  <button
+                    onClick={() => handleRefineEntireProposal()}
+                    disabled={generating || !proposal?.content?.fullProposal}
+                    className="btn-primary flex items-center gap-2"
+                  >
+                    <SparklesIcon className="w-4 h-4" />
+                    Refine with AI
+                  </button>
+                  <button 
+                    onClick={() => handleFormatProposal()}
+                    disabled={!proposal?.content?.fullProposal}
+                    className="btn-secondary flex items-center gap-2"
+                  >
+                    <CogIcon className="w-4 h-4" />
+                    Format
+                  </button>
+                </div>
+              </div>
+
+              {/* Content Editor */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-4 text-sm text-gray-600 p-3 bg-gray-50 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <EyeIcon className="w-4 h-4" />
+                    Edit the entire proposal content below
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <SparklesIcon className="w-4 h-4" />
+                    Use "Refine with AI" to improve the entire document
+                  </div>
+                </div>
+
+                {previewMode ? (
+                  <div className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white min-h-[600px] overflow-y-auto">
+                    <div className="proposal-content">
+                      <ReactMarkdown>{proposal?.content?.fullProposal || getCombinedProposalContent()}</ReactMarkdown>
+                    </div>
+                  </div>
+                ) : (
+                  <textarea
+                    value={proposal?.content?.fullProposal || getCombinedProposalContent()}
+                    onChange={(e) => setProposal({ 
+                      ...proposal, 
+                      content: { 
+                        ...proposal?.content, 
+                        fullProposal: e.target.value 
+                      } 
+                    })}
+                    rows={25}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none transition-all duration-200 bg-gray-50 font-mono text-sm leading-relaxed hover:bg-white"
+                    placeholder="Enter your complete proposal content here...
 
 # Executive Summary
 [Your executive summary goes here]
 
-# Approach
-[Your approach and methodology]
+# Project Overview
+[Detailed analysis of requirements and objectives]
 
-# Budget Details
-[Detailed budget breakdown]
+# Our Approach
+[Step-by-step methodology and processes]
 
-# Timeline
-[Project timeline and milestones]
+# Project Deliverables
+- **Deliverable Name**: Brief description. Timeline: X weeks/days
 
-# Additional Sections
-[Any other relevant sections]"
-                    />
-                    
-                    <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
-                      <span>Word count: {proposal.content.fullProposal?.split(/\s+/).length || 0} words</span>
-                      <span>Characters: {proposal.content.fullProposal?.length || 0}</span>
-                    </div>
+# Project Timeline
+1. **Phase Name** (YYYY-MM-DD)
+   Description of what will be completed in this phase.
+
+# Investment
+[Pricing and payment terms]
+
+# Why Choose Us
+[Experience and competitive advantages]
+
+# Next Steps
+[Clear action items and contact info]"
+                  />
+                )}
+                
+                <div className="flex items-center justify-between text-xs text-gray-500 p-3 bg-gray-50 rounded-lg">
+                  <span>Word count: {proposal?.content?.fullProposal?.split(/\s+/).length || 0} words</span>
+                  <span>Characters: {proposal?.content?.fullProposal?.length || 0}</span>
+                </div>
+              </div>
+
+              {/* Success Message */}
+              {proposal?.content?.fullProposal && (
+                <div className="mt-6 bg-green-50 border border-green-200 rounded-xl p-4">
+                  <div className="flex items-center gap-2 text-green-800">
+                    <CheckCircleIcon className="w-5 h-5" />
+                    <span className="font-medium">Content Ready!</span>
                   </div>
-
-                  {/* Success Message */}
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-green-800">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span className="font-medium">Content Generated Successfully!</span>
-                    </div>
-                    <p className="text-green-700 text-sm mt-1">Review and edit the content above. Use "Refine with AI" to improve the entire document or "Format" to structure it properly.</p>
-                  </div>
+                  <p className="text-green-700 text-sm mt-1">
+                    Review and edit the content above. Use "Refine with AI" to improve the entire document or "Format" to structure it properly.
+                  </p>
                 </div>
               )}
             </div>
-        </main>
+          </div>
+        </div>
       </div>
       
       {/* Client Selection Modal */}

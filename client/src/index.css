@@ -1,293 +1,362 @@
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* Modern font imports - matching the clean, professional aesthetic */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
-
+/* Premium Enterprise Design System */
 @layer base {
-  html {
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
-    font-variation-settings: normal;
+  :root {
+    /* Premium Color Palette */
+    --color-primary-50: #eff6ff;
+    --color-primary-100: #dbeafe;
+    --color-primary-200: #bfdbfe;
+    --color-primary-300: #93c5fd;
+    --color-primary-400: #60a5fa;
+    --color-primary-500: #3b82f6;
+    --color-primary-600: #2563eb;
+    --color-primary-700: #1d4ed8;
+    --color-primary-800: #1e3a8a;
+    --color-primary-900: #1e3a8a;
+    
+    /* Professional Grays */
+    --color-gray-50: #f9fafb;
+    --color-gray-100: #f3f4f6;
+    --color-gray-200: #e5e7eb;
+    --color-gray-300: #d1d5db;
+    --color-gray-400: #9ca3af;
+    --color-gray-500: #6b7280;
+    --color-gray-600: #4b5563;
+    --color-gray-700: #374151;
+    --color-gray-800: #1f2937;
+    --color-gray-900: #111827;
+    
+    /* Premium Accent Colors */
+    --color-accent-gold: #f59e0b;
+    --color-accent-emerald: #10b981;
+    --color-accent-rose: #f43f5e;
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   }
-  
-  body {
-    @apply bg-gray-50 text-gray-900;
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-weight: 400;
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-  
+
   * {
     @apply border-gray-200;
   }
-  
-  /* Typography system matching the modern interface */
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-weight: 700;
-    line-height: 1.2;
-    letter-spacing: -0.025em;
-  }
-  
-  h1 {
-    font-weight: 800;
-    letter-spacing: -0.02em;
-  }
-  
-  h2 {
-    font-weight: 700;
-    letter-spacing: -0.015em;
-  }
-  
-  /* Body text styling */
-  p, span, div, button, input, textarea, select {
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-weight: 400;
+
+  html {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     line-height: 1.6;
   }
-  
-  /* Light weight for UI elements */
-  .font-light {
-    font-weight: 300;
+
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
-  
-  /* Regular weight for body text */
-  .font-normal {
-    font-weight: 400;
+
+  /* Premium Typography */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight text-gray-900;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
-  
-  /* Medium weight for emphasis */
-  .font-medium {
-    font-weight: 500;
+
+  h1 {
+    @apply text-2xl font-bold;
+    line-height: 1.2;
   }
-  
-  /* Semibold for headings */
-  .font-semibold {
-    font-weight: 600;
+
+  h2 {
+    @apply text-xl font-semibold;
+    line-height: 1.3;
   }
-  
-  /* Bold for main headings */
-  .font-bold {
-    font-weight: 700;
+
+  h3 {
+    @apply text-lg font-semibold;
+    line-height: 1.4;
   }
-  
-  /* Extra bold for hero text */
-  .font-extrabold {
-    font-weight: 800;
+
+  h4 {
+    @apply text-base font-medium;
+    line-height: 1.5;
   }
-  
-  /* CSS Custom Properties for theming */
-  :root {
-    --primary-color: #3B82F6;
-    --secondary-color: #1F2937;
-    --font-family: 'Inter';
-    --font-family-heading: 'Inter';
-    --font-weight-light: 300;
-    --font-weight-normal: 400;
-    --font-weight-medium: 500;
-    --font-weight-semibold: 600;
-    --font-weight-bold: 700;
-    --font-weight-extrabold: 800;
+
+  /* Premium Button Styles */
+  .btn-primary {
+    @apply bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-medium px-4 py-2 rounded-lg shadow-md hover:from-emerald-600 hover:to-teal-700 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-gray-700 font-medium px-4 py-2 rounded-lg border border-gray-300 shadow-sm hover:bg-gray-50 hover:border-gray-400 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all duration-200;
+  }
+
+  .btn-ghost {
+    @apply text-gray-600 font-medium px-3 py-1.5 rounded-md hover:bg-gray-100 hover:text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all duration-200;
+  }
+
+  /* Premium Card Styles */
+  .card {
+    @apply bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200;
+  }
+
+  .card-elevated {
+    @apply bg-white rounded-xl border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-200;
+  }
+
+  /* Premium Input Styles */
+  .input-premium {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 bg-white shadow-sm;
+  }
+
+  .input-premium:focus {
+    @apply shadow-md;
+  }
+
+  /* Premium Loading States */
+  .loading-skeleton {
+    @apply animate-pulse bg-gray-200 rounded;
+  }
+
+  /* Premium Gradients */
+  .gradient-primary {
+    background: linear-gradient(135deg, #3b82f6 0%, #1e3a8a 100%);
+  }
+
+  .gradient-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  }
+
+  .gradient-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  }
+
+  /* Premium Animations */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.5s ease-out;
+  }
+
+  /* Premium Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-100 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full hover:bg-gray-400 transition-colors;
+  }
+
+  /* Premium Focus States */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+
+  /* Premium Status Indicators */
+  .status-success {
+    @apply bg-emerald-50 text-emerald-700 border-emerald-200;
+  }
+
+  .status-warning {
+    @apply bg-amber-50 text-amber-700 border-amber-200;
+  }
+
+  .status-error {
+    @apply bg-rose-50 text-rose-700 border-rose-200;
+  }
+
+  .status-info {
+    @apply bg-blue-50 text-blue-700 border-blue-200;
   }
 }
 
+/* Premium Component Overrides */
 @layer components {
+  /* Enhanced Button Components */
   .btn {
-    @apply inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200;
+    @apply inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
   }
-  
-  .btn-primary {
-    @apply btn text-white focus:ring-primary-500;
-    background-color: var(--primary-color);
+
+  .btn-sm {
+    @apply px-3 py-2 text-sm;
   }
-  
-  .btn-primary:hover {
-    background-color: color-mix(in srgb, var(--primary-color) 80%, black);
+
+  .btn-md {
+    @apply px-4 py-2.5 text-sm;
   }
-  
-  .btn-secondary {
-    @apply btn bg-white text-gray-700 border-gray-300 hover:bg-gray-50 focus:ring-primary-500;
+
+  .btn-lg {
+    @apply px-6 py-3 text-base;
   }
-  
-  .btn-success {
-    @apply btn bg-success-600 text-white hover:bg-success-700 focus:ring-success-500;
+
+  .btn-xl {
+    @apply px-8 py-4 text-lg;
   }
-  
-  .btn-danger {
-    @apply btn bg-danger-600 text-white hover:bg-danger-700 focus:ring-danger-500;
+
+  /* Premium Form Elements */
+  .form-input {
+    @apply input-premium;
   }
-  
-  .btn-ghost {
-    @apply btn bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-primary-500;
+
+  .form-textarea {
+    @apply input-premium resize-none;
   }
-  
-  .input {
-    @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm;
+
+  .form-select {
+    @apply input-premium;
   }
-  
-  .textarea {
-    @apply input resize-none;
+
+  /* Premium Navigation */
+  .nav-link {
+    @apply flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200;
   }
-  
-  .select {
-    @apply input;
+
+  .nav-link-active {
+    @apply bg-primary-50 text-primary-700 border border-primary-200;
   }
-  
-  .card {
-    @apply bg-white rounded-lg shadow-soft border border-gray-200;
+
+  .nav-link-inactive {
+    @apply text-gray-600 hover:text-gray-900 hover:bg-gray-50;
   }
-  
-  .card-header {
-    @apply px-6 py-4 border-b border-gray-200;
-  }
-  
-  .card-body {
-    @apply px-6 py-4;
-  }
-  
-  .card-footer {
-    @apply px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg;
-  }
-  
+
+  /* Premium Badge */
   .badge {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
-  
+
   .badge-primary {
-    @apply badge bg-primary-100 text-primary-800;
+    @apply bg-primary-100 text-primary-800;
   }
-  
-  .badge-secondary {
-    @apply badge bg-gray-100 text-gray-800;
-  }
-  
+
   .badge-success {
-    @apply badge bg-success-100 text-success-800;
+    @apply bg-emerald-100 text-emerald-800;
   }
-  
+
   .badge-warning {
-    @apply badge bg-warning-100 text-warning-800;
+    @apply bg-amber-100 text-amber-800;
   }
-  
-  .badge-danger {
-    @apply badge bg-danger-100 text-danger-800;
+
+  .badge-error {
+    @apply bg-rose-100 text-rose-800;
   }
-  
-  .sidebar {
-    @apply fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-large transform transition-transform duration-300 ease-in-out;
+
+  /* Proposal Content Styling */
+  .proposal-content {
+    @apply text-gray-800 leading-relaxed;
   }
-  
-  .sidebar-open {
-    @apply translate-x-0;
+
+  .proposal-content h1 {
+    @apply text-xl font-bold text-gray-900 mb-4 mt-6 first:mt-0;
   }
-  
-  .sidebar-closed {
-    @apply -translate-x-full;
+
+  .proposal-content h2 {
+    @apply text-lg font-bold text-gray-900 mb-4 mt-5;
   }
-  
-  .modal-overlay {
-    @apply fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4;
+
+  .proposal-content h3 {
+    @apply text-base font-semibold text-gray-800 mb-2 mt-3;
   }
-  
-  .modal-content {
-    @apply bg-white rounded-lg shadow-large max-w-md w-full max-h-[90vh] overflow-y-auto;
+
+  .proposal-content p {
+    @apply mb-4 text-gray-700;
   }
-  
-  .loading-spinner {
-    @apply animate-spin rounded-full border-2 border-gray-300 border-t-primary-600;
+
+  .proposal-content ul {
+    @apply mb-4 pl-6 space-y-3;
   }
-  
-  .prose-custom {
-    @apply prose prose-gray max-w-none;
+
+  .proposal-content ol {
+    @apply mb-4 pl-6 space-y-4;
   }
-  
-  .prose-custom h1 {
-    @apply text-3xl font-bold text-gray-900 mb-6;
+
+  .proposal-content li {
+    @apply mb-2 text-gray-700;
   }
-  
-  .prose-custom h2 {
-    @apply text-2xl font-semibold text-gray-900 mb-4 mt-8;
+
+  /* Project Deliverables Styling */
+  .proposal-content ul li:has(strong) {
+    @apply bg-white rounded-lg border border-gray-200 p-4 shadow-sm;
   }
-  
-  .prose-custom h3 {
-    @apply text-xl font-medium text-gray-900 mb-3 mt-6;
+
+  .proposal-content ul li strong {
+    @apply text-gray-900 font-semibold block mb-1;
   }
-  
-  .prose-custom p {
-    @apply text-gray-700 mb-4 leading-relaxed;
+
+  /* Project Timeline Styling */
+  .proposal-content ol {
+    @apply list-none;
+    counter-reset: timeline-counter;
   }
-  
-  .prose-custom ul {
-    @apply list-disc list-inside mb-4 space-y-1;
+
+  .proposal-content ol li {
+    @apply bg-white rounded-lg border border-gray-200 p-4 shadow-sm relative mb-4 pl-16;
+    counter-increment: timeline-counter;
   }
-  
-  .prose-custom ol {
-    @apply list-decimal list-inside mb-4 space-y-1;
+
+  .proposal-content ol li::before {
+    @apply absolute left-4 top-4 w-8 h-8 bg-primary-500 text-white rounded-full flex items-center justify-center text-sm font-semibold z-10;
+    content: counter(timeline-counter);
   }
-  
-  .prose-custom li {
+
+  .proposal-content ol li strong {
+    @apply text-gray-900 font-semibold block mb-2;
+  }
+
+  .proposal-content ol li p {
     @apply text-gray-700;
   }
-  
-  .prose-custom blockquote {
-    @apply border-l-4 border-primary-500 pl-4 italic text-gray-600 my-4;
-  }
-  
-  .prose-custom code {
-    @apply bg-gray-100 px-1 py-0.5 rounded text-sm font-mono text-gray-800;
-  }
-  
-  .prose-custom pre {
-    @apply bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto my-4;
-  }
-  
-  .prose-custom pre code {
-    @apply bg-transparent text-gray-100 p-0;
-  }
-}
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  /* Ensure all content in timeline items has proper spacing */
+  .proposal-content ol li > * {
+    @apply ml-0;
   }
-  
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+
+  /* Timeline and Deliverables Custom Classes */
+  .timeline-item {
+    @apply bg-white rounded-lg border border-gray-200 p-4 shadow-sm mb-4 relative;
   }
-  
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
+
+  .timeline-number {
+    @apply absolute left-4 top-4 w-8 h-8 bg-primary-500 text-white rounded-full flex items-center justify-center text-sm font-semibold;
   }
-  
-  .gradient-text {
-    @apply bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent;
+
+  .timeline-content {
+    @apply ml-12;
   }
-  
-  .glass {
-    @apply bg-white/80 backdrop-blur-sm border border-white/20;
+
+  .timeline-title {
+    @apply text-gray-900 font-semibold block mb-2;
   }
-  
-  /* Text color utilities */
-  .text-primary-600 {
-    @apply text-blue-600;
+
+  .timeline-description {
+    @apply text-gray-700;
   }
-  
-  .text-danger-600 {
-    @apply text-red-600;
+
+  .deliverable-item {
+    @apply bg-white rounded-lg border border-gray-200 p-4 shadow-sm mb-4;
   }
-  
-  /* Shadow utilities */
-  .shadow-soft {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+  .deliverable-title {
+    @apply text-gray-900 font-semibold block mb-2;
   }
-  
-  .shadow-large {
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+
+  .deliverable-description {
+    @apply text-gray-700 mb-2;
+  }
+
+  .deliverable-timeline {
+    @apply text-sm text-gray-500 flex items-center;
   }
 } 

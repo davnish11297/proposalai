@@ -8,18 +8,15 @@ import {
   PencilSquareIcon, 
   EyeIcon, 
   TrashIcon, 
-  ArrowLeftIcon, 
   PaperAirplaneIcon,
-  HomeIcon,
-  UsersIcon,
   ChevronDownIcon,
   PlusIcon
 } from '@heroicons/react/24/outline';
-import NotificationBell from '../components/NotificationBell';
 
 export default function Drafts() {
   const navigate = useNavigate();
   const [drafts, setDrafts] = useState<any[]>([]);
+  const [sentProposals, setSentProposals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showSendModal, setShowSendModal] = useState(false);
@@ -28,6 +25,7 @@ export default function Drafts() {
   const [clientName, setClientName] = useState('');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState('');
+  const [viewMode, setViewMode] = useState<'drafts' | 'sent'>('drafts');
   
   // Client selection states
   const [clients, setClients] = useState<any[]>([]);
@@ -39,7 +37,7 @@ export default function Drafts() {
   const [creatingClient, setCreatingClient] = useState(false);
 
   useEffect(() => {
-    fetchDrafts();
+    fetchProposals();
     fetchClients();
   }, []);
 
@@ -61,13 +59,15 @@ export default function Drafts() {
     };
   }, [showClientDropdown]);
 
-  const fetchDrafts = async () => {
+  const fetchProposals = async () => {
     try {
       setLoading(true);
       const response = await proposalsAPI.getAll();
-      setDrafts(response.data.data.filter((p: any) => p.status === 'DRAFT'));
+      const allProposals = response.data.data;
+      setDrafts(allProposals.filter((p: any) => p.status === 'DRAFT'));
+      setSentProposals(allProposals.filter((p: any) => ['SENT', 'IN_REVIEW', 'WON', 'LOST'].includes(p.status)));
     } catch (err) {
-      setError('Failed to load drafts');
+      setError('Failed to load proposals');
     } finally {
       setLoading(false);
     }
@@ -88,7 +88,7 @@ export default function Drafts() {
   const handleDelete = async (id: string) => {
     if (window.confirm('Delete this draft?')) {
       await proposalsAPI.delete(id);
-      fetchDrafts();
+      fetchProposals();
     }
   };
 
@@ -174,8 +174,8 @@ export default function Drafts() {
       // Show success message
       alert('Proposal sent successfully! It has been moved to Sent Proposals.');
       
-      // Refresh the drafts list (the sent proposal will no longer appear here)
-      fetchDrafts();
+      // Refresh the proposals list (the sent proposal will no longer appear here)
+      fetchProposals();
     } catch (err: any) {
       setSendError(err.response?.data?.error || 'Failed to send proposal');
     } finally {
@@ -183,116 +183,153 @@ export default function Drafts() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/login';
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pb-12">
-      {/* Top Navigation Bar */}
-      <nav className="bg-gradient-to-r from-blue-600 to-blue-400 shadow-lg fixed w-full z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-extrabold text-white tracking-wider drop-shadow">ProposalAI</h1>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="mb-12 animate-fade-in-up">
+          <div className="flex items-center mb-6">
+            <div className="w-12 h-12 bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl flex items-center justify-center shadow-lg mr-4">
+              <DocumentTextIcon className="w-6 h-6 text-white" />
             </div>
-            <div className="flex items-center space-x-8">
-              <a href="/dashboard" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <HomeIcon className="w-5 h-5" />
-                <span>Dashboard</span>
-              </a>
-              <a href="/drafts" className="flex items-center space-x-1 text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">
-                <DocumentTextIcon className="w-5 h-5" />
-                <span>Drafts</span>
-              </a>
-              <a href="/sent-proposals" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <PaperAirplaneIcon className="w-5 h-5" />
-                <span>Sent Proposals</span>
-              </a>
-              <a href="/clients" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <UsersIcon className="w-5 h-5" />
-                <span>Clients</span>
-              </a>
-              <a href="/profile" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <UserIcon className="w-5 h-5" />
-                <span>Profile</span>
-              </a>
-              <NotificationBell />
-              <button 
-                onClick={handleLogout}
-                className="text-white/80 hover:text-white transition-colors"
-              >
-                Logout
-              </button>
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 tracking-tight">
+                Proposals
+              </h1>
+              <p className="mt-2 text-xl text-gray-600">
+                Manage all your proposals - from drafts to sent proposals
+              </p>
+            </div>
+          </div>
+          
+          {/* View Mode Toggle */}
+          <div className="flex items-center justify-center mb-8">
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-2">
+              <div className="flex">
+                <button
+                  onClick={() => setViewMode('drafts')}
+                  className={`px-8 py-3 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center gap-3 ${
+                    viewMode === 'drafts'
+                      ? 'bg-emerald-500 text-white shadow-md'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  <DocumentTextIcon className="w-5 h-5" />
+                  Drafts
+                </button>
+                <button
+                  onClick={() => setViewMode('sent')}
+                  className={`px-8 py-3 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center gap-3 ${
+                    viewMode === 'sent'
+                      ? 'bg-emerald-500 text-white shadow-md'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  <PaperAirplaneIcon className="w-5 h-5" />
+                  Sent
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </nav>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24">
-        {/* Back Button */}
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-2 mb-6 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-400 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-blue-500 transition shadow"
-        >
-          <ArrowLeftIcon className="h-5 w-5" /> Back to Dashboard
-        </button>
-        <h2 className="text-4xl font-extrabold text-blue-800 mb-8 text-center tracking-tight drop-shadow-lg">Your Draft Proposals</h2>
+
         {loading ? (
-          <div className="flex justify-center items-center h-40 text-lg text-blue-600 font-semibold animate-pulse">Loading drafts...</div>
+          <div className="flex justify-center items-center h-40 text-lg text-gray-600 font-medium">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mr-3"></div>
+            Loading drafts...
+          </div>
         ) : error ? (
-          <div className="flex justify-center items-center h-40 text-lg text-red-500 font-semibold">{error}</div>
-        ) : drafts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-60 text-blue-200">
-            <DocumentTextIcon className="h-16 w-16 mb-4" />
-            <div className="text-xl font-medium">No drafts found</div>
-            <div className="text-sm mt-2">Start by generating a new proposal!</div>
+          <div className="status-error rounded-xl p-6 text-center animate-fade-in-up">
+            <p className="text-lg font-medium">{error}</p>
+          </div>
+        ) : (viewMode === 'drafts' ? drafts.length === 0 : sentProposals.length === 0) ? (
+          <div className="flex flex-col items-center justify-center h-80 text-gray-400 animate-fade-in-up">
+            <div className="w-20 h-20 bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mb-6">
+              {viewMode === 'drafts' ? <DocumentTextIcon className="h-10 w-10" /> : <PaperAirplaneIcon className="h-10 w-10" />}
+            </div>
+            <div className="text-2xl font-semibold mb-2">
+              {viewMode === 'drafts' ? 'No drafts found' : 'No sent proposals found'}
+            </div>
+            <div className="text-lg">
+              {viewMode === 'drafts' ? 'Start by generating a new proposal!' : 'Send some proposals to see them here!'}
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {drafts.map((draft) => (
-              <div key={draft.id} className="bg-white rounded-2xl shadow-xl border-2 border-blue-200 p-6 flex flex-col justify-between hover:shadow-2xl transition-all duration-200">
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <DocumentTextIcon className="h-7 w-7 text-blue-500" />
-                    <span className="text-lg font-bold text-blue-900 truncate" title={draft.title}>{draft.title}</span>
+            {(viewMode === 'drafts' ? drafts : sentProposals).map((proposal) => (
+              <div key={proposal.id} className="card-elevated p-6 flex flex-col justify-between animate-fade-in-up">
+                                  <div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-gradient-to-r from-primary-100 to-primary-200 rounded-xl flex items-center justify-center">
+                        {viewMode === 'drafts' ? <DocumentTextIcon className="h-5 w-5 text-primary-600" /> : <PaperAirplaneIcon className="h-5 w-5 text-primary-600" />}
+                      </div>
+                      <span className="text-lg font-bold text-gray-900 truncate" title={proposal.title}>{proposal.title}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                      <UserIcon className="h-4 w-4" />
+                      <span className="font-medium">{proposal.clientName || 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+                      <CalendarIcon className="h-4 w-4" />
+                      <span>{new Date(proposal.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <div className="text-gray-700 text-sm line-clamp-3 mb-4">{proposal.description}</div>
+                    {viewMode === 'sent' && (
+                      <div className="flex items-center gap-2 text-sm mb-4">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          proposal.status === 'WON' ? 'bg-green-100 text-green-800' :
+                          proposal.status === 'LOST' ? 'bg-red-100 text-red-800' :
+                          proposal.status === 'IN_REVIEW' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-blue-100 text-blue-800'
+                        }`}>
+                          {proposal.status.replace('_', ' ')}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-blue-700 mb-1">
-                    <UserIcon className="h-4 w-4" />
-                    <span>{draft.clientName || 'N/A'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-blue-400 mb-4">
-                    <CalendarIcon className="h-4 w-4" />
-                    <span>{new Date(draft.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  <div className="text-blue-800 text-sm line-clamp-3 mb-4">{draft.description}</div>
-                </div>
-                <div className="flex gap-2 mt-2 flex-wrap">
-                  <button
-                    className="flex items-center gap-1 px-3 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-400 text-white font-semibold hover:from-blue-600 hover:to-blue-500 transition text-sm"
-                    onClick={() => handleEdit(draft.id)}
-                  >
-                    <PencilSquareIcon className="h-4 w-4" /> Edit
-                  </button>
-                  <button
-                    className="flex items-center gap-1 px-3 py-2 rounded-lg bg-gradient-to-r from-green-400 to-green-300 text-white font-semibold hover:from-green-500 hover:to-green-400 transition text-sm"
-                    onClick={() => handleView(draft.id)}
-                  >
-                    <EyeIcon className="h-4 w-4" /> View
-                  </button>
-                  <button
-                    className="flex items-center gap-1 px-3 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-purple-400 text-white font-semibold hover:from-purple-600 hover:to-purple-500 transition text-sm"
-                    onClick={() => handleSend(draft)}
-                  >
-                    <PaperAirplaneIcon className="h-4 w-4" /> Send
-                  </button>
-                  <button
-                    className="flex items-center gap-1 px-3 py-2 rounded-lg bg-gradient-to-r from-red-400 to-red-300 text-white font-semibold hover:from-red-500 hover:to-red-400 transition text-sm"
-                    onClick={() => handleDelete(draft.id)}
-                  >
-                    <TrashIcon className="h-4 w-4" /> Delete
-                  </button>
+                <div className="flex gap-2 mt-4 flex-wrap">
+                  {viewMode === 'drafts' ? (
+                    <>
+                      <button
+                        className="btn-primary flex items-center gap-1 px-3 py-2 text-sm"
+                        onClick={() => handleEdit(proposal.id)}
+                      >
+                        <PencilSquareIcon className="h-4 w-4" /> Edit
+                      </button>
+                      <button
+                        className="btn-secondary flex items-center gap-1 px-3 py-2 text-sm"
+                        onClick={() => handleView(proposal.id)}
+                      >
+                        <EyeIcon className="h-4 w-4" /> View
+                      </button>
+                      <button
+                        className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-medium px-3 py-2 rounded-xl hover:from-emerald-700 hover:to-emerald-800 transition-all duration-200 flex items-center gap-1 text-sm shadow-sm hover:shadow-md"
+                        onClick={() => handleSend(proposal)}
+                      >
+                        <PaperAirplaneIcon className="h-4 w-4" /> Send
+                      </button>
+                      <button
+                        className="bg-gradient-to-r from-rose-600 to-rose-700 text-white font-medium px-3 py-2 rounded-xl hover:from-rose-700 hover:to-rose-800 transition-all duration-200 flex items-center gap-1 text-sm shadow-sm hover:shadow-md"
+                        onClick={() => handleDelete(proposal.id)}
+                      >
+                        <TrashIcon className="h-4 w-4" /> Delete
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        className="btn-secondary flex items-center gap-1 px-3 py-2 text-sm"
+                        onClick={() => handleView(proposal.id)}
+                      >
+                        <EyeIcon className="h-4 w-4" /> View
+                      </button>
+                      <button
+                        className="btn-primary flex items-center gap-1 px-3 py-2 text-sm"
+                        onClick={() => handleEdit(proposal.id)}
+                      >
+                        <PencilSquareIcon className="h-4 w-4" /> Edit
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}
@@ -303,7 +340,7 @@ export default function Drafts() {
       {/* Send Proposal Modal */}
       {showSendModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
             <div className="flex items-center gap-3 mb-4">
               <PaperAirplaneIcon className="h-6 w-6 text-purple-500" />
               <h3 className="text-xl font-bold text-gray-900">Send Proposal</h3>
@@ -495,7 +532,7 @@ export default function Drafts() {
               <button
                 onClick={handleSendProposal}
                 disabled={sending || !recipientEmail.trim() || !clientName.trim()}
-                className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-500 to-purple-400 text-white font-semibold rounded-lg hover:from-purple-600 hover:to-purple-500 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-3 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {sending ? (
                   <>

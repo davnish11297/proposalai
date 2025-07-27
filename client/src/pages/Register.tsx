@@ -77,8 +77,8 @@ export default function Register() {
   };
 
   const handleGoogleSignup = () => {
-    // TODO: Implement Google OAuth
-    console.log('Google signup clicked');
+    // Redirect to Google OAuth
+    window.location.href = `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/auth/google`;
   };
 
   return (

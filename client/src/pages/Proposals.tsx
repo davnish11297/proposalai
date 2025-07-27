@@ -14,11 +14,17 @@ interface Proposal {
   updatedAt: string;
 }
 
-const statuses = [
-  { label: 'All Status', value: 'all' },
+const draftStatuses = [
+  { label: 'All Drafts', value: 'all' },
+  { label: 'draft', value: 'draft' },
+];
+
+const sentStatuses = [
+  { label: 'All Sent', value: 'all' },
+  { label: 'sent', value: 'sent' },
   { label: 'in review', value: 'in review' },
   { label: 'won', value: 'won' },
-  { label: 'sent', value: 'sent' },
+  { label: 'lost', value: 'lost' },
 ];
 
 // Removed unused proposals variable - now using real proposals from API
@@ -31,10 +37,16 @@ export default function Proposals() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'drafts' | 'sent'>('drafts');
 
   useEffect(() => {
     fetchProposals();
   }, []);
+
+  // Reset status filter when switching view modes
+  useEffect(() => {
+    setSelectedStatus('all');
+  }, [viewMode]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -107,10 +119,21 @@ export default function Proposals() {
   };
 
   const filteredProposals = proposals.filter(proposal => {
+    // Filter by view mode (drafts vs sent)
+    const isDraft = proposal.status === 'DRAFT';
+    const isSent = ['SENT', 'IN_REVIEW', 'WON', 'LOST'].includes(proposal.status);
+    
+    if (viewMode === 'drafts' && !isDraft) return false;
+    if (viewMode === 'sent' && !isSent) return false;
+    
+    // Filter by status
     const matchesStatus = selectedStatus === 'all' || proposal.status.toLowerCase() === selectedStatus;
+    
+    // Filter by search
     const matchesSearch = search === '' || 
       proposal.title.toLowerCase().includes(search.toLowerCase()) ||
       proposal.clientName.toLowerCase().includes(search.toLowerCase());
+    
     return matchesStatus && matchesSearch;
   });
 
@@ -120,12 +143,52 @@ export default function Proposals() {
         <div>
           <h2 className="text-3xl font-bold text-gray-900 mb-1 flex items-center gap-3">
             <svg className="w-9 h-9 text-primary-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2" /><path d="M16 3v4M8 3v4" /></svg>
-            Proposals
+            {viewMode === 'drafts' ? 'Draft Proposals' : 'Sent Proposals'}
           </h2>
-          <p className="text-gray-500 text-lg">Manage all your AI-generated proposals and track their performance</p>
+          <p className="text-gray-500 text-lg">
+            {viewMode === 'drafts' 
+              ? 'Manage your draft proposals and continue editing them' 
+              : 'Track your sent proposals and their current status'
+            }
+          </p>
         </div>
         <button className="btn btn-primary px-6 py-2 text-base font-semibold mt-4 md:mt-0" onClick={() => navigate('/proposals/new')}>+ New Proposal</button>
       </div>
+      
+      {/* View Mode Toggle - More Prominent */}
+      <div className="flex items-center justify-center mb-8 bg-red-100 p-4">
+        <div className="bg-white rounded-xl shadow-lg border-2 border-emerald-300 p-2">
+          <div className="flex">
+            <button
+              onClick={() => setViewMode('drafts')}
+              className={`px-8 py-3 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center gap-3 ${
+                viewMode === 'drafts'
+                  ? 'bg-emerald-500 text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Draft Proposals
+            </button>
+            <button
+              onClick={() => setViewMode('sent')}
+              className={`px-8 py-3 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center gap-3 ${
+                viewMode === 'sent'
+                  ? 'bg-emerald-500 text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              Sent Proposals
+            </button>
+          </div>
+        </div>
+      </div>
+      
       <div className="flex flex-col md:flex-row md:items-center gap-4 mb-8">
         <div className="flex-1 flex items-center bg-white rounded-lg shadow-soft px-4 py-2">
           <svg className="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
@@ -137,10 +200,10 @@ export default function Proposals() {
           />
         </div>
         <div className="flex flex-wrap gap-2 mt-2 md:mt-0">
-          {statuses.map(status => (
+          {(viewMode === 'drafts' ? draftStatuses : sentStatuses).map(status => (
             <button
               key={status.value}
-              className={`px-4 py-1.5 rounded-lg font-medium text-sm border transition ${selectedStatus === status.value ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
+              className={`px-4 py-1.5 rounded-lg font-medium text-sm border transition ${selectedStatus === status.value ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
               onClick={() => setSelectedStatus(status.value)}
             >
               <svg className="w-4 h-4 mr-1 inline-block" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8" /><path d="M21 21H3V3" /></svg>

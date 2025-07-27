@@ -4,7 +4,6 @@ import { toast } from 'react-hot-toast';
 import { proposalsAPI } from '../services/api';
 import Comments from '../components/Comments';
 import EmailTracking from '../components/EmailTracking';
-import NotificationBell from '../components/NotificationBell';
 import { useAuth } from '../hooks/useAuth';
 import {
   ArrowTrendingUpIcon,
@@ -12,11 +11,7 @@ import {
   ChartBarIcon,
   CurrencyDollarIcon,
   ClockIcon,
-  PaperAirplaneIcon,
-  HomeIcon,
-  DocumentTextIcon,
-  UsersIcon,
-  UserIcon
+  PaperAirplaneIcon
 } from '@heroicons/react/24/outline';
 import { getOpenRouterChatCompletion } from '../services/api';
 
@@ -396,11 +391,7 @@ Return ONLY the JSON object, no other text.`;
     );
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/login';
-  };
+
 
   const handleSend = () => {
     setRecipientEmail('');
@@ -681,161 +672,32 @@ Return ONLY the JSON object, no other text.`;
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pb-12">
-        {/* Top Navigation Bar */}
-        <nav className="bg-gradient-to-r from-blue-600 to-blue-400 shadow-lg fixed w-full z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center">
-                <h1 className="text-xl font-extrabold text-white tracking-wider drop-shadow">ProposalAI</h1>
-              </div>
-              <div className="flex items-center space-x-8">
-                <a href="/dashboard" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                  <HomeIcon className="w-5 h-5" />
-                  <span>Dashboard</span>
-                </a>
-                <a href="/drafts" className="flex items-center space-x-1 text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">
-                  <DocumentTextIcon className="w-5 h-5" />
-                  <span>Drafts</span>
-                </a>
-                <a href="/sent-proposals" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                  <PaperAirplaneIcon className="w-5 h-5" />
-                  <span>Sent Proposals</span>
-                </a>
-                <a href="/clients" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                  <UsersIcon className="w-5 h-5" />
-                  <span>Clients</span>
-                </a>
-                <a href="/profile" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                  <UserIcon className="w-5 h-5" />
-                  <span>Profile</span>
-                </a>
-                <NotificationBell />
-                <button 
-                  onClick={handleLogout}
-                  className="text-white/80 hover:text-white transition-colors"
-                >
-                  Logout
-                </button>
-              </div>
-            </div>
-          </div>
-        </nav>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="animate-spin rounded-full h-20 w-20 border-b-4 border-blue-600"></div>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-20 w-20 border-b-4 border-primary-600"></div>
       </div>
     );
   }
 
   if (!proposal) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pb-12">
-        {/* Top Navigation Bar */}
-        <nav className="bg-gradient-to-r from-blue-600 to-blue-400 shadow-lg fixed w-full z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center">
-                <h1 className="text-xl font-extrabold text-white tracking-wider drop-shadow">ProposalAI</h1>
-              </div>
-              <div className="flex items-center space-x-8">
-                <a href="/dashboard" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                  <HomeIcon className="w-5 h-5" />
-                  <span>Dashboard</span>
-                </a>
-                <a href="/drafts" className="flex items-center space-x-1 text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">
-                  <DocumentTextIcon className="w-5 h-5" />
-                  <span>Drafts</span>
-                </a>
-                <a href="/sent-proposals" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                  <PaperAirplaneIcon className="w-5 h-5" />
-                  <span>Sent Proposals</span>
-                </a>
-                <a href="/clients" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                  <UsersIcon className="w-5 h-5" />
-                  <span>Clients</span>
-                </a>
-                <a href="/profile" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                  <UserIcon className="w-5 h-5" />
-                  <span>Profile</span>
-                </a>
-                <NotificationBell />
-                <button 
-                  onClick={handleLogout}
-                  className="text-white/80 hover:text-white transition-colors"
-                >
-                  Logout
-                </button>
-              </div>
-            </div>
-          </div>
-        </nav>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Proposal Not Found</h1>
-            <p className="text-gray-600 mb-6">The proposal you're looking for doesn't exist or has been removed.</p>
-            <button
-              onClick={() => navigate('/drafts')}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Back to Drafts
-            </button>
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Proposal Not Found</h1>
+          <p className="text-gray-600 mb-6">The proposal you're looking for doesn't exist or has been removed.</p>
+          <button
+            onClick={() => navigate('/drafts')}
+            className="btn-primary"
+          >
+            Back to Drafts
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pb-12">
-      {/* Top Navigation Bar */}
-      <nav className="bg-gradient-to-r from-blue-600 to-blue-400 shadow-lg fixed w-full z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-extrabold text-white tracking-wider drop-shadow">ProposalAI</h1>
-            </div>
-            <div className="flex items-center space-x-8">
-              <a href="/dashboard" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <HomeIcon className="w-5 h-5" />
-                <span>Dashboard</span>
-              </a>
-              <a href="/drafts" className="flex items-center space-x-1 text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">
-                <DocumentTextIcon className="w-5 h-5" />
-                <span>Drafts</span>
-              </a>
-              <a href="/sent-proposals" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <PaperAirplaneIcon className="w-5 h-5" />
-                <span>Sent Proposals</span>
-              </a>
-              <a href="/clients" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <UsersIcon className="w-5 h-5" />
-                <span>Clients</span>
-              </a>
-              <a href="/profile" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <UserIcon className="w-5 h-5" />
-                <span>Profile</span>
-              </a>
-              <NotificationBell />
-              <button 
-                onClick={handleLogout}
-                className="text-white/80 hover:text-white transition-colors"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24">
-        {/* Back Button */}
-        <button
-          onClick={() => navigate('/drafts')}
-          className="flex items-center gap-2 mb-6 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-400 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-blue-500 transition shadow"
-        >
-          ← Back to Drafts
-        </button>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      <div className="max-w-7xl mx-auto px-6 py-12">
 
         <div className="max-w-7xl mx-auto">
           {/* Header */}

@@ -1,40 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { proposalsAPI, commentsAPI } from '../services/api';
-import { useAuth } from '../hooks/useAuth';
 import { 
   UserIcon, 
   CalendarIcon, 
   EyeIcon, 
   TrashIcon, 
-  ArrowLeftIcon, 
   PaperAirplaneIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
   ArrowPathIcon,
-  ChatBubbleLeftIcon,
-  HomeIcon,
-  DocumentTextIcon,
-  UsersIcon
+  ChatBubbleLeftIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
-import Comments from '../components/Comments';
-import NotificationBell from '../components/NotificationBell';
 import BrowserNotificationPrompt from '../components/BrowserNotificationPrompt';
 
 export default function SentProposals() {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [sent, setSent] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [resending, setResending] = useState<string | null>(null);
 
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    fetchSent();
-  }, []);
 
   const fetchUnreadCounts = async (proposals: any[]) => {
     const counts: Record<string, number> = {};
@@ -50,7 +38,7 @@ export default function SentProposals() {
     setUnreadCounts(counts);
   };
 
-  const fetchSent = async () => {
+  const fetchSent = useCallback(async () => {
     try {
       setLoading(true);
       const response = await proposalsAPI.getAll();
@@ -65,7 +53,11 @@ export default function SentProposals() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchSent();
+  }, [fetchSent]);
 
   const handleView = (id: string) => navigate(`/proposals/${id}/view`);
   
@@ -99,12 +91,6 @@ export default function SentProposals() {
         setResending(null);
       }
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/login';
   };
 
   const handleViewComments = (proposalId: string) => {
@@ -146,11 +132,11 @@ export default function SentProposals() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+        <div className="max-w-7xl mx-auto px-6 py-12">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading sent proposals...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600 font-medium">Loading sent proposals...</p>
           </div>
         </div>
       </div>
@@ -158,89 +144,51 @@ export default function SentProposals() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Top Navigation Bar */}
-      <nav className="bg-gradient-to-r from-blue-600 to-blue-400 shadow-lg fixed w-full z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-extrabold text-white tracking-wider drop-shadow">ProposalAI</h1>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="mb-12 animate-fade-in-up">
+          <div className="flex items-center mb-6">
+            <div className="w-12 h-12 bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl flex items-center justify-center shadow-lg mr-4">
+              <PaperAirplaneIcon className="w-6 h-6 text-white" />
             </div>
-            <div className="flex items-center space-x-8">
-              <a href="/dashboard" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <HomeIcon className="w-5 h-5" />
-                <span>Dashboard</span>
-              </a>
-              <a href="/drafts" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <DocumentTextIcon className="w-5 h-5" />
-                <span>Drafts</span>
-              </a>
-              <a href="/sent-proposals" className="flex items-center space-x-1 text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">
-                <PaperAirplaneIcon className="w-5 h-5" />
-                <span>Sent Proposals</span>
-              </a>
-              <a href="/clients" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <UsersIcon className="w-5 h-5" />
-                <span>Clients</span>
-              </a>
-              <a href="/profile" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <UserIcon className="w-5 h-5" />
-                <span>Profile</span>
-              </a>
-              <NotificationBell />
-              <button 
-                onClick={handleLogout}
-                className="text-white/80 hover:text-white transition-colors"
-              >
-                Logout
-              </button>
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 tracking-tight">Sent Proposals</h1>
+              <p className="mt-2 text-xl text-gray-600">Track the engagement of your sent proposals and respond to client feedback</p>
             </div>
           </div>
-        </div>
-      </nav>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24">
-        {/* Back Button */}
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-2 mb-6 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-400 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-blue-500 transition shadow"
-        >
-          <ArrowLeftIcon className="h-4 w-4" />
-          Back to Dashboard
-        </button>
-
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Sent Proposals</h1>
-          <p className="text-gray-600">Track the engagement of your sent proposals and respond to client feedback</p>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-red-800">{error}</p>
+          <div className="status-error rounded-xl p-4 mb-8 animate-fade-in-up">
+            <p className="font-medium">{error}</p>
           </div>
         )}
 
-        <div className="space-y-6">
+        <div className="space-y-8">
           {sent.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-60 text-blue-200">
-              <PaperAirplaneIcon className="h-16 w-16 mb-4" />
-              <div className="text-xl font-medium">No sent proposals found</div>
-              <div className="text-sm mt-2">Send a proposal to see it here!</div>
+            <div className="flex flex-col items-center justify-center h-80 text-gray-400 animate-fade-in-up">
+              <div className="w-20 h-20 bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mb-6">
+                <PaperAirplaneIcon className="h-10 w-10" />
+              </div>
+              <div className="text-2xl font-semibold mb-2">No sent proposals found</div>
+              <div className="text-lg">Send a proposal to see it here!</div>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
               {sent.map((proposal) => (
-                <div key={proposal.id} className="bg-white rounded-2xl shadow-xl border-2 border-blue-200 p-6 flex flex-col justify-between hover:shadow-2xl transition-all duration-200">
+                <div key={proposal.id} className="card-elevated p-6 flex flex-col justify-between animate-fade-in-up">
                   <div>
-                    <div className="flex items-center gap-3 mb-2">
-                      <PaperAirplaneIcon className="h-7 w-7 text-blue-500" />
-                      <span className="text-lg font-bold text-blue-900 truncate" title={proposal.title}>{proposal.title}</span>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-gradient-to-r from-primary-100 to-primary-200 rounded-xl flex items-center justify-center">
+                        <PaperAirplaneIcon className="h-5 w-5 text-primary-600" />
+                      </div>
+                      <span className="text-lg font-bold text-gray-900 truncate" title={proposal.title}>{proposal.title}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-blue-700 mb-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
                       <UserIcon className="h-4 w-4" />
-                      <span>{proposal.clientName || 'N/A'}</span>
+                      <span className="font-medium">{proposal.clientName || 'N/A'}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-blue-400 mb-2">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
                       <CalendarIcon className="h-4 w-4" />
                       <span>{new Date(proposal.updatedAt).toLocaleDateString()}</span>
                     </div>
@@ -258,17 +206,17 @@ export default function SentProposals() {
                       </div>
                     )}
                     
-                    <div className="text-blue-800 text-sm line-clamp-3 mb-4">{proposal.description}</div>
+                    <div className="text-gray-700 text-sm line-clamp-3 mb-4">{proposal.description}</div>
                   </div>
                   <div className="flex flex-wrap gap-2 mt-2">
                     <button
-                      className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-gradient-to-r from-green-400 to-green-300 text-white text-sm font-semibold hover:from-green-500 hover:to-green-400 transition"
+                      className="flex items-center gap-1 px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
                       onClick={() => handleView(proposal.id)}
                     >
                       <EyeIcon className="h-3 w-3" /> View
                     </button>
-                                        <button
-                      className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-gradient-to-r from-purple-400 to-purple-300 text-white text-sm font-semibold hover:from-purple-500 hover:to-purple-400 transition relative"
+                    <button
+                      className="flex items-center gap-1 px-3 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 transition-colors relative"
                       onClick={() => handleViewComments(proposal.id)}
                     >
                       <ChatBubbleLeftIcon className="h-3 w-3" /> 
@@ -280,7 +228,7 @@ export default function SentProposals() {
                       )}
                     </button>
                     <button
-                      className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-gradient-to-r from-yellow-400 to-yellow-300 text-white text-sm font-semibold hover:from-yellow-500 hover:to-yellow-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-1 px-3 py-2 rounded-lg bg-yellow-600 text-white text-sm font-medium hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => handleResend(proposal)}
                       disabled={resending === proposal.id}
                     >
@@ -292,14 +240,12 @@ export default function SentProposals() {
                       {resending === proposal.id ? 'Resending...' : 'Resend'}
                     </button>
                     <button
-                      className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-gradient-to-r from-red-400 to-red-300 text-white text-sm font-semibold hover:from-red-500 hover:to-red-400 transition"
+                      className="flex items-center gap-1 px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
                       onClick={() => handleDelete(proposal.id)}
                     >
                       <TrashIcon className="h-3 w-3" /> Delete
                     </button>
                   </div>
-                  
-
                 </div>
               ))}
             </div>

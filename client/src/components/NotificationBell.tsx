@@ -293,10 +293,10 @@ export default function NotificationBell() {
             fetchUnreadCount();
           }
         }}
-        className={`relative p-2 rounded-lg transition-colors ${
-          isRateLimited 
-            ? 'text-yellow-300 hover:text-yellow-200 hover:bg-yellow-900/20' 
-            : 'text-white/80 hover:text-white hover:bg-white/10'
+                className={`relative p-3 rounded-xl transition-all duration-200 focus-ring ${
+          isRateLimited
+            ? 'text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50 shadow-sm'
+            : 'text-gray-600 hover:text-gray-700 hover:bg-gray-100 shadow-sm hover:shadow-md'
         }`}
         title={
           isRateLimited 

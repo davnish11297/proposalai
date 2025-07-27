@@ -12,7 +12,7 @@ export class ProposalController {
   // Get all proposals for the organization
   async getProposals(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const { page = 1, limit = 10, status, type, clientName } = req.query;
+      const { page = 1, limit = 10, status, type, clientName, search } = req.query;
       const skip = (Number(page) - 1) * Number(limit);
 
       const where: any = {
@@ -22,12 +22,25 @@ export class ProposalController {
       if (status) where.status = status;
       if (type) where.type = type;
       if (clientName) where.clientName = { contains: clientName as string, mode: 'insensitive' };
+      
+      // Add search functionality
+      if (search) {
+        where.OR = [
+          { title: { contains: search as string, mode: 'insensitive' } },
+          { description: { contains: search as string, mode: 'insensitive' } },
+          { clientName: { contains: search as string, mode: 'insensitive' } },
+          { content: { contains: search as string, mode: 'insensitive' } }
+        ];
+      }
 
       const [proposals, total] = await Promise.all([
         db.proposal.findMany({
           where,
           include: {
             author: {
+              select: { name: true, email: true }
+            },
+            client: {
               select: { name: true, email: true }
             },
             _count: {

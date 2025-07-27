@@ -3,8 +3,8 @@ import axios from 'axios';
 // In development, use relative URLs to work with the proxy
 // In production, use the full URL
 const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? (process.env.REACT_APP_API_URL || 'http://localhost:3000/api')
-  : 'http://localhost:3001/api';
+  ? (process.env.REACT_APP_API_URL || 'http://localhost:3001/api')
+  : '/api';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -216,9 +216,10 @@ interface OpenRouterResponse {
  */
 export async function getOpenRouterChatCompletion(
   messages: OpenRouterMessage[], 
-  model = "deepseek/deepseek-chat", 
+  model = "anthropic/claude-3.5-sonnet", 
   retryCount = 0
 ): Promise<OpenRouterResponse> {
+  console.log('🌐 getOpenRouterChatCompletion called with:', { messages, model, retryCount });
   const API_BASE_URL = "https://openrouter.ai/api/v1";
   // It's best to store your API key in an environment variable for security
   const API_KEY = process.env.REACT_APP_OPENROUTER_API_KEY || "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";
@@ -226,8 +227,8 @@ export async function getOpenRouterChatCompletion(
   const requestBody = {
     model,
     messages,
-    max_tokens: 2048, // Increased to allow for longer responses and reduce truncation
-    temperature: 0.7,
+    max_tokens: 4096, // Increased for longer, more detailed proposals
+    temperature: 0.3, // Lower temperature for more consistent, professional output
   };
 
   console.log('🔍 Sending request to OpenRouter:', {
@@ -244,7 +245,7 @@ export async function getOpenRouterChatCompletion(
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${API_KEY}`,
-        "HTTP-Referer": "http://localhost:3000", // Required by OpenRouter
+        "HTTP-Referer": "http://localhost:3001", // Required by OpenRouter
         "X-Title": "ProposalAI", // Optional but recommended
       },
       body: JSON.stringify(requestBody),
@@ -280,7 +281,16 @@ export async function getOpenRouterChatCompletion(
       throw new Error(`OpenRouter API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
     
-    return response.json();
+    const responseData = await response.json();
+    console.log('🔍 OpenRouter API Response:', {
+      model,
+      responseLength: JSON.stringify(responseData).length,
+      hasChoices: !!responseData.choices,
+      choiceCount: responseData.choices?.length,
+      firstChoiceContent: responseData.choices?.[0]?.message?.content?.substring(0, 200) + '...',
+      fullResponse: responseData
+    });
+    return responseData;
   } catch (error: any) {
     // Handle network errors with retry
     if (error.name === 'TypeError' && retryCount < 2) {

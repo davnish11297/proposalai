@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import LoadingSpinner from './components/LoadingSpinner';
+import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -41,30 +42,32 @@ function App() {
 
   return (
     // <ThemeProvider>
-    <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/drafts" element={<Drafts />} />
-      <Route path="/sent-proposals" element={<SentProposals />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/clients" element={<Clients />} />
-      <Route path="/clients/:id" element={<ClientDetail />} />
-      {/* <Route path="/proposals" element={<Proposals />} /> */}
-      <Route path="/proposals/new" element={<ProposalEditor />} />
-      <Route path="/proposals/:id" element={<ProposalEditor />} />
-      <Route path="/proposals/:id/view" element={<ProposalViewer />} />
-      <Route path="/proposal/:id" element={<PublicProposal />} />
-      {/* <Route path="/teams" element={<Teams />} /> */}
-      {/* <Route path="/templates" element={<Templates />} /> */}
-      {/* <Route path="/snippets" element={<Snippets />} /> */}
-      {/* <Route path="/case-studies" element={<CaseStudies />} /> */}
-      {/* <Route path="/pricing" element={<Pricing />} /> */}
-      {/* <Route path="/analytics" element={<Analytics />} /> */}
-      {/* <Route path="/settings" element={<Settings />} /> */}
-      {/* <Route path="/proposal-builder" element={<ProposalBuilder />} /> */}
-      {/* <Route path="/knowledge-base" element={<KnowledgeBase />} /> */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+    <Layout>
+      <Routes>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/drafts" element={<Drafts />} />
+        <Route path="/sent-proposals" element={<SentProposals />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/clients" element={<Clients />} />
+        <Route path="/clients/:id" element={<ClientDetail />} />
+        {/* <Route path="/proposals" element={<Proposals />} /> */}
+        <Route path="/proposals/new" element={<ProposalEditor />} />
+        <Route path="/proposals/:id" element={<ProposalEditor />} />
+        <Route path="/proposals/:id/view" element={<ProposalViewer />} />
+        <Route path="/proposal/:id" element={<PublicProposal />} />
+        {/* <Route path="/teams" element={<Teams />} /> */}
+        {/* <Route path="/templates" element={<Templates />} /> */}
+        {/* <Route path="/snippets" element={<Snippets />} /> */}
+        {/* <Route path="/case-studies" element={<CaseStudies />} /> */}
+        {/* <Route path="/pricing" element={<Pricing />} /> */}
+        {/* <Route path="/analytics" element={<Analytics />} /> */}
+        {/* <Route path="/settings" element={<Settings />} /> */}
+        {/* <Route path="/proposal-builder" element={<ProposalBuilder />} /> */}
+        {/* <Route path="/knowledge-base" element={<KnowledgeBase />} /> */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </Layout>
     // </ThemeProvider>
   );
 }

@@ -6,10 +6,23 @@ export class ClientController {
   // List all clients for the organization
   async getClients(req: AuthenticatedRequest, res: Response) {
     try {
+      const { search } = req.query;
+      
+      const where: any = {
+        organizationId: req.user!.organizationId
+      };
+
+      // Add search functionality
+      if (search) {
+        where.OR = [
+          { name: { contains: search as string, mode: 'insensitive' } },
+          { email: { contains: search as string, mode: 'insensitive' } },
+          { company: { contains: search as string, mode: 'insensitive' } }
+        ];
+      }
+
       const clients = await db.client.findMany({
-        where: {
-          organizationId: req.user!.organizationId
-        },
+        where,
         orderBy: { updatedAt: 'desc' },
         include: {
           proposals: {

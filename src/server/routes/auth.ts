@@ -203,14 +203,34 @@ router.get('/me', authenticateToken, async (req: AuthenticatedRequest, res: expr
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 // Google OAuth callback
-router.get('/google/callback', passport.authenticate('google', { failureRedirect: '/login', session: false }), async (req, res) => {
-  const user = req.user as any;
-  if (!user) {
-    return res.status(401).json({ success: false, error: 'Google authentication failed' });
+router.get('/google/callback', 
+  passport.authenticate('google', { 
+    failureRedirect: '/login', 
+    session: false,
+    failureFlash: true 
+  }), 
+  async (req, res) => {
+    try {
+      const user = req.user as any;
+      if (!user) {
+        console.error('Google OAuth callback: No user found');
+        return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/login?error=authentication_failed`);
+      }
+      
+      console.log('Google OAuth callback: User authenticated successfully', { userId: user.id, email: user.email });
+      
+      const token = generateToken(user);
+      
+      // Redirect to frontend with token in query param
+      const redirectUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/login?token=${token}`;
+      console.log('Redirecting to:', redirectUrl);
+      
+      res.redirect(redirectUrl);
+    } catch (error) {
+      console.error('Google OAuth callback error:', error);
+      res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/login?error=token_generation_failed`);
+    }
   }
-  const token = generateToken(user);
-  // Redirect to frontend with token in query param
-  res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/login?token=${token}`);
-});
+);
 
 export default router; 
