@@ -98,9 +98,10 @@ class ProposalController {
             await database_1.prisma.activity.create({
                 data: {
                     type: 'VIEWED',
-                    userId: req.user.userId,
-                    proposalId: id,
-                    details: JSON.stringify({ action: 'viewed' })
+                    user: { connect: { id: req.user.userId } },
+                    proposal: { connect: { id } },
+                    details: JSON.stringify({ action: 'viewed' }),
+                    message: 'Proposal viewed'
                 }
             });
             res.json({
@@ -144,9 +145,10 @@ class ProposalController {
             await database_1.prisma.activity.create({
                 data: {
                     type: 'CREATED',
-                    userId: req.user.userId,
-                    proposalId: proposal.id,
-                    details: JSON.stringify({ action: 'created' })
+                    user: { connect: { id: req.user.userId } },
+                    proposal: { connect: { id: proposal.id } },
+                    details: JSON.stringify({ action: 'created' }),
+                    message: 'Proposal created'
                 }
             });
             res.status(201).json({
@@ -188,8 +190,7 @@ class ProposalController {
                     clientName: updateData.clientName,
                     status: updateData.status ?? undefined,
                     content: typeof updateData.content === 'string' ? updateData.content : JSON.stringify(updateData.content || {}),
-                    metadata: typeof updateData.metadata === 'string' ? updateData.metadata : JSON.stringify(updateData.metadata || {}),
-                    version: { increment: 1 }
+                    metadata: typeof updateData.metadata === 'string' ? updateData.metadata : JSON.stringify(updateData.metadata || {})
                 },
                 include: {
                     author: {
@@ -200,9 +201,10 @@ class ProposalController {
             await database_1.prisma.activity.create({
                 data: {
                     type: 'UPDATED',
-                    userId: req.user.userId,
-                    proposalId: id,
-                    details: JSON.stringify({ updatedFields: Object.keys(updateData) })
+                    user: { connect: { id: req.user.userId } },
+                    proposal: { connect: { id } },
+                    details: JSON.stringify({ updatedFields: Object.keys(updateData) }),
+                    message: 'Proposal updated'
                 }
             });
             res.json({
@@ -217,6 +219,90 @@ class ProposalController {
                 success: false,
                 error: 'Failed to update proposal'
             });
+        }
+    }
+    async getAccessRequests(req, res) {
+        try {
+            const { id } = req.params;
+            const proposal = await database_1.prisma.proposal.findFirst({
+                where: { id, organizationId: req.user.organizationId },
+            });
+            if (!proposal) {
+                res.status(404).json({ success: false, error: 'Proposal not found' });
+                return;
+            }
+            const requests = await database_1.prisma.accessRequest.findMany({
+                where: { proposalId: id },
+                orderBy: { createdAt: 'desc' },
+            });
+            res.json({ success: true, data: requests });
+        }
+        catch (error) {
+            console.error('Get access requests error:', error);
+            res.status(500).json({ success: false, error: 'Failed to fetch access requests' });
+        }
+    }
+    async grantAccessRequest(req, res) {
+        try {
+            const { id, requestId } = req.params;
+            const proposal = await database_1.prisma.proposal.findFirst({
+                where: { id, organizationId: req.user.organizationId },
+            });
+            if (!proposal) {
+                res.status(404).json({ success: false, error: 'Proposal not found' });
+                return;
+            }
+            const accessRequest = await database_1.prisma.accessRequest.findUnique({ where: { id: requestId } });
+            if (!accessRequest || accessRequest.proposalId !== id) {
+                res.status(404).json({ success: false, error: 'Access request not found' });
+                return;
+            }
+            if (accessRequest.status !== 'PENDING') {
+                res.status(400).json({ success: false, error: 'Access request already processed' });
+                return;
+            }
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let newCode = '';
+            for (let i = 0; i < 6; i++)
+                newCode += chars.charAt(Math.floor(Math.random() * chars.length));
+            let metadata = {};
+            try {
+                metadata = proposal.metadata ? JSON.parse(proposal.metadata) : {};
+            }
+            catch { }
+            if (!metadata.accessCodes)
+                metadata.accessCodes = [];
+            metadata.accessCodes.push(newCode);
+            await database_1.prisma.proposal.update({
+                where: { id },
+                data: {
+                    metadata: JSON.stringify(metadata),
+                    status: 'IN_REVIEW',
+                },
+            });
+            await database_1.prisma.accessRequest.update({
+                where: { id: requestId },
+                data: {
+                    status: 'GRANTED',
+                    grantedAt: new Date(),
+                    accessCode: newCode,
+                },
+            });
+            await emailService_1.emailService.sendAccessRequestEmail({
+                to: accessRequest.email,
+                proposalTitle: proposal.title,
+                requesterName: accessRequest.name,
+                requesterEmail: accessRequest.email,
+                requesterCompany: accessRequest.company || '',
+                reason: accessRequest.reason || '',
+                proposalId: proposal.id,
+                accessCode: newCode,
+            });
+            res.json({ success: true, message: 'Access granted and email sent', accessCode: newCode });
+        }
+        catch (error) {
+            console.error('Grant access request error:', error);
+            res.status(500).json({ success: false, error: 'Failed to grant access' });
         }
     }
     async deleteProposal(req, res) {
@@ -355,9 +441,10 @@ class ProposalController {
             await database_1.prisma.activity.create({
                 data: {
                     type: 'CREATED',
-                    userId: req.user.userId,
-                    proposalId: proposal.id,
-                    details: JSON.stringify({ generatedWithAI: true })
+                    user: { connect: { id: req.user.userId } },
+                    proposal: { connect: { id: proposal.id } },
+                    details: JSON.stringify({ generatedWithAI: true }),
+                    message: 'Proposal generated'
                 }
             });
             res.status(201).json({
@@ -409,8 +496,9 @@ class ProposalController {
             await database_1.prisma.activity.create({
                 data: {
                     type: 'PUBLISHED',
-                    userId: req.user.userId,
-                    proposalId: id,
+                    user: { connect: { id: req.user.userId } },
+                    proposal: { connect: { id } },
+                    message: 'Proposal published'
                 }
             });
             res.json({
@@ -528,7 +616,7 @@ class ProposalController {
     async sendProposalEmail(req, res) {
         try {
             const { id: proposalId } = req.params;
-            const { recipientEmail, customMessage } = req.body;
+            const { recipientEmail, clientName, customMessage } = req.body;
             const userId = req.user?.userId;
             if (!userId) {
                 res.status(401).json({ error: 'Unauthorized' });
@@ -536,6 +624,10 @@ class ProposalController {
             }
             if (!recipientEmail) {
                 res.status(400).json({ error: 'Recipient email is required' });
+                return;
+            }
+            if (!clientName) {
+                res.status(400).json({ error: 'Client name is required' });
                 return;
             }
             const proposal = await database_1.prisma.proposal.findFirst({
@@ -556,13 +648,36 @@ class ProposalController {
                 res.status(404).json({ error: 'Proposal not found' });
                 return;
             }
+            let client = await database_1.prisma.client.findFirst({
+                where: {
+                    email: recipientEmail,
+                    organizationId: req.user?.organizationId
+                }
+            });
+            if (!client) {
+                client = await database_1.prisma.client.create({
+                    data: {
+                        name: clientName,
+                        email: recipientEmail,
+                        organizationId: req.user?.organizationId
+                    }
+                });
+            }
+            else {
+                if (client.name !== clientName) {
+                    client = await database_1.prisma.client.update({
+                        where: { id: client.id },
+                        data: { name: clientName }
+                    });
+                }
+            }
             const pdfBuffer = await pdfService_1.pdfService.generatePDFBuffer({
                 ...proposal,
-                clientEmail: proposal.clientName ? `${proposal.clientName.toLowerCase().replace(/\s+/g, '.')}@example.com` : undefined
+                clientEmail: recipientEmail
             });
             const emailResult = await emailService_1.emailService.sendProposalEmail({
                 ...proposal,
-                clientEmail: proposal.clientName ? `${proposal.clientName.toLowerCase().replace(/\s+/g, '.')}@example.com` : undefined
+                clientEmail: recipientEmail
             }, recipientEmail, pdfBuffer);
             if (!emailResult.success) {
                 res.status(500).json({
@@ -571,30 +686,51 @@ class ProposalController {
                 });
                 return;
             }
+            let existingMetadata = {};
+            try {
+                existingMetadata = proposal.metadata ? JSON.parse(proposal.metadata) : {};
+            }
+            catch (error) {
+                existingMetadata = {};
+            }
+            const accessCodes = existingMetadata.accessCodes || [];
+            accessCodes.push(emailResult.accessCode);
             await database_1.prisma.proposal.update({
                 where: { id: proposalId },
                 data: {
                     status: 'SENT',
-                    emailSentAt: new Date(),
-                    emailRecipient: recipientEmail,
-                    emailMessageId: emailResult.messageId,
-                    emailTrackingId: emailResult.accessCode,
+                    clientId: client.id,
+                    clientName: clientName,
+                    metadata: JSON.stringify({
+                        ...existingMetadata,
+                        accessCodes: accessCodes,
+                        lastEmailSent: {
+                            accessCode: emailResult.accessCode,
+                            trackingId: emailResult.trackingId,
+                            sentAt: new Date().toISOString(),
+                            recipientEmail: recipientEmail,
+                            messageId: emailResult.messageId
+                        }
+                    }),
                     updatedAt: new Date()
                 }
             });
             await database_1.prisma.activity.create({
                 data: {
                     type: 'EMAIL_SENT',
-                    userId: userId,
-                    proposalId: proposalId,
+                    user: { connect: { id: userId } },
+                    proposal: { connect: { id: proposalId } },
                     details: JSON.stringify({
                         action: 'email_sent',
                         recipientEmail,
+                        clientName,
+                        clientId: client.id,
                         messageId: emailResult.messageId,
                         trackingId: emailResult.trackingId,
                         accessCode: emailResult.accessCode,
                         sentAt: new Date().toISOString()
-                    })
+                    }),
+                    message: 'Proposal email sent'
                 }
             });
             res.json({
@@ -602,7 +738,8 @@ class ProposalController {
                 message: 'Proposal sent successfully',
                 messageId: emailResult.messageId,
                 trackingId: emailResult.trackingId,
-                accessCode: emailResult.accessCode
+                accessCode: emailResult.accessCode,
+                clientId: client.id
             });
         }
         catch (error) {

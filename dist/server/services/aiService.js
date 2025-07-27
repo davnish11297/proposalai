@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.aiService = exports.AIService = void 0;
 const openai_1 = __importDefault(require("openai"));
+const sdk_1 = __importDefault(require("@anthropic-ai/sdk"));
 const getOpenAIClient = () => {
     if (!process.env.OPENAI_API_KEY) {
         throw new Error('OPENAI_API_KEY environment variable is required for OpenAI features');
@@ -31,10 +32,27 @@ const getDeepSeekClient = () => {
         baseURL: 'https://api.deepseek.com/v1'
     };
 };
+const getAnthropicClient = () => {
+    if (!process.env.ANTHROPIC_API_KEY) {
+        throw new Error('ANTHROPIC_API_KEY environment variable is required for Anthropic features');
+    }
+    return new sdk_1.default({
+        apiKey: process.env.ANTHROPIC_API_KEY,
+    });
+};
+const getOpenRouterClient = () => {
+    if (!process.env.OPENROUTER_API_KEY) {
+        throw new Error('OPENROUTER_API_KEY environment variable is required for OpenRouter features');
+    }
+    return {
+        apiKey: process.env.OPENROUTER_API_KEY,
+        baseURL: 'https://openrouter.ai/api/v1'
+    };
+};
 class AIService {
     constructor() {
         this.preferredProvider = 'openai';
-        this.preferredProvider = 'template';
+        this.preferredProvider = 'openrouter';
     }
     static getInstance() {
         if (!AIService.instance) {
@@ -45,7 +63,7 @@ class AIService {
     async generateProposal(request, organization, snippets, caseStudies, pricingModels) {
         const systemPrompt = this.buildSystemPrompt(organization, snippets, caseStudies, pricingModels);
         const userPrompt = this.buildUserPrompt(request);
-        const providers = ['template'];
+        const providers = ['openrouter', 'anthropic', 'openai', 'template'];
         for (const provider of providers) {
             try {
                 const response = await this.generateWithProvider(provider, systemPrompt, userPrompt);
@@ -79,6 +97,10 @@ class AIService {
     }
     async generateWithProvider(provider, systemPrompt, userPrompt) {
         switch (provider) {
+            case 'openrouter':
+                return this.generateWithOpenRouter(systemPrompt, userPrompt);
+            case 'anthropic':
+                return this.generateWithAnthropic(systemPrompt, userPrompt);
             case 'openai':
                 return this.generateWithOpenAI(systemPrompt, userPrompt);
             case 'huggingface':
@@ -195,6 +217,89 @@ class AIService {
             };
         }
     }
+    async generateWithOpenRouter(systemPrompt, userPrompt) {
+        try {
+            const client = getOpenRouterClient();
+            console.log('🌐 Attempting OpenRouter API call with Claude Sonnet 4...');
+            const response = await fetch(`${client.baseURL}/chat/completions`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${client.apiKey}`,
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': 'http://localhost:3000',
+                    'X-Title': 'ProposalAI'
+                },
+                body: JSON.stringify({
+                    model: 'anthropic/claude-3-5-sonnet-20241022',
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userPrompt }
+                    ],
+                    temperature: 0.7,
+                    max_tokens: 4000,
+                })
+            });
+            console.log(`🌐 OpenRouter API response status: ${response.status}`);
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`🌐 OpenRouter API error: ${response.status} - ${errorText}`);
+                throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+            }
+            const data = await response.json();
+            console.log('🌐 OpenRouter API response data:', JSON.stringify(data, null, 2));
+            const content = data.choices?.[0]?.message?.content;
+            console.log('🌐 OpenRouter generated content:', content);
+            return {
+                content: content || '',
+                success: !!content,
+                provider: 'openrouter'
+            };
+        }
+        catch (error) {
+            console.error('🌐 OpenRouter generation error:', error);
+            return {
+                content: '',
+                success: false,
+                provider: 'openrouter',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            };
+        }
+    }
+    async generateWithAnthropic(systemPrompt, userPrompt) {
+        try {
+            const client = getAnthropicClient();
+            console.log('🤖 Attempting Anthropic Claude Sonnet 4 API call...');
+            const response = await client.messages.create({
+                model: 'claude-3-5-sonnet-20241022',
+                max_tokens: 4000,
+                temperature: 0.7,
+                system: systemPrompt,
+                messages: [
+                    {
+                        role: 'user',
+                        content: userPrompt
+                    }
+                ]
+            });
+            console.log(`🤖 Anthropic API response status: ${response.stop_reason}`);
+            const content = response.content[0]?.text;
+            console.log('🤖 Anthropic generated content:', content);
+            return {
+                content: content || '',
+                success: !!content,
+                provider: 'anthropic'
+            };
+        }
+        catch (error) {
+            console.error('🤖 Anthropic generation error:', error);
+            return {
+                content: '',
+                success: false,
+                provider: 'anthropic',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            };
+        }
+    }
     async generateWithDeepSeek(systemPrompt, userPrompt) {
         try {
             const client = getDeepSeekClient();
@@ -273,8 +378,9 @@ class AIService {
             ]
         };
         for (const key in content) {
-            if (typeof content[key] === 'string') {
-                content[key] = content[key]
+            const value = content[key];
+            if (typeof value === 'string') {
+                content[key] = value
                     .replace(/\*\*(.*?)\*\*/g, '$1')
                     .replace(/\*(.*?)\*/g, '$1')
                     .replace(/`(.*?)`/g, '$1')

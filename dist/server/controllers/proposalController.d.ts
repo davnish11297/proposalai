@@ -5,6 +5,8 @@ export declare class ProposalController {
     getProposal(req: AuthenticatedRequest, res: Response): Promise<void>;
     createProposal(req: AuthenticatedRequest, res: Response): Promise<void>;
     updateProposal(req: AuthenticatedRequest, res: Response): Promise<void>;
+    getAccessRequests(req: AuthenticatedRequest, res: Response): Promise<void>;
+    grantAccessRequest(req: AuthenticatedRequest, res: Response): Promise<void>;
     deleteProposal(req: AuthenticatedRequest, res: Response): Promise<void>;
     generateProposal(req: AuthenticatedRequest, res: Response): Promise<void>;
     publishProposal(req: AuthenticatedRequest, res: Response): Promise<void>;

@@ -8,27 +8,62 @@ class EmailTrackingService {
         return (0, uuid_1.v4)();
     }
     async updateEmailTracking(proposalId, trackingData) {
+        const proposal = await database_1.prisma.proposal.findUnique({
+            where: { id: proposalId },
+            select: { metadata: true }
+        });
+        const existingMetadata = proposal?.metadata ? JSON.parse(proposal.metadata) : {};
+        const updatedMetadata = {
+            ...existingMetadata,
+            lastEmailSent: {
+                ...existingMetadata.lastEmailSent,
+                sentAt: trackingData.emailSentAt?.toISOString(),
+                recipientEmail: trackingData.emailRecipient,
+                messageId: trackingData.emailMessageId,
+                trackingId: trackingData.emailTrackingId,
+                status: 'SENT'
+            }
+        };
         await database_1.prisma.proposal.update({
             where: { id: proposalId },
             data: {
-                ...trackingData,
-                emailStatus: 'SENT'
+                metadata: JSON.stringify(updatedMetadata),
+                updatedAt: new Date()
             }
         });
     }
     async trackEmailOpen(trackingId) {
         try {
-            const proposal = await database_1.prisma.proposal.findUnique({
-                where: { emailTrackingId: trackingId }
+            const proposals = await database_1.prisma.proposal.findMany({
+                where: { metadata: { not: null } },
+                select: { id: true, metadata: true, authorId: true }
+            });
+            const proposal = proposals.find(p => {
+                try {
+                    const metadata = JSON.parse(p.metadata || '{}');
+                    return metadata.lastEmailSent?.trackingId === trackingId;
+                }
+                catch {
+                    return false;
+                }
             });
             if (!proposal) {
                 return { success: false };
             }
+            const existingMetadata = JSON.parse(proposal.metadata || '{}');
+            const updatedMetadata = {
+                ...existingMetadata,
+                lastEmailSent: {
+                    ...existingMetadata.lastEmailSent,
+                    openedAt: new Date().toISOString(),
+                    status: 'OPENED'
+                }
+            };
             await database_1.prisma.proposal.update({
                 where: { id: proposal.id },
                 data: {
-                    emailOpenedAt: new Date(),
-                    emailStatus: 'OPENED'
+                    metadata: JSON.stringify(updatedMetadata),
+                    updatedAt: new Date()
                 }
             });
             await database_1.prisma.activity.create({
@@ -51,17 +86,36 @@ class EmailTrackingService {
     }
     async trackEmailClick(trackingId, linkType = 'proposal') {
         try {
-            const proposal = await database_1.prisma.proposal.findUnique({
-                where: { emailTrackingId: trackingId }
+            const proposals = await database_1.prisma.proposal.findMany({
+                where: { metadata: { not: null } },
+                select: { id: true, metadata: true, authorId: true }
+            });
+            const proposal = proposals.find(p => {
+                try {
+                    const metadata = JSON.parse(p.metadata || '{}');
+                    return metadata.lastEmailSent?.trackingId === trackingId;
+                }
+                catch {
+                    return false;
+                }
             });
             if (!proposal) {
                 return { success: false };
             }
+            const existingMetadata = JSON.parse(proposal.metadata || '{}');
+            const updatedMetadata = {
+                ...existingMetadata,
+                lastEmailSent: {
+                    ...existingMetadata.lastEmailSent,
+                    clickedAt: new Date().toISOString(),
+                    status: 'CLICKED'
+                }
+            };
             await database_1.prisma.proposal.update({
                 where: { id: proposal.id },
                 data: {
-                    emailClickedAt: new Date(),
-                    emailStatus: 'CLICKED'
+                    metadata: JSON.stringify(updatedMetadata),
+                    updatedAt: new Date()
                 }
             });
             await database_1.prisma.activity.create({
@@ -85,17 +139,36 @@ class EmailTrackingService {
     }
     async trackEmailReply(trackingId) {
         try {
-            const proposal = await database_1.prisma.proposal.findUnique({
-                where: { emailTrackingId: trackingId }
+            const proposals = await database_1.prisma.proposal.findMany({
+                where: { metadata: { not: null } },
+                select: { id: true, metadata: true, authorId: true }
+            });
+            const proposal = proposals.find(p => {
+                try {
+                    const metadata = JSON.parse(p.metadata || '{}');
+                    return metadata.lastEmailSent?.trackingId === trackingId;
+                }
+                catch {
+                    return false;
+                }
             });
             if (!proposal) {
                 return { success: false };
             }
+            const existingMetadata = JSON.parse(proposal.metadata || '{}');
+            const updatedMetadata = {
+                ...existingMetadata,
+                lastEmailSent: {
+                    ...existingMetadata.lastEmailSent,
+                    repliedAt: new Date().toISOString(),
+                    status: 'REPLIED'
+                }
+            };
             await database_1.prisma.proposal.update({
                 where: { id: proposal.id },
                 data: {
-                    emailRepliedAt: new Date(),
-                    emailStatus: 'REPLIED'
+                    metadata: JSON.stringify(updatedMetadata),
+                    updatedAt: new Date()
                 }
             });
             await database_1.prisma.activity.create({
@@ -120,53 +193,77 @@ class EmailTrackingService {
         const proposal = await database_1.prisma.proposal.findUnique({
             where: { id: proposalId },
             select: {
-                emailSentAt: true,
-                emailRecipient: true,
-                emailOpenedAt: true,
-                emailRepliedAt: true,
-                emailClickedAt: true,
-                emailStatus: true
+                metadata: true
             }
         });
-        if (!proposal) {
+        if (!proposal || !proposal.metadata) {
             return {};
         }
-        const stats = { ...proposal };
-        if (proposal.emailSentAt) {
-            if (proposal.emailOpenedAt) {
-                stats.timeToOpen = Math.round((proposal.emailOpenedAt.getTime() - proposal.emailSentAt.getTime()) / (1000 * 60));
+        try {
+            const metadata = JSON.parse(proposal.metadata);
+            const lastEmailSent = metadata.lastEmailSent || {};
+            const stats = {
+                emailSentAt: lastEmailSent.sentAt ? new Date(lastEmailSent.sentAt) : undefined,
+                emailRecipient: lastEmailSent.recipientEmail,
+                emailOpenedAt: lastEmailSent.openedAt ? new Date(lastEmailSent.openedAt) : undefined,
+                emailRepliedAt: lastEmailSent.repliedAt ? new Date(lastEmailSent.repliedAt) : undefined,
+                emailClickedAt: lastEmailSent.clickedAt ? new Date(lastEmailSent.clickedAt) : undefined,
+                emailStatus: lastEmailSent.status
+            };
+            if (stats.emailSentAt) {
+                if (stats.emailOpenedAt) {
+                    stats.timeToOpen = Math.round((stats.emailOpenedAt.getTime() - stats.emailSentAt.getTime()) / (1000 * 60));
+                }
+                if (stats.emailRepliedAt) {
+                    stats.timeToReply = Math.round((stats.emailRepliedAt.getTime() - stats.emailSentAt.getTime()) / (1000 * 60));
+                }
+                if (stats.emailClickedAt) {
+                    stats.timeToClick = Math.round((stats.emailClickedAt.getTime() - stats.emailSentAt.getTime()) / (1000 * 60));
+                }
             }
-            if (proposal.emailRepliedAt) {
-                stats.timeToReply = Math.round((proposal.emailRepliedAt.getTime() - proposal.emailSentAt.getTime()) / (1000 * 60));
-            }
-            if (proposal.emailClickedAt) {
-                stats.timeToClick = Math.round((proposal.emailClickedAt.getTime() - proposal.emailSentAt.getTime()) / (1000 * 60));
-            }
+            return stats;
         }
-        return stats;
+        catch (error) {
+            console.error('Error parsing proposal metadata for email tracking stats:', error);
+            return {};
+        }
     }
     async getOrganizationEmailStats(organizationId) {
         const proposals = await database_1.prisma.proposal.findMany({
             where: {
                 organizationId,
-                emailSentAt: { not: null }
+                metadata: { not: null }
             },
             select: {
-                emailSentAt: true,
-                emailOpenedAt: true,
-                emailRepliedAt: true,
-                emailClickedAt: true
+                metadata: true
             }
         });
-        const totalSent = proposals.length;
-        const totalOpened = proposals.filter(p => p.emailOpenedAt).length;
-        const totalReplied = proposals.filter(p => p.emailRepliedAt).length;
-        const totalClicked = proposals.filter(p => p.emailClickedAt).length;
+        const emailTrackingData = proposals
+            .map(p => {
+            try {
+                const metadata = JSON.parse(p.metadata || '{}');
+                const lastEmailSent = metadata.lastEmailSent || {};
+                return {
+                    emailSentAt: lastEmailSent.sentAt ? new Date(lastEmailSent.sentAt) : null,
+                    emailOpenedAt: lastEmailSent.openedAt ? new Date(lastEmailSent.openedAt) : null,
+                    emailRepliedAt: lastEmailSent.repliedAt ? new Date(lastEmailSent.repliedAt) : null,
+                    emailClickedAt: lastEmailSent.clickedAt ? new Date(lastEmailSent.clickedAt) : null
+                };
+            }
+            catch (error) {
+                return null;
+            }
+        })
+            .filter(Boolean);
+        const totalSent = emailTrackingData.filter(p => p.emailSentAt).length;
+        const totalOpened = emailTrackingData.filter(p => p.emailOpenedAt).length;
+        const totalReplied = emailTrackingData.filter(p => p.emailRepliedAt).length;
+        const totalClicked = emailTrackingData.filter(p => p.emailClickedAt).length;
         const openRate = totalSent > 0 ? (totalOpened / totalSent) * 100 : 0;
         const replyRate = totalSent > 0 ? (totalReplied / totalSent) * 100 : 0;
         const clickRate = totalSent > 0 ? (totalClicked / totalSent) * 100 : 0;
-        const openedProposals = proposals.filter(p => p.emailOpenedAt && p.emailSentAt);
-        const repliedProposals = proposals.filter(p => p.emailRepliedAt && p.emailSentAt);
+        const openedProposals = emailTrackingData.filter(p => p.emailOpenedAt && p.emailSentAt);
+        const repliedProposals = emailTrackingData.filter(p => p.emailRepliedAt && p.emailSentAt);
         const averageTimeToOpen = openedProposals.length > 0
             ? openedProposals.reduce((sum, p) => {
                 return sum + (p.emailOpenedAt.getTime() - p.emailSentAt.getTime()) / (1000 * 60);

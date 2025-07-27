@@ -73,7 +73,6 @@ export interface IProposal {
     type: ProposalType;
     content: any;
     metadata?: any;
-    version: number;
     isPublic: boolean;
     publicUrl?: string;
     userId: string;
@@ -185,7 +184,6 @@ export interface ICreatePricingModel {
 export interface IComment {
     id: string;
     content: string;
-    position?: any;
     userId: string;
     proposalId: string;
     createdAt: Date;
@@ -193,11 +191,9 @@ export interface IComment {
 }
 export interface ICreateComment {
     content: string;
-    position?: any;
 }
 export interface IUpdateComment {
     content: string;
-    position?: any;
 }
 export interface ICreateTeam {
     name: string;

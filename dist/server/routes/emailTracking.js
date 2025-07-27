@@ -33,14 +33,24 @@ router.get('/track/:trackingId/click', async (req, res) => {
             const { prisma } = require('../utils/database');
             const proposal = await prisma.proposal.findUnique({
                 where: { id: result.proposalId },
-                select: { emailTrackingId: true }
+                select: { metadata: true }
             });
-            if (proposal && proposal.emailTrackingId) {
-                const clientUrl = process.env.CLIENT_BASE_URL || 'http://localhost:3000';
-                res.redirect(`${clientUrl}/proposal/${result.proposalId}?accessCode=${proposal.emailTrackingId}`);
+            let accessCode = null;
+            if (proposal && proposal.metadata) {
+                try {
+                    const metadata = JSON.parse(proposal.metadata);
+                    const accessCodes = metadata.accessCodes || [];
+                    accessCode = accessCodes[accessCodes.length - 1];
+                }
+                catch (error) {
+                    console.error('Error parsing proposal metadata:', error);
+                }
+            }
+            const clientUrl = process.env.CLIENT_BASE_URL || 'http://localhost:3000';
+            if (accessCode) {
+                res.redirect(`${clientUrl}/proposal/${result.proposalId}?accessCode=${accessCode}`);
             }
             else {
-                const clientUrl = process.env.CLIENT_BASE_URL || 'http://localhost:3000';
                 res.redirect(`${clientUrl}/proposal/${result.proposalId}`);
             }
         }
