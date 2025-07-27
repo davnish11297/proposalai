@@ -18,6 +18,14 @@ cp ../../prisma/schema.prisma ./prisma/schema.prisma
 echo "🔨 Generating Prisma client..."
 npx prisma generate
 
+# Verify the binary was created
+echo "🔍 Verifying Prisma binary..."
+ls -la node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node
+
+# Copy binary to ensure it's in the right place
+echo "📋 Ensuring binary is in deployment folder..."
+cp node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node node_modules/@prisma/client/
+
 # Test Prisma setup
 echo "🧪 Testing Prisma setup..."
 node ../../test-prisma.js

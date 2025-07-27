@@ -239,8 +239,22 @@ app.use('*', (req, res) => {
 // Start server
 async function startServer() {
   try {
-    // Connect to database
-    await connectDatabase();
+    // Connect to database with retry
+    let retries = 3;
+    while (retries > 0) {
+      try {
+        await connectDatabase();
+        break;
+      } catch (error) {
+        retries--;
+        if (retries === 0) {
+          console.error('Failed to connect to database after 3 attempts:', error);
+          process.exit(1);
+        }
+        console.log(`Database connection failed, retrying... (${retries} attempts left)`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
     
     // Start listening
     app.listen(PORT, () => {
