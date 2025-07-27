@@ -3,7 +3,7 @@ services:
     name: proposalai-backend
     env: node
     plan: free
-    buildCommand: cd src/server && npm install && npm run build
+    buildCommand: chmod +x build.sh && ./build.sh
     startCommand: cd src/server && npm start
     envVars:
       - key: NODE_ENV
