@@ -70,8 +70,7 @@ const allowedOrigins = [
   // Netlify domains
   'https://proposalai-app.netlify.app',
   'https://688697ba702b508862421f57--proposalai-app.netlify.app',
-  // Add your Vercel domain when you deploy there
-  'https://proposalai.vercel.app'
+  'https://688699ca5aaf0e00088b9001--proposalai-app.netlify.app'
 ];
 
 // Add environment variable origins

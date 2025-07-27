@@ -1,8 +1,0 @@
-[build]
-  publish = "client/build"
-  command = "CI=false && cd client && npm run build"
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
