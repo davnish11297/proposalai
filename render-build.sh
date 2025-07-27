@@ -26,22 +26,29 @@ ls -la node_modules/.prisma/client/libquery_engine-*
 echo "📋 Copying binaries to @prisma/client..."
 cp node_modules/.prisma/client/libquery_engine-* node_modules/@prisma/client/ 2>/dev/null || true
 
+# Also copy to the root of node_modules for Render
+echo "📋 Copying binaries to node_modules root..."
+cp node_modules/.prisma/client/libquery_engine-* node_modules/ 2>/dev/null || true
+
+# Create symlinks if needed
+echo "🔗 Creating symlinks..."
+ln -sf node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node node_modules/@prisma/client/libquery_engine-debian-openssl-3.0.x.so.node 2>/dev/null || true
+
 # Verify binaries are in place
 echo "✅ Verifying binaries in @prisma/client:"
 ls -la node_modules/@prisma/client/libquery_engine-* 2>/dev/null || echo "No binaries found in @prisma/client"
 
-# Test Prisma connection
+# Check what's in the .prisma directory
+echo "📋 Contents of .prisma/client:"
+ls -la node_modules/.prisma/client/
+
+# Test Prisma connection with our custom client
 echo "🧪 Testing Prisma connection..."
 node -e "
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
-prisma.\$connect()
+const { connectDatabase } = require('./utils/prismaClient');
+connectDatabase()
   .then(() => {
     console.log('✅ Prisma connection successful');
-    return prisma.\$disconnect();
-  })
-  .then(() => {
-    console.log('✅ Prisma disconnected successfully');
     process.exit(0);
   })
   .catch((error) => {

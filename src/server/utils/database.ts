@@ -1,5 +1,10 @@
 import { PrismaClient } from '@prisma/client';
 
+// Set environment variable to help Prisma find the binary
+if (process.env.NODE_ENV === 'production') {
+  process.env.PRISMA_QUERY_ENGINE_BINARY = 'node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node';
+}
+
 export const prisma = new PrismaClient({
   log: ['query', 'info', 'warn', 'error'],
 });
