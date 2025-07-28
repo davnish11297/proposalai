@@ -6,11 +6,11 @@ import * as fs from 'fs';
 function findPrismaBinary(): string | undefined {
   const possiblePaths = [
     // Check in .prisma/client first
-    path.join(process.cwd(), 'node_modules', '.prisma', 'client', 'libquery_engine-debian-openssl-3.0.x.so.node'),
+    path.join(process.cwd(), 'node_modules', '.prisma', 'client', 'libquery_engine-linux-musl.so.node'),
     // Check in @prisma/client
-    path.join(process.cwd(), 'node_modules', '@prisma', 'client', 'libquery_engine-debian-openssl-3.0.x.so.node'),
+    path.join(process.cwd(), 'node_modules', '@prisma', 'client', 'libquery_engine-linux-musl.so.node'),
     // Check in node_modules root
-    path.join(process.cwd(), 'node_modules', 'libquery_engine-debian-openssl-3.0.x.so.node'),
+    path.join(process.cwd(), 'node_modules', 'libquery_engine-linux-musl.so.node'),
   ];
 
   for (const binaryPath of possiblePaths) {

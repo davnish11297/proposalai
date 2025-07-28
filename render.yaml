@@ -4,7 +4,7 @@ services:
     env: node
     plan: free
     buildCommand: chmod +x render-deploy.sh && ./render-deploy.sh
-    startCommand: cd src/server && PRISMA_QUERY_ENGINE_BINARY=node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node npm start
+    startCommand: cd src/server && PRISMA_QUERY_ENGINE_BINARY=node_modules/.prisma/client/libquery_engine-linux-musl.so.node npm start
     envVars:
       - key: NODE_ENV
         value: production

@@ -24,11 +24,12 @@ ls -la node_modules/.prisma/client/libquery_engine-*
 
 # Copy binary to multiple locations to ensure it's found
 echo "📋 Copying binary to multiple locations..."
-cp node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node node_modules/@prisma/client/ 2>/dev/null || true
-cp node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node node_modules/ 2>/dev/null || true
+cp node_modules/.prisma/client/libquery_engine-linux-musl.so.node node_modules/@prisma/client/ 2>/dev/null || true
+cp node_modules/.prisma/client/libquery_engine-linux-musl.so.node node_modules/ 2>/dev/null || true
 
 # Set environment variable for production
-export PRISMA_QUERY_ENGINE_BINARY="node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node"
+export PRISMA_QUERY_ENGINE_BINARY="node_modules/.prisma/client/libquery_engine-linux-musl.so.node"
+echo "🔧 Using linux-musl binary"
 
 # Verify binary exists
 echo "✅ Verifying binary exists:"
