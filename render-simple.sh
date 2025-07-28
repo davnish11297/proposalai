@@ -22,13 +22,14 @@ npx prisma generate
 echo "📋 Generated Prisma binaries:"
 ls -la node_modules/.prisma/client/libquery_engine-*
 
-# Copy binary to the expected location
-echo "📋 Copying binary to expected location..."
+# Copy both binaries to the expected location
+echo "📋 Copying binaries to expected location..."
 cp node_modules/.prisma/client/libquery_engine-debian-openssl-1.1.x.so.node node_modules/@prisma/client/ 2>/dev/null || true
+cp node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node node_modules/@prisma/client/ 2>/dev/null || true
 
-# Verify binary exists
-echo "✅ Verifying binary exists:"
-ls -la node_modules/@prisma/client/libquery_engine-debian-openssl-1.1.x.so.node 2>/dev/null || echo "Binary not found in @prisma/client"
+# Verify binaries exist
+echo "✅ Verifying binaries exist:"
+ls -la node_modules/@prisma/client/libquery_engine-debian-openssl-*.so.node 2>/dev/null || echo "Binaries not found in @prisma/client"
 
 # Build TypeScript
 echo "🔨 Building TypeScript..."

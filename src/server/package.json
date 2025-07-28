@@ -8,7 +8,7 @@
     "build": "npx prisma generate && tsc",
     "dev": "ts-node src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "npx prisma generate && cp node_modules/.prisma/client/libquery_engine-debian-openssl-1.1.x.so.node node_modules/@prisma/client/ 2>/dev/null || true",
+    "postinstall": "npx prisma generate && cp node_modules/.prisma/client/libquery_engine-debian-openssl-*.so.node node_modules/@prisma/client/ 2>/dev/null || true",
     "prisma:generate": "npx prisma generate",
     "prisma:deploy": "npx prisma db push"
   },
