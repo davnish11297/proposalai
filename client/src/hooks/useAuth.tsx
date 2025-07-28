@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { api, authAPI } from '../services/api';
+import { authAPI } from '../services/api';
 
 interface User {
   id: string;
