@@ -29,6 +29,13 @@ if (isProduction) {
       }
     }
   }
+} else {
+  // For development, use the native binary
+  const nativePath = path.join(process.cwd(), 'node_modules', '.prisma', 'client', 'libquery_engine-darwin-arm64.dylib.node');
+  if (fs.existsSync(nativePath)) {
+    process.env.PRISMA_QUERY_ENGINE_BINARY = nativePath;
+    console.log(`🔧 Development: Set PRISMA_QUERY_ENGINE_BINARY to: ${nativePath}`);
+  }
 }
 
 export const prisma = new PrismaClient({
