@@ -10,7 +10,7 @@
     "build": "npm run build:server && npm run build:client",
     "build:server": "tsc -p tsconfig.server.json",
     "build:client": "cd client && npm run build",
-    "start": "node dist/server/index.js",
+    "start": "cd src/server && node dist/index.js",
     "install:all": "npm install && cd client && npm install",
     "db:seed": "ts-node src/server/scripts/seed.ts",
     "start:client": "cd client && PORT=3000 npm start"
