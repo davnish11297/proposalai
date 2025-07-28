@@ -30,7 +30,14 @@
     "emitDecoratorMetadata": true
   },
   "include": [
-    "**/*"
+    "**/*.ts",
+    "utils/**/*",
+    "controllers/**/*",
+    "services/**/*",
+    "routes/**/*",
+    "middleware/**/*",
+    "scripts/**/*",
+    "types/**/*"
   ],
   "exclude": [
     "node_modules",
