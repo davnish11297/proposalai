@@ -1,14 +1,9 @@
 #!/bin/bash
 
-echo "🚀 Starting Render deployment with basic Prisma for MongoDB..."
+echo "🚀 Starting minimal Render deployment for Prisma + MongoDB..."
 
 # Navigate to server directory
 cd src/server
-
-# Copy Prisma schema
-echo "📋 Setting up Prisma schema..."
-mkdir -p prisma
-cp ../../prisma/schema.prisma ./prisma/schema.prisma
 
 # Install dependencies
 echo "📥 Installing dependencies..."
@@ -22,4 +17,4 @@ npx prisma generate
 echo "🔨 Building TypeScript..."
 npm run build
 
-echo "✅ Basic Prisma MongoDB deployment completed successfully!" 
+echo "✅ Minimal Prisma MongoDB deployment completed successfully!" 
