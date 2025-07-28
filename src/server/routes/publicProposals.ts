@@ -1,11 +1,11 @@
-import express from 'express';
+import { Router } from 'express';
 import { prisma } from '../utils/database';
 import { emailService } from '../services/emailService';
 import { generateToken } from '../utils/auth';
 import { notificationController } from '../controllers/notificationController';
 import { ObjectId } from "mongodb";
 
-const router = express.Router();
+const router = Router();
 
 // Generate a 6-digit alphanumeric password
 function generateAccessCode(): string {
@@ -57,21 +57,30 @@ async function hasGrantedAccess(proposalId: string, accessCode: string): Promise
   }
 }
 
-// Get public proposal with password protection
+// Get public proposal by ID and access code
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    if (!ObjectId.isValid(id)) {
-      return res.status(404).json({ success: false, error: "Invalid proposal ID" });
-    }
     const { accessCode } = req.query;
 
     // Find the proposal
     const proposal = await prisma.proposal.findUnique({
       where: { id },
       include: {
-        author: true,
-        organization: true
+        user: {
+          select: {
+            firstName: true,
+            lastName: true
+          }
+        },
+        organization: {
+          select: {
+            name: true,
+            logo: true,
+            primaryColor: true,
+            secondaryColor: true
+          }
+        }
       }
     });
 
@@ -82,139 +91,51 @@ router.get('/:id', async (req, res) => {
       });
     }
 
-    // Parse metadata once for the entire function
-    const existingMetadata = proposal.metadata ? JSON.parse(proposal.metadata) : {};
-    const lastEmailSent = existingMetadata.lastEmailSent || {};
-
-    // If no access code provided, return proposal preview with password prompt
-    if (!accessCode) {
-      // Update tracking - proposal viewed
-      const updatedMetadata = {
-        ...existingMetadata,
-        lastEmailSent: {
-          ...lastEmailSent,
-          openedAt: new Date().toISOString(),
-          status: 'OPENED'
-        }
-      };
-
-      await prisma.proposal.update({
-        where: { id },
-        data: {
-          metadata: JSON.stringify(updatedMetadata),
-          updatedAt: new Date()
-        }
-      });
-
-      return res.json({
-        success: true,
-        data: {
-          id: proposal.id,
-          title: proposal.title,
-          clientName: proposal.clientName,
-          requiresPassword: true,
-          preview: proposal.content.substring(0, 200) + '...',
-          author: proposal.author,
-          organization: proposal.organization,
-          createdAt: proposal.createdAt
-        }
-      });
-    }
-
-    // Verify access code
-    const isValidAccessCode = await verifyAccessCode(id, accessCode as string);
-    
-    if (!isValidAccessCode) {
-      return res.status(401).json({
+    // Check if proposal is public
+    if (!proposal.isPublic) {
+      return res.status(403).json({
         success: false,
-        error: 'Invalid access code'
+        error: 'This proposal is not publicly accessible'
       });
     }
 
-    // Check if proposal is in final state (approved, rejected, expired)
-    const isFinalState = proposal.status === 'APPROVED' || proposal.status === 'REJECTED' || proposal.status === 'EXPIRED';
-    
-    // For final state proposals, check if client has been granted access
-    if (isFinalState) {
-      const hasGranted = await hasGrantedAccess(id, accessCode as string);
-      if (!hasGranted) {
+    // Verify access code if provided
+    if (accessCode) {
+      const metadata = proposal.metadata as any;
+      const accessCodes = metadata?.accessCodes || [];
+      
+      if (!accessCodes.includes(accessCode)) {
         return res.status(403).json({
           success: false,
-          error: 'Access not granted for this proposal',
-          requiresAccessRequest: true
+          error: 'Invalid access code'
         });
       }
     }
 
-    // Update tracking - proposal opened with valid access code (only for unreviewed proposals)
-    if (!lastEmailSent.openedAt && !isFinalState) {
-      const updatedMetadata = {
-        ...existingMetadata,
-        lastEmailSent: {
-          ...lastEmailSent,
-          openedAt: new Date().toISOString(),
-          status: 'OPENED'
-        }
-      };
-
-      await prisma.proposal.update({
-        where: { id },
-        data: {
-          metadata: JSON.stringify(updatedMetadata),
-          updatedAt: new Date()
-        }
-      });
-
-      // Send notification to proposal owner (only for unreviewed proposals)
-      try {
-        await emailService.sendOwnerNotificationEmail({
-          to: proposal.author.email,
-          proposalTitle: proposal.title,
-          proposalId: proposal.id,
-          type: 'opened',
-          clientName: proposal.clientName,
-          clientEmail: lastEmailSent.recipientEmail || 'Unknown'
-        });
-
-        // Create in-app notification
-        await notificationController.createNotification({
-          userId: proposal.authorId,
-          type: 'PROPOSAL_OPENED',
-          title: 'Proposal Opened',
-          message: `Your proposal "${proposal.title}" was opened by the client`,
-          proposalId: proposal.id,
-          metadata: {
-            clientName: proposal.clientName,
-            clientEmail: lastEmailSent.recipientEmail || 'Unknown'
-          }
-        });
-      } catch (emailError) {
-        console.error('Failed to send owner notification for proposal opened:', emailError);
+    // Track the view
+    await prisma.activity.create({
+      data: {
+        type: 'VIEWED',
+        details: { accessCode: accessCode || null },
+        userId: proposal.userId,
+        proposalId: proposal.id,
+        organizationId: proposal.organizationId
       }
-    }
+    });
 
-    // Return full proposal content with comments
     return res.json({
       success: true,
       data: {
-        id: proposal.id,
-        title: proposal.title,
-        content: proposal.content,
-        clientName: proposal.clientName,
-        author: proposal.author,
-        organization: proposal.organization,
-        createdAt: proposal.createdAt,
-        emailSentAt: lastEmailSent.sentAt,
-        emailRecipient: lastEmailSent.recipientEmail,
-        status: proposal.status,
-        comments: proposal.comments
+        ...proposal,
+        user: proposal.user,
+        organization: proposal.organization
       }
     });
   } catch (error) {
-    console.error('Public proposal error:', error);
+    console.error('Get public proposal error:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to fetch public proposal'
+      error: 'Failed to fetch proposal'
     });
   }
 });

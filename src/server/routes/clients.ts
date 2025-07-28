@@ -1,22 +1,22 @@
-import express from 'express';
-import { authenticateToken } from '../middleware/auth';
+import { Router } from 'express';
 import { clientController } from '../controllers/clientController';
+import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 
-const router = express.Router();
+const router = Router();
 
-// List all clients
-router.get('/', authenticateToken, (req, res) => clientController.getClients(req, res));
+// Get all clients for the organization
+router.get('/', authenticateToken, (req, res) => clientController.getClients(req as AuthenticatedRequest, res));
 
 // Get a single client
-router.get('/:id', authenticateToken, (req, res) => clientController.getClient(req, res));
+router.get('/:id', authenticateToken, (req, res) => clientController.getClient(req as AuthenticatedRequest, res));
 
 // Create a new client
-router.post('/', authenticateToken, (req, res) => clientController.createClient(req, res));
+router.post('/', authenticateToken, (req, res) => clientController.createClient(req as AuthenticatedRequest, res));
 
 // Update a client
-router.put('/:id', authenticateToken, (req, res) => clientController.updateClient(req, res));
+router.put('/:id', authenticateToken, (req, res) => clientController.updateClient(req as AuthenticatedRequest, res));
 
 // Delete a client
-router.delete('/:id', authenticateToken, (req, res) => clientController.deleteClient(req, res));
+router.delete('/:id', authenticateToken, (req, res) => clientController.deleteClient(req as AuthenticatedRequest, res));
 
 export default router; 

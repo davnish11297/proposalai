@@ -1,27 +1,30 @@
-import express from 'express';
-import { authenticateToken } from '../middleware/auth';
+import { Router } from 'express';
 import { OrganizationController } from '../controllers/organizationController';
+import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 
-const router = express.Router();
+const router = Router();
 
-// Get organization brand settings
-router.get('/brand-settings', authenticateToken, OrganizationController.getBrandSettings);
+// Get brand settings for the current organization
+router.get('/brand-settings', authenticateToken, (req, res) => {
+  const authenticatedReq = req as AuthenticatedRequest;
+  return OrganizationController.getBrandSettings(authenticatedReq, res);
+});
 
-// Update organization brand settings
-router.put('/brand-settings', authenticateToken, OrganizationController.updateBrandSettings);
+// Update brand settings for the current organization
+router.put('/brand-settings', authenticateToken, (req, res) => {
+  const authenticatedReq = req as AuthenticatedRequest;
+  return OrganizationController.updateBrandSettings(authenticatedReq, res);
+});
 
+// Get current organization
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    res.json({
-      success: true,
-      data: {},
-      message: 'Organizations endpoint - implementation pending'
-    });
+    const authenticatedReq = req as AuthenticatedRequest;
+    const organization = await OrganizationController.getCurrentOrganization(authenticatedReq, res);
+    return organization;
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch organization'
-    });
+    console.error('Get organization error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to fetch organization' });
   }
 });
 

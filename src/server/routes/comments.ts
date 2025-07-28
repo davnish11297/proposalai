@@ -1,22 +1,37 @@
 import { Router } from 'express';
 import { commentController } from '../controllers/commentController';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 
 const router = Router();
 
-// Get all comments for a proposal
-router.get('/proposal/:proposalId', authenticateToken, (req, res) => commentController.getComments(req, res));
+// Get comments for a proposal
+router.get('/proposal/:proposalId', authenticateToken, (req, res) => {
+  const authenticatedReq = req as AuthenticatedRequest;
+  return commentController.getComments(authenticatedReq, res);
+});
 
-// Get unread comment count for a proposal
-router.get('/proposal/:proposalId/unread', authenticateToken, (req, res) => commentController.getUnreadCount(req, res));
+// Get unread count for a proposal
+router.get('/proposal/:proposalId/unread', authenticateToken, (req, res) => {
+  const authenticatedReq = req as AuthenticatedRequest;
+  return commentController.getUnreadCount(authenticatedReq, res);
+});
 
 // Create a new comment
-router.post('/proposal/:proposalId', authenticateToken, (req, res) => commentController.createComment(req, res));
+router.post('/proposal/:proposalId', authenticateToken, (req, res) => {
+  const authenticatedReq = req as AuthenticatedRequest;
+  return commentController.createComment(authenticatedReq, res);
+});
 
 // Update a comment
-router.put('/:id', authenticateToken, (req, res) => commentController.updateComment(req, res));
+router.put('/:id', authenticateToken, (req, res) => {
+  const authenticatedReq = req as AuthenticatedRequest;
+  return commentController.updateComment(authenticatedReq, res);
+});
 
 // Delete a comment
-router.delete('/:id', authenticateToken, (req, res) => commentController.deleteComment(req, res));
+router.delete('/:id', authenticateToken, (req, res) => {
+  const authenticatedReq = req as AuthenticatedRequest;
+  return commentController.deleteComment(authenticatedReq, res);
+});
 
 export default router; 

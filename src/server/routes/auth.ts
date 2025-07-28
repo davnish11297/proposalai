@@ -1,33 +1,112 @@
-import express from 'express';
-import { body } from 'express-validator';
-import { validateRequest } from '../middleware/validation';
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
+import { Router } from 'express';
 import { prisma } from '../utils/database';
-import { generateToken } from '../utils/auth';
-import bcrypt from 'bcrypt';
-import passport from 'passport';
+import { hashPassword, comparePassword, generateToken } from '../utils/auth';
+import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 
-const router = express.Router();
+const router = Router();
 
-// Validation rules
-const loginValidation = [
-  body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 6 }),
-];
+// Register a new user
+router.post('/register', async (req, res) => {
+  try {
+    const { email, password, firstName, lastName, organizationName, organizationSlug } = req.body;
 
-const registerValidation = [
-  body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 6 }),
-  body('firstName').trim().isLength({ min: 1 }),
-  body('lastName').trim().isLength({ min: 1 }),
-];
+    if (!email || !password || !firstName || !lastName || !organizationName || !organizationSlug) {
+      return res.status(400).json({
+        success: false,
+        error: 'All fields are required'
+      });
+    }
 
-// Routes
-router.post('/login', loginValidation, validateRequest, async (req: express.Request, res: express.Response) => {
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        error: 'User already exists'
+      });
+    }
+
+    // Check if organization slug is available
+    const existingOrg = await prisma.organization.findUnique({
+      where: { slug: organizationSlug }
+    });
+
+    if (existingOrg) {
+      return res.status(400).json({
+        success: false,
+        error: 'Organization slug already taken'
+      });
+    }
+
+    // Create organization
+    const organization = await prisma.organization.create({
+      data: {
+        name: organizationName,
+        slug: organizationSlug,
+        isActive: true
+      }
+    });
+
+    // Hash password
+    const hashedPassword = await hashPassword(password);
+
+    // Create user
+    const user = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        firstName,
+        lastName,
+        role: 'ADMIN',
+        isActive: true,
+        organizationId: organization.id
+      }
+    });
+
+    // Generate token
+    const token = generateToken(user);
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          organizationId: user.organizationId
+        },
+        organization,
+        token
+      },
+      message: 'User registered successfully'
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to register user'
+    });
+  }
+});
+
+// Login user
+router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find user by email
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email and password are required'
+      });
+    }
+
+    // Find user
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
@@ -38,137 +117,53 @@ router.post('/login', loginValidation, validateRequest, async (req: express.Requ
     if (!user) {
       return res.status(401).json({
         success: false,
-        error: 'Invalid email or password'
+        error: 'Invalid credentials'
       });
     }
 
-    // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password);
+    // Check password
+    const isValidPassword = await comparePassword(password, user.password);
     if (!isValidPassword) {
       return res.status(401).json({
         success: false,
-        error: 'Invalid email or password'
+        error: 'Invalid credentials'
       });
     }
 
-    // Generate JWT token
-    const token = generateToken(user as any);
+    // Generate token
+    const token = generateToken(user);
 
-    // Return user data (excluding password) and token
-    const { password: _, ...userWithoutPassword } = user;
-    
-    res.json({
+    return res.json({
       success: true,
       data: {
-        token,
-        user: userWithoutPassword
-      }
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          organizationId: user.organizationId
+        },
+        organization: user.organization,
+        token
+      },
+      message: 'Login successful'
     });
-    return;
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      error: 'Login failed'
-    });
-    return;
-  }
-});
-
-router.post('/register', registerValidation, validateRequest, async (req: express.Request, res: express.Response) => {
-  try {
-    const { email, password, firstName, lastName, organizationName } = req.body;
-
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
-    });
-
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        error: 'User with this email already exists'
-      });
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    // Create organization first
-    const organization = await prisma.organization.create({
-      data: {
-        name: organizationName,
-        description: `Organization for ${organizationName}`,
-        industry: 'Technology'
-      }
-    });
-
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name: `${firstName} ${lastName}`,
-        role: 'ADMIN',
-        organizationId: organization.id
-      },
-      include: {
-        organization: true
-      }
-    });
-
-    // Generate JWT token
-    const token = generateToken(user as any);
-
-    // Return user data (excluding password) and token
-    const { password: _, ...userWithoutPassword } = user;
-    
-    res.json({
-      success: true,
-      data: {
-        token,
-        user: userWithoutPassword
-      }
-    });
-    return;
-  } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Registration failed'
-    });
-    return;
-  }
-});
-
-router.post('/logout', authenticateToken, async (req, res) => {
-  try {
-    // TODO: Implement logout logic
-    res.json({
-      success: true,
-      message: 'Logged out successfully'
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: 'Logout failed'
+      error: 'Failed to login'
     });
   }
 });
 
-router.get('/me', authenticateToken, async (req: AuthenticatedRequest, res: express.Response) => {
+// Get current user
+router.get('/me', authenticateToken, async (req, res) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required'
-      });
-    }
-    
-    const userId = req.user.userId;
-    
+    const authenticatedReq = req as AuthenticatedRequest;
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: authenticatedReq.user!.userId },
       include: {
         organization: true
       }
@@ -181,36 +176,27 @@ router.get('/me', authenticateToken, async (req: AuthenticatedRequest, res: expr
       });
     }
 
-    // Return user data (excluding password)
-    const { password: _, ...userWithoutPassword } = user;
-    
-    res.json({
+    return res.json({
       success: true,
-      data: userWithoutPassword
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          organizationId: user.organizationId
+        },
+        organization: user.organization
+      }
     });
-    return;
   } catch (error) {
-    console.error('Get user error:', error);
-    res.status(500).json({
+    console.error('Get current user error:', error);
+    return res.status(500).json({
       success: false,
-      error: 'Failed to get user data'
+      error: 'Failed to get current user'
     });
-    return;
   }
-});
-
-// Google OAuth login
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-
-// Google OAuth callback
-router.get('/google/callback', passport.authenticate('google', { failureRedirect: '/login', session: false }), async (req, res) => {
-  const user = req.user as any;
-  if (!user) {
-    return res.status(401).json({ success: false, error: 'Google authentication failed' });
-  }
-  const token = generateToken(user);
-  // Redirect to frontend with token in query param
-  res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/login?token=${token}`);
 });
 
 export default router; 

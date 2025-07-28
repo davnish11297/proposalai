@@ -9,7 +9,7 @@ export interface AuthenticatedRequest extends Request {
 }
 
 export async function authenticateToken(
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
@@ -36,8 +36,7 @@ export async function authenticateToken(
 
     // Verify user still exists
     const user = await prisma.user.findUnique({
-      where: { id: payload.userId },
-      select: { id: true, organizationId: true }
+      where: { id: payload.userId }
     });
 
     if (!user) {
@@ -48,7 +47,8 @@ export async function authenticateToken(
       return;
     }
 
-    req.user = {
+    // Cast the request to include the user property
+    (req as AuthenticatedRequest).user = {
       ...payload,
       organizationId: user.organizationId
     };
@@ -63,8 +63,9 @@ export async function authenticateToken(
 }
 
 export function requireRole(allowedRoles: string[]) {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-    if (!req.user) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const authenticatedReq = req as AuthenticatedRequest;
+    if (!authenticatedReq.user) {
       res.status(401).json({
         success: false,
         error: 'Authentication required'
@@ -72,7 +73,7 @@ export function requireRole(allowedRoles: string[]) {
       return;
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    if (!allowedRoles.includes(authenticatedReq.user.role)) {
       res.status(403).json({
         success: false,
         error: 'Insufficient permissions'
@@ -85,11 +86,12 @@ export function requireRole(allowedRoles: string[]) {
 }
 
 export function requireOrganization(
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): void {
-  if (!req.user?.organizationId) {
+  const authenticatedReq = req as AuthenticatedRequest;
+  if (!authenticatedReq.user?.organizationId) {
     res.status(403).json({
       success: false,
       error: 'Organization membership required'
@@ -101,7 +103,7 @@ export function requireOrganization(
 }
 
 export function optionalAuth(
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): void {
@@ -112,7 +114,7 @@ export function optionalAuth(
     if (token) {
       const payload = verifyToken(token);
       if (payload) {
-        req.user = payload;
+        (req as AuthenticatedRequest).user = payload;
       }
     }
   } catch (error) {

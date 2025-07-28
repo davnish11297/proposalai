@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { prisma as db } from '../utils/database';
-import { Prisma } from '@prisma/client';
 import { aiService } from '../services/aiService';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { ICreateProposal, IUpdateProposal, IGenerateProposalRequest } from '../types';
@@ -672,8 +671,8 @@ export class ProposalController {
           description: originalProposal.description ?? undefined,
           clientName: originalProposal.clientName,
           type: originalProposal.type,
-          content: originalProposal.content === null ? Prisma.JsonNull : originalProposal.content,
-          metadata: originalProposal.metadata === null ? Prisma.JsonNull : originalProposal.metadata,
+          content: originalProposal.content,
+          metadata: originalProposal.metadata,
           authorId: req.user!.userId,
           organizationId: req.user!.organizationId!,
           status: 'DRAFT',

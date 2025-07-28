@@ -8,13 +8,11 @@
     "dev:server": "PORT=3001 nodemon --exec tsx src/server/index.ts",
     "dev:client": "cd client && PORT=3000 npm start",
     "build": "npm run build:server && npm run build:client",
-    "build:server": "npx prisma generate && tsc -p tsconfig.server.json",
+    "build:server": "tsc -p tsconfig.server.json",
     "build:client": "cd client && npm run build",
     "start": "node dist/server/index.js",
     "install:all": "npm install && cd client && npm install",
-    "db:migrate": "npx prisma migrate dev",
-    "db:generate": "npx prisma generate",
-    "db:studio": "npx prisma studio",
+
     "db:seed": "ts-node src/server/scripts/seed.ts",
     "start:client": "cd client && PORT=3000 npm start"
   },
@@ -35,7 +33,7 @@
   "license": "MIT",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.57.0",
-    "@prisma/client": "^5.7.1",
+
     "@sendgrid/mail": "^8.1.5",
     "@types/bcrypt": "^5.0.2",
     "@types/express-session": "^1.18.2",
@@ -77,7 +75,7 @@
     "@types/uuid": "^9.0.8",
     "concurrently": "^8.2.2",
     "nodemon": "^3.1.10",
-    "prisma": "^5.7.1",
+
     "ts-node": "^10.9.2",
     "tsx": "^4.20.3",
     "typescript": "^5.2.2"

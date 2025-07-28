@@ -1,89 +1,179 @@
-import express from 'express';
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
+import { Router } from 'express';
 import { prisma } from '../utils/database';
+import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 
-const router = express.Router();
+const router = Router();
 
-// Get all templates
-router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
+// Get all templates for the organization
+router.get('/', authenticateToken, async (req, res) => {
   try {
+    const authenticatedReq = req as AuthenticatedRequest;
     const templates = await prisma.template.findMany({
-      where: {
-        isActive: true,
-      },
+      where: { organizationId: authenticatedReq.user!.organizationId },
       orderBy: { updatedAt: 'desc' }
     });
 
-    res.json({
+    return res.json({
       success: true,
       data: templates
     });
   } catch (error) {
     console.error('Get templates error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch templates'
     });
   }
 });
 
-// Get template by ID
+// Get a single template
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
-    res.json({
+    const { id } = req.params;
+    const authenticatedReq = req as AuthenticatedRequest;
+    const template = await prisma.template.findUnique({
+      where: { 
+        id,
+        organizationId: authenticatedReq.user!.organizationId 
+      }
+    });
+
+    if (!template) {
+      return res.status(404).json({
+        success: false,
+        error: 'Template not found'
+      });
+    }
+
+    return res.json({
       success: true,
-      data: {},
-      message: 'Template detail endpoint - implementation pending'
+      data: template
     });
   } catch (error) {
-    res.status(500).json({
+    console.error('Get template error:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch template'
     });
   }
 });
 
-// Create new template
+// Create a new template
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    res.json({
+    const { name, description, category, content, isPublic } = req.body;
+    const authenticatedReq = req as AuthenticatedRequest;
+
+    if (!name || !category || !content) {
+      return res.status(400).json({
+        success: false,
+        error: 'Name, category, and content are required'
+      });
+    }
+
+    const template = await prisma.template.create({
+      data: {
+        name,
+        description,
+        category,
+        content,
+        isPublic: isPublic || false,
+        organizationId: authenticatedReq.user!.organizationId!
+      }
+    });
+
+    return res.status(201).json({
       success: true,
-      data: {},
-      message: 'Create template endpoint - implementation pending'
+      data: template,
+      message: 'Template created successfully'
     });
   } catch (error) {
-    res.status(500).json({
+    console.error('Create template error:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to create template'
     });
   }
 });
 
-// Update template
+// Update a template
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
-    res.json({
+    const { id } = req.params;
+    const { name, description, category, content, isPublic } = req.body;
+    const authenticatedReq = req as AuthenticatedRequest;
+
+    const existingTemplate = await prisma.template.findFirst({
+      where: { 
+        id,
+        organizationId: authenticatedReq.user!.organizationId 
+      }
+    });
+
+    if (!existingTemplate) {
+      return res.status(404).json({
+        success: false,
+        error: 'Template not found'
+      });
+    }
+
+    const updatedTemplate = await prisma.template.update({
+      where: { id },
+      data: {
+        name,
+        description,
+        category,
+        content,
+        isPublic,
+        updatedAt: new Date()
+      }
+    });
+
+    return res.json({
       success: true,
-      data: {},
-      message: 'Update template endpoint - implementation pending'
+      data: updatedTemplate,
+      message: 'Template updated successfully'
     });
   } catch (error) {
-    res.status(500).json({
+    console.error('Update template error:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to update template'
     });
   }
 });
 
-// Delete template
+// Delete a template
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
-    res.json({
+    const { id } = req.params;
+    const authenticatedReq = req as AuthenticatedRequest;
+
+    const existingTemplate = await prisma.template.findFirst({
+      where: { 
+        id,
+        organizationId: authenticatedReq.user!.organizationId 
+      }
+    });
+
+    if (!existingTemplate) {
+      return res.status(404).json({
+        success: false,
+        error: 'Template not found'
+      });
+    }
+
+    await prisma.template.delete({
+      where: { id }
+    });
+
+    return res.json({
       success: true,
-      message: 'Delete template endpoint - implementation pending'
+      message: 'Template deleted successfully'
     });
   } catch (error) {
-    res.status(500).json({
+    console.error('Delete template error:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to delete template'
     });

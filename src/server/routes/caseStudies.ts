@@ -1,34 +1,68 @@
-import express from 'express';
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
+import { Router } from 'express';
 import { prisma } from '../utils/database';
+import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 
-const router = express.Router();
+const router = Router();
 
-router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
+// Get all case studies for the organization
+router.get('/', authenticateToken, async (req, res) => {
   try {
+    const authenticatedReq = req as AuthenticatedRequest;
     const caseStudies = await prisma.caseStudy.findMany({
-      where: {
-        isActive: true,
-      },
+      where: { organizationId: authenticatedReq.user!.organizationId },
       orderBy: { updatedAt: 'desc' }
     });
 
-    res.json({
+    return res.json({
       success: true,
       data: caseStudies
     });
   } catch (error) {
     console.error('Get case studies error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch case studies'
     });
   }
 });
 
-router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
+// Get a single case study
+router.get('/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authenticatedReq = req as AuthenticatedRequest;
+    const caseStudy = await prisma.caseStudy.findUnique({
+      where: { 
+        id,
+        organizationId: authenticatedReq.user!.organizationId 
+      }
+    });
+
+    if (!caseStudy) {
+      return res.status(404).json({
+        success: false,
+        error: 'Case study not found'
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: caseStudy
+    });
+  } catch (error) {
+    console.error('Get case study error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch case study'
+    });
+  }
+});
+
+// Create a new case study
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const { title, description, clientName, industry, challenge, solution, results, metrics } = req.body;
+    const authenticatedReq = req as AuthenticatedRequest;
 
     if (!title || !description || !challenge || !solution || !results) {
       return res.status(400).json({
@@ -41,13 +75,13 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
       data: {
         title,
         description,
-        clientName: clientName || null,
-        industry: industry || null,
+        clientName,
+        industry,
         challenge,
         solution,
         results,
-        metrics: metrics || null,
-        organizationId: req.user!.organizationId!,
+        metrics,
+        organizationId: authenticatedReq.user!.organizationId!
       }
     });
 

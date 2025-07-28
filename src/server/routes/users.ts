@@ -1,47 +1,57 @@
-import express from 'express';
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
+import { Router } from 'express';
 import { prisma } from '../utils/database';
+import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 
-const router = express.Router();
+const router = Router();
 
-// GET /api/users?teamId=optional
-router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
+// Get all users for the organization
+router.get('/', authenticateToken, async (req, res) => {
   try {
-    const organizationId = req.user!.organizationId;
-    const teamId = req.query.teamId as string | undefined;
-
-    // Get all users in the org
+    const authenticatedReq = req as AuthenticatedRequest;
     let users = await prisma.user.findMany({
-      where: {
-        organizationId,
-      },
+      where: { organizationId: authenticatedReq.user!.organizationId },
       select: {
         id: true,
-        name: true,
         email: true,
+        firstName: true,
+        lastName: true,
         role: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true
       },
-      orderBy: { name: 'asc' },
+      orderBy: { createdAt: 'desc' }
     });
 
-    // If teamId is provided, filter out users already in the team
-    if (teamId) {
-      const teamMembers = await prisma.teamMember.findMany({
-        where: { teamId },
-        select: { userId: true },
-      });
-      const memberIds = new Set(teamMembers.map(m => m.userId));
-      users = users.filter(u => !memberIds.has(u.id));
-    }
+    // Get team members for each user
+    const teamMembers = await prisma.teamMember.findMany({
+      where: { organizationId: authenticatedReq.user!.organizationId },
+      include: {
+        team: true
+      }
+    });
 
-    res.json({
+    // Add team information to users
+    users = users.map(user => ({
+      ...user,
+      teams: teamMembers
+        .filter(member => member.userId === user.id)
+        .map(member => ({
+          teamId: member.teamId,
+          teamName: member.team.name,
+          role: member.role
+        }))
+    }));
+
+    return res.json({
       success: true,
-      data: users,
+      data: users
     });
   } catch (error) {
-    res.status(500).json({
+    console.error('Get users error:', error);
+    return res.status(500).json({
       success: false,
-      error: 'Failed to fetch users',
+      error: 'Failed to fetch users'
     });
   }
 });

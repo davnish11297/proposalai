@@ -1,103 +1,123 @@
-import express from 'express';
-import { emailTrackingService } from '../services/emailTrackingService';
+import { Router } from 'express';
+import { prisma } from '../utils/database';
+import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 
-const router = express.Router();
+const router = Router();
 
-// Tracking pixel for email opens
-router.get('/track/:trackingId/pixel.png', async (req, res) => {
-  const { trackingId } = req.params;
-  
+// Get email tracking data for a proposal
+router.get('/proposal/:proposalId', authenticateToken, async (req, res) => {
   try {
-    await emailTrackingService.trackEmailOpen(trackingId);
-    
-    // Return a 1x1 transparent PNG
-    const pixel = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
-    
-    res.setHeader('Content-Type', 'image/png');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.send(pixel);
-  } catch (error) {
-    console.error('Email tracking pixel error:', error);
-    // Still return the pixel even if tracking fails
-    const pixel = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
-    res.setHeader('Content-Type', 'image/png');
-    res.send(pixel);
-  }
-});
+    const { proposalId } = req.params;
+    const authenticatedReq = req as AuthenticatedRequest;
 
-// Track email clicks
-router.get('/track/:trackingId/click', async (req, res) => {
-  const { trackingId } = req.params;
-  const { linkType = 'proposal' } = req.query;
-  
-  try {
-    const result = await emailTrackingService.trackEmailClick(trackingId, linkType as string);
-    
-    if (result.success && result.proposalId) {
-      // Find the proposal to get the access code from metadata
-      const { prisma } = require('../utils/database');
-      const proposal = await prisma.proposal.findUnique({
-        where: { id: result.proposalId },
-        select: { metadata: true }
+    // Verify the proposal belongs to the user's organization
+    const proposal = await prisma.proposal.findFirst({
+      where: { 
+        id: proposalId,
+        organizationId: authenticatedReq.user!.organizationId 
+      }
+    });
+
+    if (!proposal) {
+      return res.status(404).json({
+        success: false,
+        error: 'Proposal not found'
       });
-      
-      let accessCode = null;
-      if (proposal && proposal.metadata) {
-        try {
-          const metadata = JSON.parse(proposal.metadata);
-          const accessCodes = metadata.accessCodes || [];
-          // Use the most recent access code (last in the array)
-          accessCode = accessCodes[accessCodes.length - 1];
-        } catch (error) {
-          console.error('Error parsing proposal metadata:', error);
-        }
-      }
-      
-      // Redirect to the frontend client with access code
-      const clientUrl = process.env.CLIENT_BASE_URL || 'http://localhost:3000';
-      if (accessCode) {
-        res.redirect(`${clientUrl}/proposal/${result.proposalId}?accessCode=${accessCode}`);
-      } else {
-        // Fallback to frontend client without access code
-        res.redirect(`${clientUrl}/proposal/${result.proposalId}`);
-      }
-    } else {
-      // Fallback redirect to frontend
-      const clientUrl = process.env.CLIENT_BASE_URL || 'http://localhost:3000';
-      res.redirect(clientUrl);
     }
+
+    // Get email tracking data
+    const trackingData = await prisma.emailTracking.findMany({
+      where: { proposalId },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return res.json({
+      success: true,
+      data: trackingData
+    });
   } catch (error) {
-    console.error('Email click tracking error:', error);
-    const clientUrl = process.env.CLIENT_BASE_URL || 'http://localhost:3000';
-    res.redirect(clientUrl);
+    console.error('Get email tracking error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch email tracking data'
+    });
   }
 });
 
-// Track email replies (webhook endpoint)
-router.post('/track/:trackingId/reply', async (req, res) => {
-  const { trackingId } = req.params;
-  
+// Track email open
+router.post('/track-open/:trackingId', async (req, res) => {
   try {
-    await emailTrackingService.trackEmailReply(trackingId);
-    res.json({ success: true });
+    const { trackingId } = req.params;
+
+    const tracking = await prisma.emailTracking.findUnique({
+      where: { id: trackingId }
+    });
+
+    if (!tracking) {
+      return res.status(404).json({
+        success: false,
+        error: 'Tracking record not found'
+      });
+    }
+
+    // Update tracking data
+    await prisma.emailTracking.update({
+      where: { id: trackingId },
+      data: {
+        openedAt: new Date(),
+        isOpened: true,
+        openCount: tracking.openCount + 1
+      }
+    });
+
+    // Return a 1x1 transparent pixel
+    res.writeHead(200, { 'Content-Type': 'image/gif' });
+    return res.end(Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'));
   } catch (error) {
-    console.error('Email reply tracking error:', error);
-    res.status(500).json({ success: false, error: 'Failed to track reply' });
+    console.error('Track email open error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to track email open'
+    });
   }
 });
 
-// Get email tracking statistics for a proposal
-router.get('/stats/:proposalId', async (req, res) => {
-  const { proposalId } = req.params;
-  
+// Track email click
+router.post('/track-click/:trackingId', async (req, res) => {
   try {
-    const stats = await emailTrackingService.getEmailTrackingStats(proposalId);
-    res.json({ success: true, data: stats });
+    const { trackingId } = req.params;
+    const { url } = req.body;
+
+    const tracking = await prisma.emailTracking.findUnique({
+      where: { id: trackingId }
+    });
+
+    if (!tracking) {
+      return res.status(404).json({
+        success: false,
+        error: 'Tracking record not found'
+      });
+    }
+
+    // Update tracking data
+    await prisma.emailTracking.update({
+      where: { id: trackingId },
+      data: {
+        clickedAt: new Date(),
+        isClicked: true,
+        clickCount: tracking.clickCount + 1,
+        lastClickedUrl: url
+      }
+    });
+
+    // Redirect to the original URL
+    return res.redirect(url || '/');
   } catch (error) {
-    console.error('Get email stats error:', error);
-    res.status(500).json({ success: false, error: 'Failed to get email statistics' });
+    console.error('Track email click error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to track email click'
+    });
   }
 });
 

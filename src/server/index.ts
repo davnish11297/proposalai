@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
-import { connectDatabase, prisma } from './utils/prismaConfig';
+import { connectToDatabase } from './utils/mongoClient';
 import proposalsRouter from './routes/proposals';
 import commentsRouter from './routes/comments';
 import teamsRouter from './routes/teams';
@@ -243,7 +243,7 @@ async function startServer() {
     let retries = 3;
     while (retries > 0) {
       try {
-        await connectDatabase();
+        await connectToDatabase();
         break;
       } catch (error) {
         retries--;

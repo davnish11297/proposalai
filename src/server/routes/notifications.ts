@@ -1,25 +1,25 @@
 import { Router } from 'express';
 import { notificationController } from '../controllers/notificationController';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 
 const router = Router();
 
-// All notification routes require authentication
+// Apply authentication to all routes
 router.use(authenticateToken);
 
-// Get all notifications for the current user
-router.get('/', notificationController.getNotifications);
+// Get all notifications for the user
+router.get('/', (req, res) => notificationController.getNotifications(req as AuthenticatedRequest, res));
 
-// Get unread notification count
-router.get('/unread-count', notificationController.getUnreadCount);
+// Get unread count
+router.get('/unread-count', (req, res) => notificationController.getUnreadCount(req as AuthenticatedRequest, res));
 
 // Mark notification as read
-router.put('/:id/read', notificationController.markAsRead);
+router.put('/:id/read', (req, res) => notificationController.markAsRead(req as AuthenticatedRequest, res));
 
 // Mark all notifications as read
-router.put('/mark-all-read', notificationController.markAllAsRead);
+router.put('/mark-all-read', (req, res) => notificationController.markAllAsRead(req as AuthenticatedRequest, res));
 
 // Get notifications for a specific proposal
-router.get('/proposal/:proposalId', notificationController.getByProposal);
+router.get('/proposal/:proposalId', (req, res) => notificationController.getByProposal(req as AuthenticatedRequest, res));
 
 export default router; 

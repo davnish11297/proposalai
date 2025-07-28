@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { proposalController } from '../controllers/proposalController';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 import express from 'express';
 import multer from 'multer';
 import { PDFService } from '../services/pdfService';
-import db from '../utils/database';
+import { prisma as db } from '../utils/database';
 
 const router = Router();
 const pdfService = new PDFService();
@@ -25,28 +25,28 @@ const upload = multer({
 });
 
 // List all proposals
-router.get('/', authenticateToken, (req, res) => proposalController.getProposals(req, res));
+router.get('/', authenticateToken, (req, res) => proposalController.getProposals(req as AuthenticatedRequest, res));
 
 // Get a single proposal
-router.get('/:id', authenticateToken, (req, res) => proposalController.getProposal(req, res));
+router.get('/:id', authenticateToken, (req, res) => proposalController.getProposal(req as AuthenticatedRequest, res));
 
 // Create a new proposal
-router.post('/', authenticateToken, (req, res) => proposalController.createProposal(req, res));
+router.post('/', authenticateToken, (req, res) => proposalController.createProposal(req as AuthenticatedRequest, res));
 
 // Update a proposal
-router.put('/:id', authenticateToken, (req, res) => proposalController.updateProposal(req, res));
+router.put('/:id', authenticateToken, (req, res) => proposalController.updateProposal(req as AuthenticatedRequest, res));
 
 // Delete a proposal
-router.delete('/:id', authenticateToken, (req, res) => proposalController.deleteProposal(req, res));
+router.delete('/:id', authenticateToken, (req, res) => proposalController.deleteProposal(req as AuthenticatedRequest, res));
 
 // Generate proposal with AI
-router.post('/generate', authenticateToken, (req, res) => proposalController.generateProposal(req, res));
+router.post('/generate', authenticateToken, (req, res) => proposalController.generateProposal(req as AuthenticatedRequest, res));
 
 // Publish proposal
-router.post('/:id/publish', authenticateToken, (req, res) => proposalController.publishProposal(req, res));
+router.post('/:id/publish', authenticateToken, (req, res) => proposalController.publishProposal(req as AuthenticatedRequest, res));
 
 // Duplicate proposal
-router.post('/:id/duplicate', authenticateToken, (req, res) => proposalController.duplicateProposal(req, res));
+router.post('/:id/duplicate', authenticateToken, (req, res) => proposalController.duplicateProposal(req as AuthenticatedRequest, res));
 
 // Get public proposal (no auth)
 router.get('/public/:id', (req, res) => proposalController.getPublicProposal(req, res));
@@ -81,9 +81,9 @@ router.post('/extract-pdf', upload.single('pdf'), async (req, res) => {
 });
 
 // List all access requests for a proposal
-router.get('/:id/access-requests', authenticateToken, (req, res) => proposalController.getAccessRequests(req, res));
+router.get('/:id/access-requests', authenticateToken, (req, res) => proposalController.getAccessRequests(req as AuthenticatedRequest, res));
 // Grant a pending access request
-router.post('/:id/access-requests/:requestId/grant', authenticateToken, (req, res) => proposalController.grantAccessRequest(req, res));
+router.post('/:id/access-requests/:requestId/grant', authenticateToken, (req, res) => proposalController.grantAccessRequest(req as AuthenticatedRequest, res));
 
 // GET /api/proposals/drafts - fetch all draft proposals
 router.get('/drafts', async (req, res) => {
