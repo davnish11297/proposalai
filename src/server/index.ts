@@ -5,7 +5,7 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
-import { connectToDatabase } from './utils/mongoClient';
+import { connectToDatabase } from './utils/mongoClient.js';
 import proposalsRouter from './routes/proposals';
 import commentsRouter from './routes/comments';
 import teamsRouter from './routes/teams';
