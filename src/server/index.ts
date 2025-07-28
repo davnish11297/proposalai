@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import path from 'path';
 import { connectToDatabase } from './utils/mongoClient';
 import proposalsRouter from './routes/proposals';
 import commentsRouter from './routes/comments';
@@ -18,7 +19,7 @@ import multer from 'multer';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 // Add request logging middleware for debugging
 app.use((req, res, next) => {
@@ -228,12 +229,21 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    error: 'Route not found'
-  });
+// Serve static files from the React app build directory
+app.use(express.static(path.join(__dirname, '../../client/build')));
+
+// Handle client-side routing - serve index.html for all non-API routes
+app.get('*', (req, res) => {
+  // Don't serve index.html for API routes
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({
+      success: false,
+      error: 'Route not found'
+    });
+  }
+  
+  // Serve the React app for all other routes
+  return res.sendFile(path.join(__dirname, '../../client/build/index.html'));
 });
 
 // Start server

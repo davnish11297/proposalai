@@ -1,11 +1,11 @@
 import axios from 'axios';
 
 // API Base URL configuration
-// For local development: use proxy (relative URL)
+// For local development: use same server (no proxy needed)
 // For production: use environment variable or relative URL for Netlify
 const API_BASE_URL = process.env.NODE_ENV === 'production' 
   ? (process.env.REACT_APP_API_URL || '/api')
-  : '/api'; // Use proxy for local development
+  : '/api'; // Use same server for local development
 
 console.log('🔧 API Configuration:', {
   NODE_ENV: process.env.NODE_ENV,

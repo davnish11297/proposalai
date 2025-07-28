@@ -9,6 +9,7 @@ const helmet_1 = __importDefault(require("helmet"));
 const compression_1 = __importDefault(require("compression"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const path_1 = __importDefault(require("path"));
 const mongoClient_1 = require("./utils/mongoClient");
 const proposals_1 = __importDefault(require("./routes/proposals"));
 const comments_1 = __importDefault(require("./routes/comments"));
@@ -180,11 +181,15 @@ app.use((err, req, res, next) => {
             : err.message || 'Something went wrong'
     });
 });
-app.use('*', (req, res) => {
-    res.status(404).json({
-        success: false,
-        error: 'Route not found'
-    });
+app.use(express_1.default.static(path_1.default.join(__dirname, '../../client/build')));
+app.get('*', (req, res) => {
+    if (req.path.startsWith('/api/')) {
+        return res.status(404).json({
+            success: false,
+            error: 'Route not found'
+        });
+    }
+    return res.sendFile(path_1.default.join(__dirname, '../../client/build/index.html'));
 });
 async function startServer() {
     try {
