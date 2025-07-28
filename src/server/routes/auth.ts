@@ -191,10 +191,10 @@ router.get('/me', authenticateToken, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get current user error:', error);
+    console.error('Get user error:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to get current user'
+      error: 'Failed to get user'
     });
   }
 });

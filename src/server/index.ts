@@ -18,7 +18,7 @@ import multer from 'multer';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // Add request logging middleware for debugging
 app.use((req, res, next) => {
