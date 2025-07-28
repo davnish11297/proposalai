@@ -1,5 +1,5 @@
-import { useState, useEffect, createContext, useContext } from 'react';
-import { api } from '../services/api';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { api, authAPI } from '../services/api';
 
 interface User {
   id: string;
@@ -44,7 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const token = localStorage.getItem('token');
       if (token) {
-        const response = await api.get('/auth/me');
+        const response = await authAPI.me();
         setUser(response.data.data);
       }
     } catch (error) {
@@ -57,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       console.log('AuthContext: Making login request');
-      const response = await api.post('/auth/login', { email, password });
+      const response = await authAPI.login({ email, password });
       console.log('AuthContext: Login response received:', response.data);
       
       const { token, user } = response.data.data;
@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = async (userData: RegisterData) => {
     try {
-      const response = await api.post('/auth/register', userData);
+      const response = await authAPI.register(userData);
       const { token, user } = response.data.data;
       
       localStorage.setItem('token', token);
