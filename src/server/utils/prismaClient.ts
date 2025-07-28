@@ -32,6 +32,15 @@ const binaryPath = findPrismaBinary();
 if (binaryPath && process.env.NODE_ENV === 'production') {
   process.env.PRISMA_QUERY_ENGINE_BINARY = binaryPath;
   console.log(`🔧 Set PRISMA_QUERY_ENGINE_BINARY to: ${binaryPath}`);
+} else if (process.env.NODE_ENV === 'production') {
+  // Force the binary path for production
+  const forcedPath = path.join(process.cwd(), 'node_modules', '.prisma', 'client', 'libquery_engine-debian-openssl-3.0.x.so.node');
+  if (fs.existsSync(forcedPath)) {
+    process.env.PRISMA_QUERY_ENGINE_BINARY = forcedPath;
+    console.log(`🔧 Forced PRISMA_QUERY_ENGINE_BINARY to: ${forcedPath}`);
+  } else {
+    console.log('⚠️  Forced binary path not found:', forcedPath);
+  }
 }
 
 export const prisma = new PrismaClient({

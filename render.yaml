@@ -3,8 +3,8 @@ services:
     name: proposalai-backend
     env: node
     plan: free
-    buildCommand: chmod +x render-simple.sh && ./render-simple.sh
-    startCommand: cd src/server && npm start
+    buildCommand: chmod +x render-force.sh && ./render-force.sh
+    startCommand: cd src/server && PRISMA_QUERY_ENGINE_BINARY=node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node npm start
     envVars:
       - key: NODE_ENV
         value: production

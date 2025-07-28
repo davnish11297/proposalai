@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
-import { connectDatabase, prisma } from './utils/prismaClient';
+import { connectDatabase, prisma } from './utils/prismaConfig';
 import proposalsRouter from './routes/proposals';
 import commentsRouter from './routes/comments';
 import teamsRouter from './routes/teams';
