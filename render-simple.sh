@@ -1,22 +1,18 @@
 #!/bin/bash
 
-echo "🚀 Starting simple Render deployment based on Stack Overflow solutions..."
+echo "🚀 Starting Render deployment with Prisma schema copied BEFORE npm install..."
 
 # Navigate to server directory
 cd src/server
 
-# Install dependencies
-echo "📥 Installing dependencies..."
-npm install
-
-# Copy Prisma schema
-echo "📋 Setting up Prisma schema..."
+# Copy Prisma schema FIRST (before npm install)
+echo "📋 Setting up Prisma schema BEFORE npm install..."
 mkdir -p prisma
 cp ../../prisma/schema.prisma ./prisma/schema.prisma
 
-# Generate Prisma client
-echo "🔨 Generating Prisma client..."
-npx prisma generate
+# Install dependencies (Prisma client will be generated during install)
+echo "📥 Installing dependencies..."
+npm install
 
 # List generated binaries
 echo "📋 Generated Prisma binaries:"
@@ -35,4 +31,4 @@ ls -la node_modules/@prisma/client/libquery_engine-debian-openssl-*.so.node 2>/d
 echo "🔨 Building TypeScript..."
 npm run build
 
-echo "✅ Simple Render deployment completed successfully!" 
+echo "✅ Render deployment completed successfully!" 
