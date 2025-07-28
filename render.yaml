@@ -1,20 +1,28 @@
 services:
   - type: web
-    name: proposalai-backend
+    name: proposalai
     env: node
     plan: free
-    buildCommand: chmod +x render-docker.sh && ./render-docker.sh
-    startCommand: cd src/server && npm run build && node dist/index.js
+    buildCommand: npm run build
+    startCommand: npm start
     envVars:
-      - key: NODE_ENV
-        value: production
       - key: DATABASE_URL
         sync: false
       - key: SESSION_SECRET
-        sync: false
+        generateValue: true
       - key: SENDGRID_API_KEY
         sync: false
       - key: FROM_EMAIL
         sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CALLBACK_URL
+        sync: false
       - key: CORS_ORIGIN
-        sync: false 
+        sync: false
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 900000
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 100 
