@@ -5,68 +5,46 @@ import { ICreateTeam, IUpdateTeam, IAddTeamMember, IUpdateTeamMember } from '../
 
 export class TeamController {
   // Get all teams for the organization
-  async getTeams(req: AuthenticatedRequest, res: Response): Promise<void> {
+  async getTeams(req: AuthenticatedRequest, res: Response) {
     try {
-      const { page = 1, limit = 20, search } = req.query;
-      const skip = (Number(page) - 1) * Number(limit);
-
-      const where = {
-        organizationId: req.user!.organizationId,
-        isActive: true,
-        ...(search && {
-          OR: [
-            { name: { contains: search as string, mode: 'insensitive' as const } },
-            { description: { contains: search as string, mode: 'insensitive' as const } },
-          ],
-        }),
-      };
-
-      const [teams, total] = await Promise.all([
-        db.team.findMany({
-          where,
-          include: {
-            members: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    firstName: true,
-                    lastName: true,
-                    email: true,
-                    avatar: true,
-                  },
-                },
-              },
-            },
-            _count: {
-              select: {
-                members: true,
-                proposals: true,
-              },
-            },
-          },
-          orderBy: { updatedAt: 'desc' },
-          skip,
-          take: Number(limit),
-        }),
-        db.team.count({ where }),
-      ]);
-
-      res.json({
-        success: true,
-        data: teams,
-        pagination: {
-          page: Number(page),
-          limit: Number(limit),
-          total,
-          pages: Math.ceil(total / Number(limit)),
+      const teams = await db.team.findMany({
+        where: { organizationId: req.user!.organizationId },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true
+                }
+              }
+            }
+          }
         },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      const teamsWithStats = teams.map(team => ({
+        ...team,
+        memberCount: team.members.length,
+        members: team.members.map((member: any) => ({
+          id: member.id,
+          role: member.role,
+          user: member.user
+        }))
+      }));
+
+      return res.json({
+        success: true,
+        data: teamsWithStats
       });
     } catch (error) {
       console.error('Get teams error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
-        message: 'Failed to fetch teams',
+        error: 'Failed to fetch teams'
       });
     }
   }
@@ -138,55 +116,50 @@ export class TeamController {
   }
 
   // Create a new team
-  async createTeam(req: AuthenticatedRequest, res: Response): Promise<void> {
+  async createTeam(req: AuthenticatedRequest, res: Response) {
     try {
-      const teamData: ICreateTeam = req.body;
+      const { name, description } = req.body;
+
+      if (!name) {
+        return res.status(400).json({
+          success: false,
+          error: 'Team name is required'
+        });
+      }
+
+      // Check if team name already exists in organization
+      const existingTeam = await db.team.findFirst({
+        where: {
+          name,
+          organizationId: req.user!.organizationId
+        }
+      });
+
+      if (existingTeam) {
+        return res.status(400).json({
+          success: false,
+          error: 'Team with this name already exists'
+        });
+      }
 
       const team = await db.team.create({
         data: {
-          name: teamData.name,
-          description: teamData.description,
-          organizationId: req.user!.organizationId!,
-          members: {
-            create: {
-              userId: req.user!.userId!,
-              role: 'ADMIN',
-            },
-          },
-        },
-        include: {
-          members: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  email: true,
-                  avatar: true,
-                },
-              },
-            },
-          },
-          _count: {
-            select: {
-              members: true,
-              proposals: true,
-            },
-          },
-        },
+          name,
+          description,
+          organizationId: req.user!.organizationId!
+        }
       });
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         data: team,
-        message: 'Team created successfully',
+        message: 'Team created successfully'
       });
     } catch (error) {
       console.error('Create team error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
-        message: 'Failed to create team',
+        error: 'Failed to create team'
       });
     }
   }

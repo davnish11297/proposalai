@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.commentController = exports.CommentController = void 0;
 const database_1 = require("../utils/database");
-const emailService_1 = require("../services/emailService");
 const notificationController_1 = require("./notificationController");
 class CommentController {
     async getComments(req, res) {
@@ -101,113 +100,54 @@ class CommentController {
     async createComment(req, res) {
         try {
             const { proposalId } = req.params;
-            const commentData = req.body;
-            const proposalCreate = await database_1.prisma.proposal.findFirst({
+            const { content } = req.body;
+            if (!content) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Comment content is required'
+                });
+            }
+            const proposal = await database_1.prisma.proposal.findFirst({
                 where: {
                     id: proposalId,
-                    organizationId: req.user.organizationId,
+                    organizationId: req.user.organizationId
                 }
             });
-            if (!proposalCreate) {
-                res.status(404).json({
+            if (!proposal) {
+                return res.status(404).json({
                     success: false,
                     error: 'Proposal not found'
                 });
-                return;
             }
             const comment = await database_1.prisma.comment.create({
                 data: {
-                    content: commentData.content,
-                    authorId: req.user.userId,
-                    proposalId,
-                },
-                include: {
-                    author: {
-                        select: {
-                            name: true,
-                            email: true
-                        }
-                    }
-                }
-            });
-            await database_1.prisma.activity.create({
-                data: {
-                    type: 'COMMENTED',
-                    message: `User commented on proposal`,
+                    content,
                     userId: req.user.userId,
                     proposalId,
-                    details: JSON.stringify({ commentId: comment.id })
+                    organizationId: req.user.organizationId
                 }
             });
-            const proposal = await database_1.prisma.proposal.findFirst({
-                where: { id: proposalId },
-                include: { author: true }
-            });
-            if (proposal && proposal.authorId !== req.user.userId) {
-                await notificationController_1.notificationController.createNotification({
-                    userId: proposal.authorId,
-                    type: 'COMMENT',
-                    title: 'New Client Comment',
-                    message: `A client commented on your proposal "${proposal.title}"`,
-                    proposalId,
-                    metadata: {
-                        commentId: comment.id,
-                        clientName: req.user.name || req.user.email
-                    }
-                });
-            }
-            const proposalWithComments = await database_1.prisma.proposal.findFirst({
-                where: { id: proposalId },
-                include: {
-                    comments: {
-                        where: {
-                            author: {
-                                isPublicUser: true
-                            }
-                        },
-                        orderBy: { createdAt: 'desc' },
-                        take: 1,
-                        include: {
-                            author: true
-                        }
-                    }
+            await notificationController_1.notificationController.createNotification({
+                userId: proposal.userId,
+                type: 'COMMENT_ADDED',
+                title: 'New Comment',
+                message: `New comment added to proposal "${proposal.title}"`,
+                proposalId,
+                metadata: {
+                    commentId: comment.id,
+                    commenterName: req.user.email || 'Proposal Owner',
+                    clientName: proposal.clientName
                 }
             });
-            if (proposalWithComments && proposalWithComments.comments.length > 0 && proposalWithComments.authorId === req.user.userId) {
-                const latestClientComment = proposalWithComments.comments[0];
-                let accessCode = '';
-                try {
-                    const metadata = proposalWithComments.metadata ? JSON.parse(proposalWithComments.metadata) : {};
-                    accessCode = metadata.accessCodes?.[0] || '';
-                }
-                catch (error) {
-                    console.error('Error parsing proposal metadata for access code:', error);
-                }
-                if (accessCode && latestClientComment.author.email) {
-                    try {
-                        await emailService_1.emailService.sendClientReplyNotificationEmail({
-                            to: latestClientComment.author.email,
-                            proposalTitle: proposalWithComments.title,
-                            proposalId: proposalWithComments.id,
-                            ownerName: req.user.name || 'Proposal Owner',
-                            replyContent: commentData.content,
-                            accessCode
-                        });
-                    }
-                    catch (emailError) {
-                        console.error('Failed to send client reply notification:', emailError);
-                    }
-                }
-            }
-            res.status(201).json({
+            return res.status(201).json({
                 success: true,
                 data: comment,
-                message: 'Comment added successfully'
+                message: 'Comment created successfully'
             });
         }
         catch (error) {
             console.error('Create comment error:', error);
-            res.status(500).json({
+            return res.status(500).json({
                 success: false,
                 error: 'Failed to create comment'
             });
@@ -216,60 +156,42 @@ class CommentController {
     async updateComment(req, res) {
         try {
             const { id } = req.params;
-            const updateData = req.body;
+            const { content } = req.body;
+            if (!content) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Comment content is required'
+                });
+            }
             const existingComment = await database_1.prisma.comment.findFirst({
-                where: { id },
-                include: {
-                    proposal: {
-                        select: { organizationId: true }
-                    }
+                where: {
+                    id,
+                    userId: req.user.userId,
+                    organizationId: req.user.organizationId
                 }
             });
             if (!existingComment) {
-                res.status(404).json({
+                return res.status(404).json({
                     success: false,
-                    error: 'Comment not found'
+                    error: 'Comment not found or access denied'
                 });
-                return;
             }
-            if (existingComment.proposal.organizationId !== req.user.organizationId) {
-                res.status(403).json({
-                    success: false,
-                    error: 'Access denied'
-                });
-                return;
-            }
-            if (existingComment.authorId !== req.user.userId) {
-                res.status(403).json({
-                    success: false,
-                    error: 'You can only edit your own comments'
-                });
-                return;
-            }
-            const comment = await database_1.prisma.comment.update({
+            const updatedComment = await database_1.prisma.comment.update({
                 where: { id },
                 data: {
-                    content: updateData.content,
-                    position: updateData.position || null,
-                },
-                include: {
-                    author: {
-                        select: {
-                            name: true,
-                            email: true
-                        }
-                    }
+                    content,
+                    updatedAt: new Date()
                 }
             });
-            res.json({
+            return res.json({
                 success: true,
-                data: comment,
+                data: updatedComment,
                 message: 'Comment updated successfully'
             });
         }
         catch (error) {
             console.error('Update comment error:', error);
-            res.status(500).json({
+            return res.status(500).json({
                 success: false,
                 error: 'Failed to update comment'
             });

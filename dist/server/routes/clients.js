@@ -1,12 +1,9 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = __importDefault(require("express"));
-const auth_1 = require("../middleware/auth");
+const express_1 = require("express");
 const clientController_1 = require("../controllers/clientController");
-const router = express_1.default.Router();
+const auth_1 = require("../middleware/auth");
+const router = (0, express_1.Router)();
 router.get('/', auth_1.authenticateToken, (req, res) => clientController_1.clientController.getClients(req, res));
 router.get('/:id', auth_1.authenticateToken, (req, res) => clientController_1.clientController.getClient(req, res));
 router.post('/', auth_1.authenticateToken, (req, res) => clientController_1.clientController.createClient(req, res));

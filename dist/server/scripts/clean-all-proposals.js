@@ -1,10 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const client_1 = require("@prisma/client");
-const db = new client_1.PrismaClient();
+const database_1 = require("../utils/database");
 async function cleanAllProposals() {
     try {
-        const proposals = await db.proposal.findMany();
+        const proposals = await database_1.prisma.proposal.findMany();
         let fixed = 0;
         for (const proposal of proposals) {
             let content = proposal.content;
@@ -37,7 +36,7 @@ async function cleanAllProposals() {
                 needsUpdate = true;
             }
             if (needsUpdate) {
-                await db.proposal.update({
+                await database_1.prisma.proposal.update({
                     where: { id: proposal.id },
                     data: { content: JSON.stringify(content) }
                 });
@@ -51,7 +50,7 @@ async function cleanAllProposals() {
         console.error('Error cleaning proposals:', error);
     }
     finally {
-        await db.$disconnect();
+        process.exit(0);
     }
 }
 cleanAllProposals();

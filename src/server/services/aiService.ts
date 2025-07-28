@@ -342,7 +342,7 @@ export class AIService {
 
       console.log(`🤖 Anthropic API response status: ${response.stop_reason}`);
 
-      const content = response.content[0]?.text;
+      const content = response.content[0]?.type === 'text' ? response.content[0]?.text : '';
       console.log('🤖 Anthropic generated content:', content);
       
       return {
@@ -455,7 +455,7 @@ export class AIService {
     for (const key in content) {
       const value = content[key as keyof typeof content];
       if (typeof value === 'string') {
-        content[key as keyof typeof content] = value
+        (content as any)[key] = value
           .replace(/\*\*(.*?)\*\*/g, '$1')
           .replace(/\*(.*?)\*/g, '$1')
           .replace(/`(.*?)`/g, '$1')

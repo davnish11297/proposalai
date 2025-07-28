@@ -1,119 +1,94 @@
 import { Request, Response } from 'express';
 import { prisma } from '../utils/database';
-
-// Extend Request type to include user
-interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-    organizationId: string;
-    email: string;
-  };
-}
+import { AuthenticatedRequest } from '../middleware/auth';
 
 export class OrganizationController {
-  // Get organization brand settings
-  static async getBrandSettings(req: AuthenticatedRequest, res: Response): Promise<void> {
+  static async getBrandSettings(req: AuthenticatedRequest, res: Response) {
     try {
-      const organizationId = req.user?.organizationId;
-      
-      if (!organizationId) {
-        res.status(401).json({ error: 'Organization not found' });
-        return;
-      }
-
       const organization = await prisma.organization.findUnique({
-        where: { id: organizationId },
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          logo: true,
-          website: true,
-          industry: true,
-          size: true,
-          primaryColor: true,
-          secondaryColor: true,
-          fontFamily: true,
-          brandVoice: true,
-          brandGuidelines: true,
-          valueProps: true,
-        }
+        where: { id: req.user!.organizationId }
       });
 
       if (!organization) {
-        res.status(404).json({ error: 'Organization not found' });
-        return;
+        return res.status(404).json({
+          success: false,
+          error: 'Organization not found'
+        });
       }
 
-      res.json(organization);
+      return res.json({
+        success: true,
+        data: {
+          primaryColor: organization.primaryColor,
+          secondaryColor: organization.secondaryColor,
+          fontFamily: organization.fontFamily,
+          brandVoice: organization.brandVoice,
+          brandGuidelines: organization.brandGuidelines,
+          valueProps: organization.valueProps
+        }
+      });
     } catch (error) {
       console.error('Get brand settings error:', error);
-      res.status(500).json({ error: 'Failed to get brand settings' });
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch brand settings'
+      });
     }
   }
 
-  // Update organization brand settings
-  static async updateBrandSettings(req: AuthenticatedRequest, res: Response): Promise<void> {
+  static async updateBrandSettings(req: AuthenticatedRequest, res: Response) {
     try {
-      const organizationId = req.user?.organizationId;
-      
-      if (!organizationId) {
-        res.status(401).json({ error: 'Organization not found' });
-        return;
-      }
+      const { primaryColor, secondaryColor, fontFamily, brandVoice, brandGuidelines, valueProps } = req.body;
 
-      const {
-        name,
-        description,
-        logo,
-        website,
-        industry,
-        size,
-        primaryColor,
-        secondaryColor,
-        fontFamily,
-        brandVoice,
-        brandGuidelines,
-        valueProps
-      } = req.body;
-
-      const updatedOrganization = await prisma.organization.update({
-        where: { id: organizationId },
+      const organization = await prisma.organization.update({
+        where: { id: req.user!.organizationId },
         data: {
-          name,
-          description,
-          logo,
-          website,
-          industry,
-          size,
           primaryColor,
           secondaryColor,
           fontFamily,
           brandVoice,
           brandGuidelines,
           valueProps
-        },
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          logo: true,
-          website: true,
-          industry: true,
-          size: true,
-          primaryColor: true,
-          secondaryColor: true,
-          fontFamily: true,
-          brandVoice: true,
-          brandGuidelines: true,
-          valueProps: true,
         }
       });
 
-      res.json(updatedOrganization);
+      return res.json({
+        success: true,
+        data: organization,
+        message: 'Brand settings updated successfully'
+      });
     } catch (error) {
       console.error('Update brand settings error:', error);
-      res.status(500).json({ error: 'Failed to update brand settings' });
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update brand settings'
+      });
+    }
+  }
+
+  static async getCurrentOrganization(req: AuthenticatedRequest, res: Response) {
+    try {
+      const organization = await prisma.organization.findUnique({
+        where: { id: req.user!.organizationId }
+      });
+
+      if (!organization) {
+        return res.status(404).json({
+          success: false,
+          error: 'Organization not found'
+        });
+      }
+
+      return res.json({
+        success: true,
+        data: organization
+      });
+    } catch (error) {
+      console.error('Get current organization error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch organization'
+      });
     }
   }
 } 

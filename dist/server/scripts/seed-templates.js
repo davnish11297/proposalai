@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const database_1 = require("../utils/database");
 async function main() {
     console.log('🌱 Starting template and snippet seeding...');
     const sampleTemplates = [
@@ -98,7 +97,7 @@ async function main() {
     ];
     console.log('📄 Creating sample templates...');
     for (const templateData of sampleTemplates) {
-        const template = await prisma.template.create({
+        const template = await database_1.prisma.template.create({
             data: templateData
         });
         console.log(`✅ Created template: ${template.name} (${template.category})`);
@@ -149,7 +148,7 @@ async function main() {
     ];
     console.log('📝 Creating sample snippets...');
     for (const snippetData of sampleSnippets) {
-        const snippet = await prisma.snippet.create({
+        const snippet = await database_1.prisma.snippet.create({
             data: snippetData
         });
         console.log(`✅ Created snippet: ${snippet.title} (${snippet.category})`);
@@ -165,6 +164,6 @@ main()
     process.exit(1);
 })
     .finally(async () => {
-    await prisma.$disconnect();
+    process.exit(0);
 });
 //# sourceMappingURL=seed-templates.js.map

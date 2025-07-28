@@ -1,11 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const database_1 = require("../utils/database");
 async function fixAllProposals() {
     console.log('🔧 Starting to fix all proposals...');
     try {
-        const proposals = await prisma.proposal.findMany();
+        const proposals = await database_1.prisma.proposal.findMany();
         console.log(`📄 Found ${proposals.length} proposals to process`);
         for (const proposal of proposals) {
             console.log(`\n🔧 Processing proposal: ${proposal.title} (ID: ${proposal.id})`);
@@ -31,7 +30,7 @@ async function fixAllProposals() {
                     timeline: "The project will be completed in phases with regular milestones and updates. We'll provide a detailed timeline during the planning phase to ensure clear expectations and successful delivery.",
                     budget: "$5,000 - $25,000"
                 };
-                await prisma.proposal.update({
+                await database_1.prisma.proposal.update({
                     where: { id: proposal.id },
                     data: {
                         content: JSON.stringify(fixedContent)
@@ -48,7 +47,7 @@ async function fixAllProposals() {
                     timeline: "The project will be completed in phases with regular milestones and updates. We'll provide a detailed timeline during the planning phase to ensure clear expectations and successful delivery.",
                     budget: "$5,000 - $25,000"
                 };
-                await prisma.proposal.update({
+                await database_1.prisma.proposal.update({
                     where: { id: proposal.id },
                     data: {
                         content: JSON.stringify(fixedContent)
@@ -65,7 +64,7 @@ async function fixAllProposals() {
                     timeline: "The project will be completed in phases with regular milestones and updates. We'll provide a detailed timeline during the planning phase to ensure clear expectations and successful delivery.",
                     budget: "$5,000 - $25,000"
                 };
-                await prisma.proposal.update({
+                await database_1.prisma.proposal.update({
                     where: { id: proposal.id },
                     data: {
                         content: JSON.stringify(fixedContent)
@@ -81,7 +80,7 @@ async function fixAllProposals() {
         console.error('❌ Error fixing proposals:', error);
     }
     finally {
-        await prisma.$disconnect();
+        process.exit(0);
     }
 }
 fixAllProposals();

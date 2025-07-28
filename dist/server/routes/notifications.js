@@ -5,10 +5,10 @@ const notificationController_1 = require("../controllers/notificationController"
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticateToken);
-router.get('/', notificationController_1.notificationController.getNotifications);
-router.get('/unread-count', notificationController_1.notificationController.getUnreadCount);
-router.put('/:id/read', notificationController_1.notificationController.markAsRead);
-router.put('/mark-all-read', notificationController_1.notificationController.markAllAsRead);
-router.get('/proposal/:proposalId', notificationController_1.notificationController.getByProposal);
+router.get('/', (req, res) => notificationController_1.notificationController.getNotifications(req, res));
+router.get('/unread-count', (req, res) => notificationController_1.notificationController.getUnreadCount(req, res));
+router.put('/:id/read', (req, res) => notificationController_1.notificationController.markAsRead(req, res));
+router.put('/mark-all-read', (req, res) => notificationController_1.notificationController.markAllAsRead(req, res));
+router.get('/proposal/:proposalId', (req, res) => notificationController_1.notificationController.getByProposal(req, res));
 exports.default = router;
 //# sourceMappingURL=notifications.js.map

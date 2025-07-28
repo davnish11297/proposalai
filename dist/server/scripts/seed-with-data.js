@@ -3,13 +3,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const client_1 = require("@prisma/client");
+const database_1 = require("../utils/database");
 const bcrypt_1 = __importDefault(require("bcrypt"));
-const prisma = new client_1.PrismaClient();
 async function main() {
     console.log('🌱 Starting comprehensive database seed...');
     const hashedPassword = await bcrypt_1.default.hash('password123', 12);
-    const user = await prisma.user.upsert({
+    const user = await database_1.prisma.user.upsert({
         where: { email: 'test@example.com' },
         update: {},
         create: {
@@ -20,20 +19,20 @@ async function main() {
         },
     });
     console.log('✅ Created test user:', user.email);
-    const organization = await prisma.organization.create({
+    const organization = await database_1.prisma.organization.create({
         data: {
             name: 'Test Organization',
             valueProps: ['Quality', 'Innovation', 'Reliability', 'Customer Focus']
         },
     });
     console.log('✅ Created test organization:', organization.name);
-    await prisma.user.update({
+    await database_1.prisma.user.update({
         where: { id: user.id },
         data: { organizationId: organization.id }
     });
     console.log('✅ Associated user with organization');
     const clients = await Promise.all([
-        prisma.client.create({
+        database_1.prisma.client.create({
             data: {
                 name: 'John Smith',
                 email: 'john.smith@acmecorp.com',
@@ -44,7 +43,7 @@ async function main() {
                 organizationId: organization.id
             }
         }),
-        prisma.client.create({
+        database_1.prisma.client.create({
             data: {
                 name: 'Sarah Johnson',
                 email: 'sarah.johnson@innovateco.com',
@@ -55,7 +54,7 @@ async function main() {
                 organizationId: organization.id
             }
         }),
-        prisma.client.create({
+        database_1.prisma.client.create({
             data: {
                 name: 'Mike Chen',
                 email: 'mike.chen@startupxyz.com',
@@ -67,9 +66,9 @@ async function main() {
             }
         })
     ]);
-    console.log('✅ Created test clients:', clients.map(c => c.name).join(', '));
+    console.log('✅ Created test clients:', clients.map((c) => c.name).join(', '));
     const drafts = await Promise.all([
-        prisma.proposal.create({
+        database_1.prisma.proposal.create({
             data: {
                 title: 'Web Development Project for Acme Corp',
                 description: 'Comprehensive web development services including frontend, backend, and database design',
@@ -86,7 +85,7 @@ async function main() {
                 client: { connect: { id: clients[0].id } }
             }
         }),
-        prisma.proposal.create({
+        database_1.prisma.proposal.create({
             data: {
                 title: 'Mobile App Development for Healthcare Platform',
                 description: 'Cross-platform mobile application for healthcare management and patient engagement',
@@ -103,7 +102,7 @@ async function main() {
                 client: { connect: { id: clients[1].id } }
             }
         }),
-        prisma.proposal.create({
+        database_1.prisma.proposal.create({
             data: {
                 title: 'E-commerce Platform Development',
                 description: 'Full-featured e-commerce platform with payment processing and inventory management',
@@ -121,9 +120,9 @@ async function main() {
             }
         })
     ]);
-    console.log('✅ Created test drafts:', drafts.map(d => d.title).join(', '));
+    console.log('✅ Created test drafts:', drafts.map((d) => d.title).join(', '));
     const sentProposals = await Promise.all([
-        prisma.proposal.create({
+        database_1.prisma.proposal.create({
             data: {
                 title: 'Digital Marketing Strategy Proposal',
                 description: 'Comprehensive digital marketing strategy including SEO, PPC, and social media management',
@@ -149,7 +148,7 @@ async function main() {
                 })
             }
         }),
-        prisma.proposal.create({
+        database_1.prisma.proposal.create({
             data: {
                 title: 'Cloud Infrastructure Migration Proposal',
                 description: 'Migration of on-premise infrastructure to cloud-based solutions for improved scalability and cost efficiency',
@@ -176,9 +175,9 @@ async function main() {
             }
         })
     ]);
-    console.log('✅ Created test sent proposals:', sentProposals.map(p => p.title).join(', '));
+    console.log('✅ Created test sent proposals:', sentProposals.map((p) => p.title).join(', '));
     await Promise.all([
-        prisma.activity.create({
+        database_1.prisma.activity.create({
             data: {
                 type: 'PROPOSAL_CREATED',
                 message: 'Created new proposal: Web Development Project for Acme Corp',
@@ -187,7 +186,7 @@ async function main() {
                 proposal: { connect: { id: drafts[0].id } }
             }
         }),
-        prisma.activity.create({
+        database_1.prisma.activity.create({
             data: {
                 type: 'PROPOSAL_SENT',
                 message: 'Sent proposal: Digital Marketing Strategy Proposal',
@@ -196,7 +195,7 @@ async function main() {
                 proposal: { connect: { id: sentProposals[0].id } }
             }
         }),
-        prisma.activity.create({
+        database_1.prisma.activity.create({
             data: {
                 type: 'PROPOSAL_SENT',
                 message: 'Sent proposal: Cloud Infrastructure Migration Proposal',
@@ -225,6 +224,6 @@ main()
     process.exit(1);
 })
     .finally(async () => {
-    await prisma.$disconnect();
+    await database_1.prisma.$disconnect();
 });
 //# sourceMappingURL=seed-with-data.js.map

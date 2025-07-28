@@ -255,15 +255,15 @@ class EmailTrackingService {
             }
         })
             .filter(Boolean);
-        const totalSent = emailTrackingData.filter(p => p.emailSentAt).length;
-        const totalOpened = emailTrackingData.filter(p => p.emailOpenedAt).length;
-        const totalReplied = emailTrackingData.filter(p => p.emailRepliedAt).length;
-        const totalClicked = emailTrackingData.filter(p => p.emailClickedAt).length;
+        const totalSent = emailTrackingData.filter(p => p && p.emailSentAt).length;
+        const totalOpened = emailTrackingData.filter(p => p && p.emailOpenedAt).length;
+        const totalReplied = emailTrackingData.filter(p => p && p.emailRepliedAt).length;
+        const totalClicked = emailTrackingData.filter(p => p && p.emailClickedAt).length;
         const openRate = totalSent > 0 ? (totalOpened / totalSent) * 100 : 0;
         const replyRate = totalSent > 0 ? (totalReplied / totalSent) * 100 : 0;
         const clickRate = totalSent > 0 ? (totalClicked / totalSent) * 100 : 0;
-        const openedProposals = emailTrackingData.filter(p => p.emailOpenedAt && p.emailSentAt);
-        const repliedProposals = emailTrackingData.filter(p => p.emailRepliedAt && p.emailSentAt);
+        const openedProposals = emailTrackingData.filter(p => p && p.emailOpenedAt && p.emailSentAt);
+        const repliedProposals = emailTrackingData.filter(p => p && p.emailRepliedAt && p.emailSentAt);
         const averageTimeToOpen = openedProposals.length > 0
             ? openedProposals.reduce((sum, p) => {
                 return sum + (p.emailOpenedAt.getTime() - p.emailSentAt.getTime()) / (1000 * 60);

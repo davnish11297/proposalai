@@ -8,7 +8,7 @@ const proposalController_1 = require("../controllers/proposalController");
 const auth_1 = require("../middleware/auth");
 const multer_1 = __importDefault(require("multer"));
 const pdfService_1 = require("../services/pdfService");
-const database_1 = __importDefault(require("../utils/database"));
+const database_1 = require("../utils/database");
 const router = (0, express_1.Router)();
 const pdfService = new pdfService_1.PDFService();
 const upload = (0, multer_1.default)({
@@ -60,7 +60,7 @@ router.get('/:id/access-requests', auth_1.authenticateToken, (req, res) => propo
 router.post('/:id/access-requests/:requestId/grant', auth_1.authenticateToken, (req, res) => proposalController_1.proposalController.grantAccessRequest(req, res));
 router.get('/drafts', async (req, res) => {
     try {
-        const drafts = await database_1.default.proposal.findMany({
+        const drafts = await database_1.prisma.proposal.findMany({
             where: { status: 'DRAFT' },
             orderBy: { createdAt: 'desc' }
         });

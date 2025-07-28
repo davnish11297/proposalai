@@ -1,10 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const database_1 = require("../utils/database");
 async function main() {
     console.log('🌱 Starting client seeding...');
-    const user = await prisma.user.findUnique({
+    const user = await database_1.prisma.user.findUnique({
         where: { email: 'test@example.com' },
         include: { organization: true }
     });
@@ -65,7 +64,7 @@ async function main() {
     ];
     console.log('👥 Creating sample clients...');
     for (const clientData of sampleClients) {
-        const client = await prisma.client.create({
+        const client = await database_1.prisma.client.create({
             data: clientData
         });
         console.log(`✅ Created client: ${client.name} (${client.company})`);
@@ -79,6 +78,6 @@ main()
     process.exit(1);
 })
     .finally(async () => {
-    await prisma.$disconnect();
+    await database_1.prisma.$disconnect();
 });
 //# sourceMappingURL=seed-clients.js.map

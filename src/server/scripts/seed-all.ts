@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/database';
 import bcrypt from 'bcrypt';
-
-const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Starting comprehensive database seeding...\n');
@@ -26,7 +24,6 @@ async function main() {
     create: {
       id: 'test-org',
       name: 'Test Organization',
-      description: 'A test organization for development',
       industry: 'Technology'
     },
   });
@@ -309,7 +306,6 @@ A comprehensive mobile solution featuring:
         clientName: proposalData.clientName,
         authorId: user.id,
         organizationId: user.organizationId!,
-        emailSentAt: proposalData.status === 'SENT' ? proposalData.sentAt : null,
         emailRecipient: proposalData.status === 'SENT' ? proposalData.clientEmail : null,
         emailStatus: proposalData.status === 'SENT' ? 'SENT' : null,
         createdAt: proposalData.status === 'SENT' 
@@ -445,5 +441,6 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    // MongoDB doesn't need explicit disconnection
+    process.exit(0);
   }); 

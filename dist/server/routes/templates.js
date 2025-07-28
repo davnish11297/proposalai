@@ -1,28 +1,24 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = __importDefault(require("express"));
-const auth_1 = require("../middleware/auth");
+const express_1 = require("express");
 const database_1 = require("../utils/database");
-const router = express_1.default.Router();
+const auth_1 = require("../middleware/auth");
+const router = (0, express_1.Router)();
 router.get('/', auth_1.authenticateToken, async (req, res) => {
     try {
+        const authenticatedReq = req;
         const templates = await database_1.prisma.template.findMany({
-            where: {
-                isActive: true,
-            },
+            where: { organizationId: authenticatedReq.user.organizationId },
             orderBy: { updatedAt: 'desc' }
         });
-        res.json({
+        return res.json({
             success: true,
             data: templates
         });
     }
     catch (error) {
         console.error('Get templates error:', error);
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             error: 'Failed to fetch templates'
         });
@@ -30,14 +26,28 @@ router.get('/', auth_1.authenticateToken, async (req, res) => {
 });
 router.get('/:id', auth_1.authenticateToken, async (req, res) => {
     try {
-        res.json({
+        const { id } = req.params;
+        const authenticatedReq = req;
+        const template = await database_1.prisma.template.findUnique({
+            where: {
+                id,
+                organizationId: authenticatedReq.user.organizationId
+            }
+        });
+        if (!template) {
+            return res.status(404).json({
+                success: false,
+                error: 'Template not found'
+            });
+        }
+        return res.json({
             success: true,
-            data: {},
-            message: 'Template detail endpoint - implementation pending'
+            data: template
         });
     }
     catch (error) {
-        res.status(500).json({
+        console.error('Get template error:', error);
+        return res.status(500).json({
             success: false,
             error: 'Failed to fetch template'
         });
@@ -45,14 +55,33 @@ router.get('/:id', auth_1.authenticateToken, async (req, res) => {
 });
 router.post('/', auth_1.authenticateToken, async (req, res) => {
     try {
-        res.json({
+        const { name, description, category, content, isPublic } = req.body;
+        const authenticatedReq = req;
+        if (!name || !category || !content) {
+            return res.status(400).json({
+                success: false,
+                error: 'Name, category, and content are required'
+            });
+        }
+        const template = await database_1.prisma.template.create({
+            data: {
+                name,
+                description,
+                category,
+                content,
+                isPublic: isPublic || false,
+                organizationId: authenticatedReq.user.organizationId
+            }
+        });
+        return res.status(201).json({
             success: true,
-            data: {},
-            message: 'Create template endpoint - implementation pending'
+            data: template,
+            message: 'Template created successfully'
         });
     }
     catch (error) {
-        res.status(500).json({
+        console.error('Create template error:', error);
+        return res.status(500).json({
             success: false,
             error: 'Failed to create template'
         });
@@ -60,14 +89,41 @@ router.post('/', auth_1.authenticateToken, async (req, res) => {
 });
 router.put('/:id', auth_1.authenticateToken, async (req, res) => {
     try {
-        res.json({
+        const { id } = req.params;
+        const { name, description, category, content, isPublic } = req.body;
+        const authenticatedReq = req;
+        const existingTemplate = await database_1.prisma.template.findFirst({
+            where: {
+                id,
+                organizationId: authenticatedReq.user.organizationId
+            }
+        });
+        if (!existingTemplate) {
+            return res.status(404).json({
+                success: false,
+                error: 'Template not found'
+            });
+        }
+        const updatedTemplate = await database_1.prisma.template.update({
+            where: { id },
+            data: {
+                name,
+                description,
+                category,
+                content,
+                isPublic,
+                updatedAt: new Date()
+            }
+        });
+        return res.json({
             success: true,
-            data: {},
-            message: 'Update template endpoint - implementation pending'
+            data: updatedTemplate,
+            message: 'Template updated successfully'
         });
     }
     catch (error) {
-        res.status(500).json({
+        console.error('Update template error:', error);
+        return res.status(500).json({
             success: false,
             error: 'Failed to update template'
         });
@@ -75,13 +131,31 @@ router.put('/:id', auth_1.authenticateToken, async (req, res) => {
 });
 router.delete('/:id', auth_1.authenticateToken, async (req, res) => {
     try {
-        res.json({
+        const { id } = req.params;
+        const authenticatedReq = req;
+        const existingTemplate = await database_1.prisma.template.findFirst({
+            where: {
+                id,
+                organizationId: authenticatedReq.user.organizationId
+            }
+        });
+        if (!existingTemplate) {
+            return res.status(404).json({
+                success: false,
+                error: 'Template not found'
+            });
+        }
+        await database_1.prisma.template.delete({
+            where: { id }
+        });
+        return res.json({
             success: true,
-            message: 'Delete template endpoint - implementation pending'
+            message: 'Template deleted successfully'
         });
     }
     catch (error) {
-        res.status(500).json({
+        console.error('Delete template error:', error);
+        return res.status(500).json({
             success: false,
             error: 'Failed to delete template'
         });

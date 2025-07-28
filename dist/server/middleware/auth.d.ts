@@ -5,8 +5,8 @@ export interface AuthenticatedRequest extends Request {
         organizationId?: string;
     };
 }
-export declare function authenticateToken(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void>;
-export declare function requireRole(allowedRoles: string[]): (req: AuthenticatedRequest, res: Response, next: NextFunction) => void;
-export declare function requireOrganization(req: AuthenticatedRequest, res: Response, next: NextFunction): void;
-export declare function optionalAuth(req: AuthenticatedRequest, res: Response, next: NextFunction): void;
+export declare function authenticateToken(req: Request, res: Response, next: NextFunction): Promise<void>;
+export declare function requireRole(allowedRoles: string[]): (req: Request, res: Response, next: NextFunction) => void;
+export declare function requireOrganization(req: Request, res: Response, next: NextFunction): void;
+export declare function optionalAuth(req: Request, res: Response, next: NextFunction): void;
 //# sourceMappingURL=auth.d.ts.map

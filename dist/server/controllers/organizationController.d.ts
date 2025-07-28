@@ -1,14 +1,8 @@
-import { Request, Response } from 'express';
-interface AuthenticatedRequest extends Request {
-    user?: {
-        id: string;
-        organizationId: string;
-        email: string;
-    };
-}
+import { Response } from 'express';
+import { AuthenticatedRequest } from '../middleware/auth';
 export declare class OrganizationController {
-    static getBrandSettings(req: AuthenticatedRequest, res: Response): Promise<void>;
-    static updateBrandSettings(req: AuthenticatedRequest, res: Response): Promise<void>;
+    static getBrandSettings(req: AuthenticatedRequest, res: Response): Promise<Response<any, Record<string, any>>>;
+    static updateBrandSettings(req: AuthenticatedRequest, res: Response): Promise<Response<any, Record<string, any>>>;
+    static getCurrentOrganization(req: AuthenticatedRequest, res: Response): Promise<Response<any, Record<string, any>>>;
 }
-export {};
 //# sourceMappingURL=organizationController.d.ts.map

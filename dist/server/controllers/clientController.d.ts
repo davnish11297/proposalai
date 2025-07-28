@@ -3,7 +3,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 export declare class ClientController {
     getClients(req: AuthenticatedRequest, res: Response): Promise<void>;
     getClient(req: AuthenticatedRequest, res: Response): Promise<void>;
-    createClient(req: AuthenticatedRequest, res: Response): Promise<Response<any, Record<string, any>> | undefined>;
+    createClient(req: AuthenticatedRequest, res: Response): Promise<Response<any, Record<string, any>>>;
     updateClient(req: AuthenticatedRequest, res: Response): Promise<void>;
     deleteClient(req: AuthenticatedRequest, res: Response): Promise<void>;
 }

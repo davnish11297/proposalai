@@ -9,7 +9,7 @@ const helmet_1 = __importDefault(require("helmet"));
 const compression_1 = __importDefault(require("compression"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const dotenv_1 = __importDefault(require("dotenv"));
-const database_1 = require("./utils/database");
+const mongoClient_1 = require("./utils/mongoClient");
 const proposals_1 = __importDefault(require("./routes/proposals"));
 const comments_1 = __importDefault(require("./routes/comments"));
 const teams_1 = __importDefault(require("./routes/teams"));
@@ -22,7 +22,7 @@ dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3000;
 app.use((req, res, next) => {
-    console.log(`[${req.method}] ${req.originalUrl}`);
+    console.log(`[${req.method}] ${req.originalUrl} - Origin: ${req.headers.origin || 'No origin'}`);
     next();
 });
 app.set('trust proxy', 1);
@@ -47,6 +47,7 @@ app.use(passport_1.default.initialize());
 app.use(passport_1.default.session());
 const allowedOrigins = [
     'http://localhost:3000',
+    'http://localhost:3001',
     'http://localhost:3002',
     'http://localhost:3003',
     'http://localhost:3004',
@@ -55,29 +56,32 @@ const allowedOrigins = [
     'http://localhost:3007',
     'http://localhost:3008',
     'http://localhost:3009',
-    'http://localhost:3010'
+    'http://localhost:3010',
+    'https://proposalai-app.netlify.app',
+    'https://688697ba702b508862421f57--proposalai-app.netlify.app',
+    'https://688699ca5aaf0e00088b9001--proposalai-app.netlify.app'
 ];
-if (process.env.CORS_ORIGIN)
-    allowedOrigins.push(process.env.CORS_ORIGIN);
-const corsOptions = process.env.NODE_ENV === 'production'
-    ? {
-        origin: allowedOrigins,
-        credentials: true,
-    }
-    : {
-        origin: function (origin, callback) {
-            if (!origin)
-                return callback(null, true);
-            if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
-                return callback(null, true);
-            }
-            if (allowedOrigins.includes(origin)) {
-                return callback(null, true);
-            }
-            callback(new Error('Not allowed by CORS'));
-        },
-        credentials: true,
-    };
+if (process.env.CORS_ORIGIN) {
+    const envOrigins = process.env.CORS_ORIGIN.split(',').map(origin => origin.trim());
+    allowedOrigins.push(...envOrigins);
+}
+const corsOptions = {
+    origin: function (origin, callback) {
+        if (!origin)
+            return callback(null, true);
+        if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
+            return callback(null, true);
+        }
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        console.log(`CORS blocked origin: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+};
 app.use((0, cors_1.default)(corsOptions));
 const limiter = (0, express_rate_limit_1.default)({
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),
@@ -184,7 +188,22 @@ app.use('*', (req, res) => {
 });
 async function startServer() {
     try {
-        await (0, database_1.connectDatabase)();
+        let retries = 3;
+        while (retries > 0) {
+            try {
+                await (0, mongoClient_1.connectToDatabase)();
+                break;
+            }
+            catch (error) {
+                retries--;
+                if (retries === 0) {
+                    console.error('Failed to connect to database after 3 attempts:', error);
+                    process.exit(1);
+                }
+                console.log(`Database connection failed, retrying... (${retries} attempts left)`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+        }
         app.listen(PORT, () => {
             console.log(`🚀 ProposalAI server running on port ${PORT}`);
             console.log(`📊 Health check: http://localhost:${PORT}/health`);

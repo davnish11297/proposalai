@@ -149,7 +149,7 @@ export const prisma = {
       const doc = await collection.findOne(convertWhere(args.where));
       return convertMongoDoc(doc);
     },
-    findMany: async (args: any) => {
+    findMany: async (args: any = {}) => {
       const collection = await getUsersCollection();
       const docs = await collection.find(convertWhere(args.where || {})).toArray();
       return docs.map(convertMongoDoc);
@@ -171,6 +171,20 @@ export const prisma = {
       const doc = await collection.findOne(convertWhere(args.where));
       return convertMongoDoc(doc);
     },
+    upsert: async (args: any) => {
+      const collection = await getUsersCollection();
+      const where = convertWhere(args.where);
+      const existing = await collection.findOne(where);
+      if (existing) {
+        await collection.updateOne(where, { $set: args.update || args.create });
+        const doc = await collection.findOne(where);
+        return convertMongoDoc(doc);
+      } else {
+        const result = await collection.insertOne(args.create);
+        const doc = await collection.findOne({ _id: result.insertedId });
+        return convertMongoDoc(doc);
+      }
+    },
     delete: async (args: any) => {
       const collection = await getUsersCollection();
       return collection.deleteOne(convertWhere(args.where));
@@ -187,7 +201,7 @@ export const prisma = {
       const doc = await collection.findOne(where);
       return doc ? convertMongoDoc(doc) : null;
     },
-    findMany: async (args: any) => {
+    findMany: async (args: any = {}) => {
       const collection = await getProposalsCollection();
       const where = args.where ? convertWhere(args.where) : {};
       const cursor = collection.find(where);
@@ -370,7 +384,7 @@ export const prisma = {
       const doc = await collection.findOne(convertWhere(args.where));
       return convertMongoDoc(doc);
     },
-    findMany: async (args: any) => {
+    findMany: async (args: any = {}) => {
       const collection = await getOrganizationsCollection();
       const docs = await collection.find(convertWhere(args.where || {})).toArray();
       return docs.map(convertMongoDoc);
@@ -386,6 +400,20 @@ export const prisma = {
       await collection.updateOne(convertWhere(args.where), { $set: args.data });
       const doc = await collection.findOne(convertWhere(args.where));
       return convertMongoDoc(doc);
+    },
+    upsert: async (args: any) => {
+      const collection = await getOrganizationsCollection();
+      const where = convertWhere(args.where);
+      const existing = await collection.findOne(where);
+      if (existing) {
+        await collection.updateOne(where, { $set: args.update || args.create });
+        const doc = await collection.findOne(where);
+        return convertMongoDoc(doc);
+      } else {
+        const result = await collection.insertOne(args.create);
+        const doc = await collection.findOne({ _id: result.insertedId });
+        return convertMongoDoc(doc);
+      }
     },
     delete: async (args: any) => {
       const collection = await getOrganizationsCollection();
@@ -802,6 +830,13 @@ export const prisma = {
       });
     } finally {
       await session.endSession();
+    }
+  },
+  // Add disconnect method for compatibility
+  $disconnect: async () => {
+    if (client) {
+      await client.close();
+      console.log('✅ MongoDB connection closed');
     }
   }
 }; 

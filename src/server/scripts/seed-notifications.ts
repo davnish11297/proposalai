@@ -103,7 +103,8 @@ async function seedNotifications() {
   } catch (error) {
     console.error('❌ Error seeding notifications:', error);
   } finally {
-    await prisma.$disconnect();
+    // MongoDB doesn't need explicit disconnection
+    process.exit(0);
   }
 }
 

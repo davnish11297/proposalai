@@ -1,9 +1,9 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 export declare class TeamController {
-    getTeams(req: AuthenticatedRequest, res: Response): Promise<void>;
+    getTeams(req: AuthenticatedRequest, res: Response): Promise<Response<any, Record<string, any>>>;
     getTeam(req: AuthenticatedRequest, res: Response): Promise<void>;
-    createTeam(req: AuthenticatedRequest, res: Response): Promise<void>;
+    createTeam(req: AuthenticatedRequest, res: Response): Promise<Response<any, Record<string, any>>>;
     updateTeam(req: AuthenticatedRequest, res: Response): Promise<void>;
     deleteTeam(req: AuthenticatedRequest, res: Response): Promise<void>;
     addTeamMember(req: AuthenticatedRequest, res: Response): Promise<void>;

@@ -7,39 +7,42 @@ export class ClientController {
   async getClients(req: AuthenticatedRequest, res: Response) {
     try {
       const clients = await db.client.findMany({
-        where: {
-          organizationId: req.user!.organizationId
-        },
-        orderBy: { updatedAt: 'desc' },
+        where: { organizationId: req.user!.organizationId },
         include: {
           proposals: {
             select: {
-              id: true
+              id: true,
+              title: true,
+              status: true,
+              createdAt: true
             }
           }
-        }
-      });
-      
-      // Manually calculate proposal counts
-      const clientsWithCounts = clients.map(client => ({
-        ...client,
-        _count: {
-          proposals: client.proposals.length
         },
-        proposals: undefined // Remove proposals from response to keep it clean
+        orderBy: { createdAt: 'desc' }
+      });
+
+      const clientsWithStats = clients.map(client => ({
+        ...client,
+        proposals: client.proposals.map((proposal: any) => ({
+          id: proposal.id,
+          title: proposal.title,
+          status: proposal.status,
+          createdAt: proposal.createdAt
+        })),
+        totalProposals: client.proposals.length,
+        activeProposals: client.proposals.filter((p: any) => p.status === 'ACTIVE').length
       }));
-      
-      // Debug: Log the clients and their proposal counts
-      console.log('Clients with proposal counts:', clientsWithCounts.map(client => ({
-        id: client.id,
-        name: client.name,
-        proposalCount: client._count.proposals
-      })));
-      
-      res.json({ success: true, data: clientsWithCounts });
+
+      res.json({
+        success: true,
+        data: clientsWithStats
+      });
     } catch (error) {
       console.error('Get clients error:', error);
-      res.status(500).json({ success: false, error: 'Failed to fetch clients' });
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch clients'
+      });
     }
   }
 
@@ -75,7 +78,7 @@ export class ClientController {
       // Transform proposals to include email info from metadata
       const transformedClient = {
         ...client,
-        proposals: client.proposals.map(proposal => {
+        proposals: client.proposals.map((proposal: any) => {
           let emailSentAt, emailRecipient;
           if (proposal.metadata) {
             try {
@@ -106,38 +109,37 @@ export class ClientController {
   // Create a new client
   async createClient(req: AuthenticatedRequest, res: Response) {
     try {
-      const { name, email, phone, company, industry, notes } = req.body;
-      
-      // Check if client already exists in this organization
-      const existingClient = await db.client.findFirst({
-        where: {
-          email: email,
-          organizationId: req.user!.organizationId
-        }
-      });
-      
-      if (existingClient) {
-        return res.status(400).json({ 
-          success: false, 
-          error: 'Client with this email already exists in your organization' 
+      const { name, email, phone, company, notes } = req.body;
+
+      if (!name) {
+        return res.status(400).json({
+          success: false,
+          error: 'Client name is required'
         });
       }
-      
+
       const client = await db.client.create({
         data: {
           name,
           email,
           phone,
           company,
-          industry,
           notes,
-          organizationId: req.user!.organizationId,
-        },
+          organizationId: req.user!.organizationId!
+        }
       });
-      res.status(201).json({ success: true, data: client, message: 'Client created successfully' });
+
+      return res.status(201).json({
+        success: true,
+        data: client,
+        message: 'Client created successfully'
+      });
     } catch (error) {
       console.error('Create client error:', error);
-      res.status(500).json({ success: false, error: 'Failed to create client' });
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to create client'
+      });
     }
   }
 

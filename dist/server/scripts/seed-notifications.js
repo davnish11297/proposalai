@@ -96,7 +96,7 @@ async function seedNotifications() {
         console.error('❌ Error seeding notifications:', error);
     }
     finally {
-        await database_1.prisma.$disconnect();
+        process.exit(0);
     }
 }
 seedNotifications();

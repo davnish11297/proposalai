@@ -1,11 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const client_1 = require("@prisma/client");
-const db = new client_1.PrismaClient();
+const database_1 = require("../utils/database");
 async function fixBrokenProposals() {
     try {
         console.log('🔍 Finding proposals with broken content...');
-        const proposals = await db.proposal.findMany();
+        const proposals = await database_1.prisma.proposal.findMany();
         let fixedCount = 0;
         for (const proposal of proposals) {
             try {
@@ -29,7 +28,7 @@ async function fixBrokenProposals() {
                         'Begin project implementation'
                     ]
                 };
-                await db.proposal.update({
+                await database_1.prisma.proposal.update({
                     where: { id: proposal.id },
                     data: {
                         content: JSON.stringify(newContent)
@@ -45,7 +44,7 @@ async function fixBrokenProposals() {
         console.error('❌ Error fixing broken proposals:', error);
     }
     finally {
-        await db.$disconnect();
+        process.exit(0);
     }
 }
 fixBrokenProposals()

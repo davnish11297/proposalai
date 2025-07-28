@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/database';
 import bcrypt from 'bcrypt';
-
-const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Starting comprehensive database seed...');
@@ -77,7 +75,7 @@ async function main() {
     })
   ]);
 
-  console.log('✅ Created test clients:', clients.map(c => c.name).join(', '));
+  console.log('✅ Created test clients:', clients.map((c: any) => c.name).join(', '));
 
   // Create test drafts
   const drafts = await Promise.all([
@@ -134,7 +132,7 @@ async function main() {
     })
   ]);
 
-  console.log('✅ Created test drafts:', drafts.map(d => d.title).join(', '));
+  console.log('✅ Created test drafts:', drafts.map((d: any) => d.title).join(', '));
 
   // Create test sent proposals
   const sentProposals = await Promise.all([
@@ -192,7 +190,7 @@ async function main() {
     })
   ]);
 
-  console.log('✅ Created test sent proposals:', sentProposals.map(p => p.title).join(', '));
+  console.log('✅ Created test sent proposals:', sentProposals.map((p: any) => p.title).join(', '));
 
   // Create some activities for the proposals
   await Promise.all([

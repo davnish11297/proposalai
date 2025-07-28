@@ -26,8 +26,7 @@ async function authenticateToken(req, res, next) {
             return;
         }
         const user = await database_1.prisma.user.findUnique({
-            where: { id: payload.userId },
-            select: { id: true, organizationId: true }
+            where: { id: payload.userId }
         });
         if (!user) {
             res.status(401).json({
@@ -52,14 +51,15 @@ async function authenticateToken(req, res, next) {
 }
 function requireRole(allowedRoles) {
     return (req, res, next) => {
-        if (!req.user) {
+        const authenticatedReq = req;
+        if (!authenticatedReq.user) {
             res.status(401).json({
                 success: false,
                 error: 'Authentication required'
             });
             return;
         }
-        if (!allowedRoles.includes(req.user.role)) {
+        if (!allowedRoles.includes(authenticatedReq.user.role)) {
             res.status(403).json({
                 success: false,
                 error: 'Insufficient permissions'
@@ -70,7 +70,8 @@ function requireRole(allowedRoles) {
     };
 }
 function requireOrganization(req, res, next) {
-    if (!req.user?.organizationId) {
+    const authenticatedReq = req;
+    if (!authenticatedReq.user?.organizationId) {
         res.status(403).json({
             success: false,
             error: 'Organization membership required'

@@ -1,10 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const database_1 = require("../utils/database");
 async function main() {
     console.log('🌱 Starting proposal seeding...');
-    const user = await prisma.user.findUnique({
+    const user = await database_1.prisma.user.findUnique({
         where: { email: 'test@example.com' },
         include: { organization: true }
     });
@@ -216,7 +215,7 @@ A comprehensive mobile solution featuring:
     ];
     console.log('📝 Creating sample proposals...');
     for (const proposalData of sampleProposals) {
-        const proposal = await prisma.proposal.create({
+        const proposal = await database_1.prisma.proposal.create({
             data: {
                 title: proposalData.title,
                 content: proposalData.content,
@@ -224,7 +223,6 @@ A comprehensive mobile solution featuring:
                 clientName: proposalData.clientName,
                 authorId: user.id,
                 organizationId: user.organizationId,
-                emailSentAt: proposalData.status === 'SENT' ? proposalData.sentAt : null,
                 emailRecipient: proposalData.status === 'SENT' ? proposalData.clientEmail : null,
                 emailStatus: proposalData.status === 'SENT' ? 'SENT' : null,
                 createdAt: proposalData.status === 'SENT'
@@ -246,6 +244,6 @@ main()
     process.exit(1);
 })
     .finally(async () => {
-    await prisma.$disconnect();
+    process.exit(0);
 });
 //# sourceMappingURL=seed-proposals.js.map

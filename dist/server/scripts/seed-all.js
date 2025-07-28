@@ -3,14 +3,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const client_1 = require("@prisma/client");
+const database_1 = require("../utils/database");
 const bcrypt_1 = __importDefault(require("bcrypt"));
-const prisma = new client_1.PrismaClient();
 async function main() {
     console.log('🌱 Starting comprehensive database seeding...\n');
     console.log('👤 Step 1: Creating test user and organization...');
     const hashedPassword = await bcrypt_1.default.hash('password123', 12);
-    const user = await prisma.user.upsert({
+    const user = await database_1.prisma.user.upsert({
         where: { email: 'test@example.com' },
         update: {},
         create: {
@@ -19,17 +18,16 @@ async function main() {
             role: 'ADMIN'
         },
     });
-    const organization = await prisma.organization.upsert({
+    const organization = await database_1.prisma.organization.upsert({
         where: { id: 'test-org' },
         update: {},
         create: {
             id: 'test-org',
             name: 'Test Organization',
-            description: 'A test organization for development',
             industry: 'Technology'
         },
     });
-    await prisma.user.update({
+    await database_1.prisma.user.update({
         where: { id: user.id },
         data: { organizationId: organization.id }
     });
@@ -88,7 +86,7 @@ async function main() {
         }
     ];
     for (const clientData of sampleClients) {
-        await prisma.client.create({
+        await database_1.prisma.client.create({
             data: clientData
         });
     }
@@ -292,7 +290,7 @@ A comprehensive mobile solution featuring:
         }
     ];
     for (const proposalData of sampleProposals) {
-        await prisma.proposal.create({
+        await database_1.prisma.proposal.create({
             data: {
                 title: proposalData.title,
                 content: proposalData.content,
@@ -300,7 +298,6 @@ A comprehensive mobile solution featuring:
                 clientName: proposalData.clientName,
                 authorId: user.id,
                 organizationId: user.organizationId,
-                emailSentAt: proposalData.status === 'SENT' ? proposalData.sentAt : null,
                 emailRecipient: proposalData.status === 'SENT' ? proposalData.clientEmail : null,
                 emailStatus: proposalData.status === 'SENT' ? 'SENT' : null,
                 createdAt: proposalData.status === 'SENT'
@@ -359,7 +356,7 @@ A comprehensive mobile solution featuring:
         }
     ];
     for (const templateData of sampleTemplates) {
-        await prisma.template.create({ data: templateData });
+        await database_1.prisma.template.create({ data: templateData });
     }
     const sampleSnippets = [
         {
@@ -406,7 +403,7 @@ A comprehensive mobile solution featuring:
         }
     ];
     for (const snippetData of sampleSnippets) {
-        await prisma.snippet.create({ data: snippetData });
+        await database_1.prisma.snippet.create({ data: snippetData });
     }
     console.log('✅ Created 3 templates and 7 snippets\n');
     console.log('🎉 Comprehensive database seeding completed!');
@@ -425,6 +422,6 @@ main()
     process.exit(1);
 })
     .finally(async () => {
-    await prisma.$disconnect();
+    process.exit(0);
 });
 //# sourceMappingURL=seed-all.js.map

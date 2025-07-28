@@ -282,7 +282,7 @@ class AIService {
                 ]
             });
             console.log(`🤖 Anthropic API response status: ${response.stop_reason}`);
-            const content = response.content[0]?.text;
+            const content = response.content[0]?.type === 'text' ? response.content[0]?.text : '';
             console.log('🤖 Anthropic generated content:', content);
             return {
                 content: content || '',

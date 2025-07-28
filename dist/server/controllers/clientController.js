@@ -6,35 +6,41 @@ class ClientController {
     async getClients(req, res) {
         try {
             const clients = await database_1.prisma.client.findMany({
-                where: {
-                    organizationId: req.user.organizationId
-                },
-                orderBy: { updatedAt: 'desc' },
+                where: { organizationId: req.user.organizationId },
                 include: {
                     proposals: {
                         select: {
-                            id: true
+                            id: true,
+                            title: true,
+                            status: true,
+                            createdAt: true
                         }
                     }
-                }
-            });
-            const clientsWithCounts = clients.map(client => ({
-                ...client,
-                _count: {
-                    proposals: client.proposals.length
                 },
-                proposals: undefined
+                orderBy: { createdAt: 'desc' }
+            });
+            const clientsWithStats = clients.map(client => ({
+                ...client,
+                proposals: client.proposals.map((proposal) => ({
+                    id: proposal.id,
+                    title: proposal.title,
+                    status: proposal.status,
+                    createdAt: proposal.createdAt
+                })),
+                totalProposals: client.proposals.length,
+                activeProposals: client.proposals.filter((p) => p.status === 'ACTIVE').length
             }));
-            console.log('Clients with proposal counts:', clientsWithCounts.map(client => ({
-                id: client.id,
-                name: client.name,
-                proposalCount: client._count.proposals
-            })));
-            res.json({ success: true, data: clientsWithCounts });
+            res.json({
+                success: true,
+                data: clientsWithStats
+            });
         }
         catch (error) {
             console.error('Get clients error:', error);
-            res.status(500).json({ success: false, error: 'Failed to fetch clients' });
+            res.status(500).json({
+                success: false,
+                error: 'Failed to fetch clients'
+            });
         }
     }
     async getClient(req, res) {
@@ -65,7 +71,7 @@ class ClientController {
             }
             const transformedClient = {
                 ...client,
-                proposals: client.proposals.map(proposal => {
+                proposals: client.proposals.map((proposal) => {
                     let emailSentAt, emailRecipient;
                     if (proposal.metadata) {
                         try {
@@ -94,17 +100,11 @@ class ClientController {
     }
     async createClient(req, res) {
         try {
-            const { name, email, phone, company, industry, notes } = req.body;
-            const existingClient = await database_1.prisma.client.findFirst({
-                where: {
-                    email: email,
-                    organizationId: req.user.organizationId
-                }
-            });
-            if (existingClient) {
+            const { name, email, phone, company, notes } = req.body;
+            if (!name) {
                 return res.status(400).json({
                     success: false,
-                    error: 'Client with this email already exists in your organization'
+                    error: 'Client name is required'
                 });
             }
             const client = await database_1.prisma.client.create({
@@ -113,16 +113,22 @@ class ClientController {
                     email,
                     phone,
                     company,
-                    industry,
                     notes,
-                    organizationId: req.user.organizationId,
-                },
+                    organizationId: req.user.organizationId
+                }
             });
-            res.status(201).json({ success: true, data: client, message: 'Client created successfully' });
+            return res.status(201).json({
+                success: true,
+                data: client,
+                message: 'Client created successfully'
+            });
         }
         catch (error) {
             console.error('Create client error:', error);
-            res.status(500).json({ success: false, error: 'Failed to create client' });
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to create client'
+            });
         }
     }
     async updateClient(req, res) {

@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const db = new PrismaClient();
+import { prisma as db } from '../utils/database';
 
 async function cleanAllProposals() {
   try {
@@ -48,7 +46,8 @@ async function cleanAllProposals() {
   } catch (error) {
     console.error('Error cleaning proposals:', error);
   } finally {
-    await db.$disconnect();
+    // MongoDB doesn't need explicit disconnection
+    process.exit(0);
   }
 }
 

@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/database';
 
 async function main() {
   console.log('🌱 Starting template and snippet seeding...');
@@ -177,5 +175,6 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    // MongoDB doesn't need explicit disconnection
+    process.exit(0);
   }); 

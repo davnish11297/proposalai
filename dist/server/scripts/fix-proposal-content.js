@@ -1,11 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const database_1 = require("../utils/database");
 async function fixProposalContent() {
     console.log('🔧 Starting proposal content fix...');
     try {
-        const proposal = await prisma.proposal.findFirst({
+        const proposal = await database_1.prisma.proposal.findFirst({
             where: {
                 id: 'cmd85skrn0001jjtckegwcuu5'
             }
@@ -31,7 +30,7 @@ async function fixProposalContent() {
             executiveSummaryPreview: testContent.executiveSummary.substring(0, 100) + '...',
             approachPreview: testContent.approach.substring(0, 100) + '...'
         });
-        await prisma.proposal.update({
+        await database_1.prisma.proposal.update({
             where: { id: proposal.id },
             data: {
                 content: JSON.stringify(testContent)
@@ -44,7 +43,7 @@ async function fixProposalContent() {
         console.error('❌ Error fixing proposal content:', error);
     }
     finally {
-        await prisma.$disconnect();
+        process.exit(0);
     }
 }
 fixProposalContent();

@@ -13,15 +13,7 @@ export declare class NotificationController {
         message: string;
         proposalId?: string;
         metadata?: any;
-    }): Promise<{
-        id: string;
-        type: string;
-        createdAt: Date;
-        userId: string | null;
-        proposalId: string | null;
-        message: string;
-        read: boolean;
-    }>;
+    }): Promise<any>;
 }
 export declare const notificationController: NotificationController;
 //# sourceMappingURL=notificationController.d.ts.map

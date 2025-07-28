@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/database';
 
 async function main() {
   console.log('🌱 Starting proposal seeding...');
@@ -232,7 +230,6 @@ A comprehensive mobile solution featuring:
         clientName: proposalData.clientName,
         authorId: user.id,
         organizationId: user.organizationId!,
-        emailSentAt: proposalData.status === 'SENT' ? proposalData.sentAt : null,
         emailRecipient: proposalData.status === 'SENT' ? proposalData.clientEmail : null,
         emailStatus: proposalData.status === 'SENT' ? 'SENT' : null,
         createdAt: proposalData.status === 'SENT' 
@@ -257,5 +254,6 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    // MongoDB doesn't need explicit disconnection
+    process.exit(0);
   }); 

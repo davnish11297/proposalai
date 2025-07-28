@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/database';
 
 async function fixAllProposals() {
   console.log('🔧 Starting to fix all proposals...');
@@ -101,7 +99,8 @@ async function fixAllProposals() {
   } catch (error) {
     console.error('❌ Error fixing proposals:', error);
   } finally {
-    await prisma.$disconnect();
+    // MongoDB doesn't need explicit disconnection
+    process.exit(0);
   }
 }
 

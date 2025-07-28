@@ -3,7 +3,7 @@ import { prisma as db } from '../utils/database';
 import { aiService } from '../services/aiService';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { ICreateProposal, IUpdateProposal, IGenerateProposalRequest } from '../types';
-import { generatePublicUrl } from '../utils/auth';
+import { generatePublicUrl, generateSecureToken } from '../utils/auth';
 import { pdfService } from '../services/pdfService';
 import { emailService } from '../services/emailService';
 
@@ -294,7 +294,7 @@ export class ProposalController {
       let newCode = '';
       for (let i = 0; i < 6; i++) newCode += chars.charAt(Math.floor(Math.random() * chars.length));
       // Update proposal metadata
-      let metadata = {};
+      let metadata: any = {};
       try { metadata = proposal.metadata ? JSON.parse(proposal.metadata) : {}; } catch {}
       if (!metadata.accessCodes) metadata.accessCodes = [];
       metadata.accessCodes.push(newCode);
@@ -532,166 +532,181 @@ export class ProposalController {
     }
   }
 
-  // Publish proposal (make public)
-  async publishProposal(req: AuthenticatedRequest, res: Response): Promise<void> {
+  async publishProposal(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
 
       const proposal = await db.proposal.findFirst({
         where: {
           id,
-          organizationId: req.user!.organizationId,
+          organizationId: req.user!.organizationId
         }
       });
 
       if (!proposal) {
-        res.status(404).json({
+        return res.status(404).json({
           success: false,
           error: 'Proposal not found'
         });
-        return;
       }
 
-      const publicUrl = generatePublicUrl(id);
+      // Generate access code
+      const newCode = generateSecureToken();
+      
+      // Update proposal metadata with access codes
+      let metadata = proposal.metadata as any || {};
+      if (!metadata.accessCodes) metadata.accessCodes = [];
+      metadata.accessCodes.push(newCode);
 
       const updatedProposal = await db.proposal.update({
         where: { id },
         data: {
-          status: 'SENT',
-          metadata: JSON.stringify({
-            isPublic: true,
-            publicUrl,
-            publishedAt: new Date().toISOString()
-          })
+          isPublic: true,
+          publicUrl: generatePublicUrl(id),
+          metadata: metadata,
+          publishedAt: new Date()
         }
       });
 
-      // Record publish activity
-      await db.activity.create({
-        data: {
-          type: 'PUBLISHED',
-          user: { connect: { id: req.user!.userId } },
-          proposal: { connect: { id } },
-          message: 'Proposal published'
-        }
-      });
-
-      res.json({
+      return res.json({
         success: true,
-        data: updatedProposal,
+        data: {
+          ...updatedProposal,
+          accessCode: newCode
+        },
         message: 'Proposal published successfully'
       });
     } catch (error) {
       console.error('Publish proposal error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: 'Failed to publish proposal'
       });
     }
   }
 
-  // Get public proposal (no auth required)
-  async getPublicProposal(req: Request, res: Response): Promise<void> {
+  async getPublicProposal(req: Request, res: Response) {
     try {
       const { id } = req.params;
+      const { accessCode } = req.query;
 
-      const proposal = await db.proposal.findFirst({
-        where: {
-          id,
-        },
+      const proposal = await db.proposal.findUnique({
+        where: { id },
         include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true
+            }
+          },
           organization: {
-            select: { name: true, logo: true, description: true }
+            select: {
+              name: true,
+              logo: true,
+              primaryColor: true,
+              secondaryColor: true
+            }
           }
         }
       });
 
-      // Check if proposal is public by parsing metadata
       if (!proposal) {
-        res.status(404).json({
+        return res.status(404).json({
           success: false,
           error: 'Proposal not found'
         });
-        return;
       }
 
-      try {
-        const metadata = proposal.metadata ? JSON.parse(proposal.metadata) : {};
-        if (!metadata.isPublic) {
-          res.status(404).json({
-            success: false,
-            error: 'Proposal not found or not public'
-          });
-          return;
-        }
-      } catch (error) {
-        res.status(404).json({
+      if (!proposal.isPublic) {
+        return res.status(403).json({
           success: false,
-          error: 'Proposal not found or not public'
+          error: 'This proposal is not publicly accessible'
         });
-        return;
       }
 
-      res.json({
+      // Verify access code if provided
+      if (accessCode) {
+        const metadata = proposal.metadata as any;
+        const accessCodes = metadata?.accessCodes || [];
+        
+        if (!accessCodes.includes(accessCode)) {
+          return res.status(403).json({
+            success: false,
+            error: 'Invalid access code'
+          });
+        }
+      }
+
+      // Track the view
+      await db.activity.create({
+        data: {
+          type: 'VIEWED',
+          details: { accessCode: accessCode || null },
+          userId: proposal.userId,
+          proposalId: proposal.id,
+          organizationId: proposal.organizationId
+        }
+      });
+
+      return res.json({
         success: true,
-        data: proposal
+        data: {
+          ...proposal,
+          user: proposal.user,
+          organization: proposal.organization
+        }
       });
     } catch (error) {
       console.error('Get public proposal error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: 'Failed to fetch proposal'
       });
     }
   }
 
-  // Duplicate proposal
-  async duplicateProposal(req: AuthenticatedRequest, res: Response): Promise<void> {
+  async duplicateProposal(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
 
       const originalProposal = await db.proposal.findFirst({
         where: {
           id,
-          organizationId: req.user!.organizationId,
+          organizationId: req.user!.organizationId
         }
       });
 
       if (!originalProposal) {
-        res.status(404).json({
+        return res.status(404).json({
           success: false,
           error: 'Proposal not found'
         });
-        return;
       }
 
       const duplicatedProposal = await db.proposal.create({
         data: {
           title: `${originalProposal.title} (Copy)`,
-          description: originalProposal.description ?? undefined,
+          description: originalProposal.description,
           clientName: originalProposal.clientName,
+          clientEmail: originalProposal.clientEmail,
+          status: 'DRAFT',
           type: originalProposal.type,
           content: originalProposal.content,
           metadata: originalProposal.metadata,
-          authorId: req.user!.userId,
-          organizationId: req.user!.organizationId!,
-          status: 'DRAFT',
-        },
-        include: {
-          author: {
-            select: { name: true, email: true }
-          }
+          isPublic: false,
+          userId: req.user!.userId,
+          organizationId: req.user!.organizationId!
         }
       });
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         data: duplicatedProposal,
         message: 'Proposal duplicated successfully'
       });
     } catch (error) {
       console.error('Duplicate proposal error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: 'Failed to duplicate proposal'
       });
@@ -792,7 +807,7 @@ export class ProposalController {
       }
 
       // Get existing metadata to preserve access codes
-      let existingMetadata = {};
+      let existingMetadata: any = {};
       try {
         existingMetadata = proposal.metadata ? JSON.parse(proposal.metadata) : {};
       } catch (error) {

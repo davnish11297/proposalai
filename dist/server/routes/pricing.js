@@ -1,36 +1,62 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = __importDefault(require("express"));
-const auth_1 = require("../middleware/auth");
+const express_1 = require("express");
 const database_1 = require("../utils/database");
-const router = express_1.default.Router();
+const auth_1 = require("../middleware/auth");
+const router = (0, express_1.Router)();
 router.get('/', auth_1.authenticateToken, async (req, res) => {
     try {
+        const authenticatedReq = req;
         const pricingModels = await database_1.prisma.pricingModel.findMany({
-            where: {
-                isActive: true,
-            },
+            where: { organizationId: authenticatedReq.user.organizationId },
             orderBy: { createdAt: 'desc' }
         });
-        res.json({
+        return res.json({
             success: true,
             data: pricingModels
         });
     }
     catch (error) {
         console.error('Get pricing models error:', error);
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             error: 'Failed to fetch pricing models'
+        });
+    }
+});
+router.get('/:id', auth_1.authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const authenticatedReq = req;
+        const pricingModel = await database_1.prisma.pricingModel.findUnique({
+            where: {
+                id,
+                organizationId: authenticatedReq.user.organizationId
+            }
+        });
+        if (!pricingModel) {
+            return res.status(404).json({
+                success: false,
+                error: 'Pricing model not found'
+            });
+        }
+        return res.json({
+            success: true,
+            data: pricingModel
+        });
+    }
+    catch (error) {
+        console.error('Get pricing model error:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to fetch pricing model'
         });
     }
 });
 router.post('/', auth_1.authenticateToken, async (req, res) => {
     try {
         const { name, description, pricing } = req.body;
+        const authenticatedReq = req;
         if (!name || !pricing) {
             return res.status(400).json({
                 success: false,
@@ -40,8 +66,9 @@ router.post('/', auth_1.authenticateToken, async (req, res) => {
         const pricingModel = await database_1.prisma.pricingModel.create({
             data: {
                 name,
-                description: description || null,
+                description,
                 pricing,
+                organizationId: authenticatedReq.user.organizationId
             }
         });
         return res.status(201).json({

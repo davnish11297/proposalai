@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.proposalController = exports.ProposalController = void 0;
 const database_1 = require("../utils/database");
-const client_1 = require("@prisma/client");
 const aiService_1 = require("../services/aiService");
 const auth_1 = require("../utils/auth");
 const pdfService_1 = require("../services/pdfService");
@@ -471,45 +470,41 @@ class ProposalController {
             const proposal = await database_1.prisma.proposal.findFirst({
                 where: {
                     id,
-                    organizationId: req.user.organizationId,
+                    organizationId: req.user.organizationId
                 }
             });
             if (!proposal) {
-                res.status(404).json({
+                return res.status(404).json({
                     success: false,
                     error: 'Proposal not found'
                 });
-                return;
             }
-            const publicUrl = (0, auth_1.generatePublicUrl)(id);
+            const newCode = (0, auth_1.generateSecureToken)();
+            let metadata = proposal.metadata || {};
+            if (!metadata.accessCodes)
+                metadata.accessCodes = [];
+            metadata.accessCodes.push(newCode);
             const updatedProposal = await database_1.prisma.proposal.update({
                 where: { id },
                 data: {
-                    status: 'SENT',
-                    metadata: JSON.stringify({
-                        isPublic: true,
-                        publicUrl,
-                        publishedAt: new Date().toISOString()
-                    })
+                    isPublic: true,
+                    publicUrl: (0, auth_1.generatePublicUrl)(id),
+                    metadata: metadata,
+                    publishedAt: new Date()
                 }
             });
-            await database_1.prisma.activity.create({
-                data: {
-                    type: 'PUBLISHED',
-                    user: { connect: { id: req.user.userId } },
-                    proposal: { connect: { id } },
-                    message: 'Proposal published'
-                }
-            });
-            res.json({
+            return res.json({
                 success: true,
-                data: updatedProposal,
+                data: {
+                    ...updatedProposal,
+                    accessCode: newCode
+                },
                 message: 'Proposal published successfully'
             });
         }
         catch (error) {
             console.error('Publish proposal error:', error);
-            res.status(500).json({
+            return res.status(500).json({
                 success: false,
                 error: 'Failed to publish proposal'
             });
@@ -518,48 +513,69 @@ class ProposalController {
     async getPublicProposal(req, res) {
         try {
             const { id } = req.params;
-            const proposal = await database_1.prisma.proposal.findFirst({
-                where: {
-                    id,
-                },
+            const { accessCode } = req.query;
+            const proposal = await database_1.prisma.proposal.findUnique({
+                where: { id },
                 include: {
+                    user: {
+                        select: {
+                            firstName: true,
+                            lastName: true
+                        }
+                    },
                     organization: {
-                        select: { name: true, logo: true, description: true }
+                        select: {
+                            name: true,
+                            logo: true,
+                            primaryColor: true,
+                            secondaryColor: true
+                        }
                     }
                 }
             });
             if (!proposal) {
-                res.status(404).json({
+                return res.status(404).json({
                     success: false,
                     error: 'Proposal not found'
                 });
-                return;
             }
-            try {
-                const metadata = proposal.metadata ? JSON.parse(proposal.metadata) : {};
-                if (!metadata.isPublic) {
-                    res.status(404).json({
+            if (!proposal.isPublic) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'This proposal is not publicly accessible'
+                });
+            }
+            if (accessCode) {
+                const metadata = proposal.metadata;
+                const accessCodes = metadata?.accessCodes || [];
+                if (!accessCodes.includes(accessCode)) {
+                    return res.status(403).json({
                         success: false,
-                        error: 'Proposal not found or not public'
+                        error: 'Invalid access code'
                     });
-                    return;
                 }
             }
-            catch (error) {
-                res.status(404).json({
-                    success: false,
-                    error: 'Proposal not found or not public'
-                });
-                return;
-            }
-            res.json({
+            await database_1.prisma.activity.create({
+                data: {
+                    type: 'VIEWED',
+                    details: { accessCode: accessCode || null },
+                    userId: proposal.userId,
+                    proposalId: proposal.id,
+                    organizationId: proposal.organizationId
+                }
+            });
+            return res.json({
                 success: true,
-                data: proposal
+                data: {
+                    ...proposal,
+                    user: proposal.user,
+                    organization: proposal.organization
+                }
             });
         }
         catch (error) {
             console.error('Get public proposal error:', error);
-            res.status(500).json({
+            return res.status(500).json({
                 success: false,
                 error: 'Failed to fetch proposal'
             });
@@ -571,35 +587,31 @@ class ProposalController {
             const originalProposal = await database_1.prisma.proposal.findFirst({
                 where: {
                     id,
-                    organizationId: req.user.organizationId,
+                    organizationId: req.user.organizationId
                 }
             });
             if (!originalProposal) {
-                res.status(404).json({
+                return res.status(404).json({
                     success: false,
                     error: 'Proposal not found'
                 });
-                return;
             }
             const duplicatedProposal = await database_1.prisma.proposal.create({
                 data: {
                     title: `${originalProposal.title} (Copy)`,
-                    description: originalProposal.description ?? undefined,
+                    description: originalProposal.description,
                     clientName: originalProposal.clientName,
-                    type: originalProposal.type,
-                    content: originalProposal.content === null ? client_1.Prisma.JsonNull : originalProposal.content,
-                    metadata: originalProposal.metadata === null ? client_1.Prisma.JsonNull : originalProposal.metadata,
-                    authorId: req.user.userId,
-                    organizationId: req.user.organizationId,
+                    clientEmail: originalProposal.clientEmail,
                     status: 'DRAFT',
-                },
-                include: {
-                    author: {
-                        select: { name: true, email: true }
-                    }
+                    type: originalProposal.type,
+                    content: originalProposal.content,
+                    metadata: originalProposal.metadata,
+                    isPublic: false,
+                    userId: req.user.userId,
+                    organizationId: req.user.organizationId
                 }
             });
-            res.status(201).json({
+            return res.status(201).json({
                 success: true,
                 data: duplicatedProposal,
                 message: 'Proposal duplicated successfully'
@@ -607,7 +619,7 @@ class ProposalController {
         }
         catch (error) {
             console.error('Duplicate proposal error:', error);
-            res.status(500).json({
+            return res.status(500).json({
                 success: false,
                 error: 'Failed to duplicate proposal'
             });

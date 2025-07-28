@@ -1,11 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const client_1 = require("@prisma/client");
-const db = new client_1.PrismaClient();
+const database_1 = require("../utils/database");
 async function fixMarkdownContent() {
     try {
         console.log('🔍 Finding proposals with Markdown formatting...');
-        const proposals = await db.proposal.findMany();
+        const proposals = await database_1.prisma.proposal.findMany();
         let fixedCount = 0;
         for (const proposal of proposals) {
             try {
@@ -14,7 +13,7 @@ async function fixMarkdownContent() {
                 if (contentString.includes('**') || contentString.includes('*') || contentString.includes('`')) {
                     console.log(`📝 Found proposal with Markdown: ${proposal.title} (${proposal.id})`);
                     const cleanedContent = cleanMarkdownFromObject(content);
-                    await db.proposal.update({
+                    await database_1.prisma.proposal.update({
                         where: { id: proposal.id },
                         data: {
                             content: JSON.stringify(cleanedContent)
@@ -29,7 +28,7 @@ async function fixMarkdownContent() {
                 try {
                     const cleanedContent = cleanMarkdownFromString(proposal.content);
                     const parsedContent = JSON.parse(cleanedContent);
-                    await db.proposal.update({
+                    await database_1.prisma.proposal.update({
                         where: { id: proposal.id },
                         data: {
                             content: JSON.stringify(parsedContent)
@@ -49,7 +48,7 @@ async function fixMarkdownContent() {
         console.error('❌ Error fixing Markdown content:', error);
     }
     finally {
-        await db.$disconnect();
+        process.exit(0);
     }
 }
 function cleanMarkdownFromObject(obj) {
