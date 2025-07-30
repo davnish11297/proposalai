@@ -341,7 +341,7 @@ Return ONLY the JSON object, no other text.`;
           <button
             onClick={generateAnalytics}
             disabled={generatingAnalytics}
-            className="px-6 py-3 bg-orange-600 text-white font-semibold hover:bg-orange-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
+            className="px-6 py-3 bg-orange-600 text-white font-semibold hover:bg-orange-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto rounded-sm"
           >
             {generatingAnalytics ? (
               <>
@@ -444,7 +444,7 @@ Return ONLY the JSON object, no other text.`;
           <button
             onClick={generateAnalytics}
             disabled={generatingAnalytics}
-            className="px-6 py-3 bg-purple-600 text-white font-semibold hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
+            className="px-6 py-3 bg-purple-600 text-white font-semibold hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto rounded-sm"
           >
             {generatingAnalytics ? (
               <>
@@ -586,7 +586,7 @@ Return ONLY the JSON object, no other text.`;
             <p className="text-gray-600 mb-6">The proposal you're looking for doesn't exist or has been removed.</p>
             <button
               onClick={() => navigate('/drafts')}
-                                className="px-4 py-2 bg-orange-600 text-white hover:bg-orange-700"
+                                className="px-4 py-2 bg-orange-600 text-white hover:bg-orange-700 rounded-sm"
             >
               Back to Drafts
             </button>
@@ -655,7 +655,7 @@ Return ONLY the JSON object, no other text.`;
         {/* Back Button */}
         <button
           onClick={() => navigate('/drafts')}
-                      className="flex items-center gap-2 mb-6 px-4 py-2 bg-orange-600 text-white font-semibold hover:bg-orange-700 transition shadow"
+                      className="flex items-center gap-2 mb-6 px-4 py-2 bg-orange-600 text-white font-semibold hover:bg-orange-700 transition shadow rounded-sm"
         >
           ← Back to Drafts
         </button>
@@ -680,14 +680,14 @@ Return ONLY the JSON object, no other text.`;
                 </span>
                 <button
                   onClick={() => navigate(`/proposals/${proposal.id}`)}
-                  className="px-4 py-2 bg-orange-600 text-white hover:bg-orange-700 transition-colors"
+                  className="px-4 py-2 bg-orange-600 text-white hover:bg-orange-700 transition-colors rounded-sm"
                 >
                   Edit Proposal
                 </button>
                 {proposal.status === 'DRAFT' && (
                   <button
                     onClick={handleSend}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 transition-colors rounded-sm"
                   >
                     <PaperAirplaneIcon className="h-4 w-4" />
                     Send
@@ -1007,7 +1007,7 @@ Return ONLY the JSON object, no other text.`;
                               <button
                                 onClick={() => handleGrantAccess(req.id)}
                                 disabled={grantingRequestId === req.id}
-                                className="ml-4 px-4 py-2 bg-gradient-to-r from-blue-600 to-green-500 text-white font-semibold hover:from-blue-700 hover:to-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="ml-4 px-4 py-2 bg-gradient-to-r from-blue-600 to-green-500 text-white font-semibold hover:from-blue-700 hover:to-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed rounded-sm"
                               >
                                 {grantingRequestId === req.id ? 'Granting...' : 'Grant Access'}
                               </button>
@@ -1092,7 +1092,7 @@ Return ONLY the JSON object, no other text.`;
               <button
                 onClick={handleSendProposal}
                 disabled={sending || !recipientEmail.trim() || !clientName.trim()}
-                                  className="flex-1 px-4 py-3 bg-orange-600 text-white font-semibold hover:bg-orange-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                  className="flex-1 px-4 py-3 bg-orange-600 text-white font-semibold hover:bg-orange-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 rounded-sm"
               >
                 {sending ? (
                   <>

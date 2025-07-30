@@ -20,14 +20,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           <div className="space-y-3">
             <Link
               to="/register"
-              className="w-full bg-orange-600 text-white font-semibold py-3 px-6 hover:bg-orange-700 transition-colors block text-center"
+              className="w-full bg-orange-600 text-white font-semibold py-3 px-6 hover:bg-orange-700 transition-colors block text-center rounded-sm"
               onClick={onClose}
             >
               Sign up
             </Link>
             <Link
               to="/login"
-              className="w-full bg-white text-gray-700 font-semibold py-3 px-6 border border-gray-300 hover:bg-gray-50 transition-colors block text-center"
+              className="w-full bg-white text-gray-700 font-semibold py-3 px-6 border border-gray-300 hover:bg-gray-50 transition-colors block text-center rounded-sm"
               onClick={onClose}
             >
               Sign in
@@ -74,7 +74,7 @@ export default function Home() {
           {/* Right side - Auth buttons */}
           <div className="flex items-center gap-4">
             <Link to="/login" className="text-gray-600 hover:text-gray-900 transition font-medium">Sign in</Link>
-            <Link to="/register" className="px-4 py-2 bg-orange-600 text-white font-semibold hover:bg-orange-700 transition">Get Started Free</Link>
+            <Link to="/register" className="px-4 py-2 bg-orange-600 text-white font-semibold hover:bg-orange-700 transition rounded-sm">Get Started Free</Link>
           </div>
         </div>
       </header>
@@ -108,7 +108,7 @@ export default function Home() {
               <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center gap-3">
                 <button 
                   onClick={handleSubmit}
-                  className="w-8 h-8 bg-green-400 flex items-center justify-center hover:bg-green-500 transition-colors"
+                  className="w-8 h-8 bg-green-400 flex items-center justify-center hover:bg-green-500 transition-colors rounded-sm"
                 >
                   <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -116,13 +116,13 @@ export default function Home() {
                 </button>
                 <div 
                   onClick={handleSubmit}
-                  className="w-8 h-8 bg-green-600 flex items-center justify-center cursor-pointer hover:bg-green-700 transition-colors"
+                  className="w-8 h-8 bg-green-600 flex items-center justify-center cursor-pointer hover:bg-green-700 transition-colors rounded-sm"
                 >
                   <span className="text-white text-sm font-bold">G</span>
                 </div>
                 <button
                   onClick={handleSubmit}
-                  className="w-10 h-10 bg-orange-600 flex items-center justify-center hover:bg-orange-700 transition-colors"
+                  className="w-10 h-10 bg-orange-600 flex items-center justify-center hover:bg-orange-700 transition-colors rounded-sm"
                   aria-label="Generate Proposal"
                 >
                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -137,7 +137,7 @@ export default function Home() {
           <div className="max-w-4xl mx-auto flex items-center justify-between">
             <button 
               onClick={handleSubmit}
-              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 transition border border-gray-300 bg-white hover:bg-gray-50"
+              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 transition border border-gray-300 bg-white hover:bg-gray-50 rounded-sm"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />

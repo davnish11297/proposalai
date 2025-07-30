@@ -73,7 +73,7 @@ export default function Login() {
           <p className="text-gray-500 text-center text-base">Sign in to continue</p>
         </div>
         <button
-                      className="w-full flex items-center justify-center border border-gray-200 py-2.5 mb-6 text-gray-700 font-medium hover:bg-gray-50 transition"
+                      className="w-full flex items-center justify-center border border-gray-200 py-2.5 mb-6 text-gray-700 font-medium hover:bg-gray-50 transition rounded-sm"
           type="button"
           onClick={() => {
             window.location.href = 'http://localhost:3000/api/auth/google';
@@ -100,7 +100,7 @@ export default function Login() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent rounded-sm"
                 placeholder="Enter your email"
                 required
               />
@@ -118,7 +118,7 @@ export default function Login() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent rounded-sm"
                 placeholder="Enter your password"
                 required
               />
@@ -132,7 +132,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-orange-600 text-white font-semibold py-2.5 hover:bg-orange-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-orange-600 text-white font-semibold py-2.5 hover:bg-orange-700 transition disabled:opacity-50 disabled:cursor-not-allowed rounded-sm"
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
