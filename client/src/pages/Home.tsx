@@ -160,27 +160,27 @@ export default function Home() {
       {/* Left Panel - Problem Research */}
       <div className="fixed left-8 top-1/2 transform -translate-y-1/2 hidden lg:block">
         <div className="relative">
-          <div className="w-16 h-16 bg-yellow-200 rounded-full flex items-center justify-center mb-4">
-            <span className="text-yellow-800 font-semibold text-sm">PR</span>
+          <div className="w-16 h-16 bg-yellow-200 rounded-full flex items-center justify-center mb-4 animate-pulse">
+            <span className="text-yellow-800 font-semibold text-sm animate-bounce">PR</span>
           </div>
-          <div className="w-px h-20 bg-gray-300 mx-auto"></div>
-          <div className="bg-white rounded-lg shadow-lg p-4 mt-4">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="px-2 py-1 bg-orange-600 text-white text-xs rounded-full">ProposalAI</span>
-              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-px h-20 bg-gray-300 mx-auto animate-pulse"></div>
+          <div className="bg-white rounded-lg shadow-lg p-4 mt-4 animate-fade-in-up">
+            <div className="flex items-center gap-2 mb-3 animate-slide-in-left">
+              <span className="px-2 py-1 bg-orange-600 text-white text-xs rounded-full animate-pulse">ProposalAI</span>
+              <svg className="w-4 h-4 text-gray-400 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
               </svg>
             </div>
-            <h4 className="font-semibold text-gray-900 mb-2">Sources</h4>
+            <h4 className="font-semibold text-gray-900 mb-2 animate-fade-in">Sources</h4>
             <div className="space-y-2">
-              <div className="h-2 bg-gray-200 rounded"></div>
-              <div className="h-2 bg-gray-200 rounded"></div>
-              <div className="h-2 bg-gray-200 rounded"></div>
+              <div className="h-2 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-2 bg-gray-200 rounded animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+              <div className="h-2 bg-gray-200 rounded animate-pulse" style={{ animationDelay: '0.4s' }}></div>
             </div>
             <div className="flex gap-2 mt-3">
-              <div className="w-4 h-4 bg-red-500 rounded"></div>
-              <div className="w-4 h-4 bg-blue-500 rounded"></div>
-              <div className="w-4 h-4 bg-green-500 rounded"></div>
+              <div className="w-4 h-4 bg-red-500 rounded animate-ping"></div>
+              <div className="w-4 h-4 bg-blue-500 rounded animate-ping" style={{ animationDelay: '0.3s' }}></div>
+              <div className="w-4 h-4 bg-green-500 rounded animate-ping" style={{ animationDelay: '0.6s' }}></div>
             </div>
           </div>
         </div>
@@ -189,17 +189,17 @@ export default function Home() {
       {/* Right Panel - Build Product */}
       <div className="fixed right-8 top-1/2 transform -translate-y-1/2 hidden lg:block">
         <div className="relative">
-          <div className="w-16 h-16 bg-green-200 rounded-full flex items-center justify-center mb-4">
-            <span className="text-green-800 font-semibold text-sm">BP</span>
+          <div className="w-16 h-16 bg-green-200 rounded-full flex items-center justify-center mb-4 animate-pulse">
+            <span className="text-green-800 font-semibold text-sm animate-bounce">BP</span>
           </div>
-          <div className="w-px h-20 bg-gray-300 mx-auto"></div>
-          <div className="bg-white rounded-lg shadow-lg p-4 mt-4">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="px-2 py-1 bg-gray-800 text-white text-xs rounded-full">You</span>
+          <div className="w-px h-20 bg-gray-300 mx-auto animate-pulse"></div>
+          <div className="bg-white rounded-lg shadow-lg p-4 mt-4 animate-fade-in-up">
+            <div className="flex items-center gap-2 mb-3 animate-slide-in-right">
+              <span className="px-2 py-1 bg-gray-800 text-white text-xs rounded-full animate-pulse">You</span>
             </div>
-            <h4 className="font-semibold text-gray-900 mb-2">Development plan</h4>
+            <h4 className="font-semibold text-gray-900 mb-2 animate-fade-in">Development plan</h4>
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div className="bg-orange-600 h-2 rounded-full" style={{ width: '60%' }}></div>
+              <div className="bg-orange-600 h-2 rounded-full animate-progress" style={{ width: '60%' }}></div>
             </div>
           </div>
         </div>
