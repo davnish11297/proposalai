@@ -12,30 +12,22 @@ const Onboarding: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const totalSteps = 3;
-  console.log('totalSteps:', totalSteps, 'currentStep === totalSteps:', currentStep === totalSteps);
 
   const { updateUser } = useAuth();
 
   const handleContinue = async () => {
-    console.log('handleContinue called, currentStep:', currentStep, 'totalSteps:', totalSteps);
-    console.log('Button clicked!'); // Add this to confirm button click
-    
     if (currentStep === 1 && !name.trim()) {
-      console.log('Step 1: Name is empty, not proceeding');
       return; // Don't proceed if name is empty
     }
 
     if (currentStep < totalSteps) {
-      console.log('Moving to next step:', currentStep + 1);
       setCurrentStep(currentStep + 1);
     } else {
-      console.log('Completing onboarding...');
       // Complete onboarding
       setIsLoading(true);
       try {
         // Call the onboarding completion API
         const token = localStorage.getItem('token');
-        console.log('Token:', token ? 'exists' : 'missing');
         
         const requestBody = {
           name: name.trim(),
@@ -43,7 +35,6 @@ const Onboarding: React.FC = () => {
           industry: selectedIndustry,
           goal: selectedGoal
         };
-        console.log('Request body:', requestBody);
         
         const response = await fetch('/api/auth/onboarding/complete', {
           method: 'POST',
@@ -53,11 +44,8 @@ const Onboarding: React.FC = () => {
           },
           body: JSON.stringify(requestBody)
         });
-
-        console.log('Response status:', response.status);
         
         if (response.ok) {
-          console.log('Onboarding completed successfully');
           // Update the user context
           updateUser({ 
             firstName: name.trim(), 
@@ -87,7 +75,7 @@ const Onboarding: React.FC = () => {
     currentStep === 3 ? true : 
     true;
 
-  console.log('Onboarding render - currentStep:', currentStep, 'canContinue:', canContinue, 'isLoading:', isLoading, 'name:', name, 'selectedIndustry:', selectedIndustry, 'selectedGoal:', selectedGoal);
+
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -244,18 +232,13 @@ const Onboarding: React.FC = () => {
             )}
             
             <button
-              onClick={(e) => {
-                console.log('Button clicked directly!');
-                alert('Button clicked!'); // Temporary test
-                handleContinue();
-              }}
+              onClick={handleContinue}
               disabled={!canContinue || isLoading}
               className={`px-6 py-2 rounded-lg font-medium transition-colors ${
                 canContinue && !isLoading
                   ? 'bg-orange-600 text-white hover:bg-orange-700'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
-              title={`canContinue: ${canContinue}, isLoading: ${isLoading}`}
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
@@ -263,9 +246,9 @@ const Onboarding: React.FC = () => {
                   Setting up...
                 </div>
               ) : currentStep === totalSteps ? (
-                `Get Started (Step ${currentStep}/${totalSteps})`
+                'Get Started'
               ) : (
-                `Continue (Step ${currentStep}/${totalSteps})`
+                'Continue'
               )}
             </button>
           </div>
