@@ -190,46 +190,59 @@ export default function Drafts() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pb-12">
-      {/* Top Navigation Bar */}
-      <nav className="bg-gradient-to-r from-blue-600 to-blue-400 shadow-lg fixed w-full z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-extrabold text-white tracking-wider drop-shadow">ProposalAI</h1>
+    <div className="min-h-screen bg-gray-50" style={{ backgroundImage: 'radial-gradient(circle, #e5e7eb 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
+      {/* Header */}
+      <header className="sticky top-0 z-40 w-full bg-transparent">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 flex items-center justify-between h-16">
+          {/* Left side - Logo and Navigation */}
+          <div className="flex items-center gap-8">
+            <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/dashboard')}>
+              <span className="text-xl font-bold text-gray-900">ProposalAI</span>
             </div>
-            <div className="flex items-center space-x-8">
-              <a href="/dashboard" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <HomeIcon className="w-5 h-5" />
-                <span>Dashboard</span>
-              </a>
-              <a href="/drafts" className="flex items-center space-x-1 text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">
-                <DocumentTextIcon className="w-5 h-5" />
-                <span>Drafts</span>
-              </a>
-              <a href="/sent-proposals" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <PaperAirplaneIcon className="w-5 h-5" />
-                <span>Sent Proposals</span>
-              </a>
-              <a href="/clients" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <UsersIcon className="w-5 h-5" />
-                <span>Clients</span>
-              </a>
-              <a href="/profile" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <UserIcon className="w-5 h-5" />
-                <span>Profile</span>
-              </a>
-              <NotificationBell />
+            <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
               <button 
-                onClick={handleLogout}
-                className="text-white/80 hover:text-white transition-colors"
+                onClick={() => navigate('/dashboard')}
+                className="text-gray-600 hover:text-gray-900 transition flex items-center gap-2"
               >
-                Logout
+                <HomeIcon className="w-4 h-4" />
+                Dashboard
+              </button>
+              <button 
+                onClick={() => navigate('/drafts')}
+                className="text-orange-600 font-medium flex items-center gap-2"
+              >
+                <DocumentTextIcon className="w-4 h-4" />
+                Drafts
+              </button>
+              <button 
+                onClick={() => navigate('/clients')}
+                className="text-gray-600 hover:text-gray-900 transition flex items-center gap-2"
+              >
+                <UsersIcon className="w-4 h-4" />
+                Clients
+              </button>
+            </nav>
+          </div>
+          
+          {/* Right side - User actions */}
+          <div className="flex items-center gap-4">
+            <NotificationBell />
+            <div className="relative">
+              <button className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition">
+                <UserIcon className="w-5 h-5" />
+                <span className="hidden md:block">Account</span>
+                <ChevronDownIcon className="w-4 h-4" />
               </button>
             </div>
+            <button
+              onClick={handleLogout}
+              className="text-gray-600 hover:text-gray-900 transition font-medium"
+            >
+              Logout
+            </button>
           </div>
         </div>
-      </nav>
+      </header>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24">
         {/* Back Button */}
         <button

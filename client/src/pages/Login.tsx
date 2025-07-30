@@ -63,10 +63,10 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 sm:p-10 flex flex-col items-center">
+    <div className="min-h-screen bg-gray-50" style={{ backgroundImage: 'radial-gradient(circle, #e5e7eb 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
+      <div className="w-full max-w-md mx-auto bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-100 p-8 sm:p-10 flex flex-col items-center mt-20">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-20 h-20 rounded-full bg-[#0a2540] flex items-center justify-center shadow-lg mb-4">
+          <div className="w-20 h-20 rounded-full bg-orange-600 flex items-center justify-center shadow-lg mb-4">
             <span className="text-2xl font-bold text-white tracking-tight">ProposalAI</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-1 text-center">Welcome to ProposalAI</h1>
@@ -98,63 +98,55 @@ export default function Login() {
                 id="email"
                 type="email"
                 autoComplete="email"
-                required
-                className="input pl-10"
-                placeholder="you@example.com"
                 value={email}
-                onChange={e => setEmail(e.target.value)}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                placeholder="Enter your email"
+                required
               />
             </div>
           </div>
-          <div className="mb-2">
+          <div className="mb-6">
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
             <div className="relative">
               <span className="absolute left-3 top-2.5 text-gray-400">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m0-6v2m6 4V7a2 2 0 00-2-2H8a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2z" /></svg>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
               </span>
               <input
                 id="password"
                 type="password"
                 autoComplete="current-password"
-                required
-                className="input pl-10"
-                placeholder="••••••••"
                 value={password}
-                onChange={e => setPassword(e.target.value)}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                placeholder="Enter your password"
+                required
               />
             </div>
           </div>
           {error && (
-            <div className="text-danger-600 text-sm mb-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex items-start gap-2">
-                <svg className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                <div>
-                  <div className="font-medium">{error}</div>
-                  {error.includes('Too many requests') && (
-                    <div className="text-xs text-red-600 mt-1">
-                      💡 Try refreshing the page or waiting a few minutes before attempting again.
-                    </div>
-                  )}
-                </div>
-              </div>
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-600 text-sm">{error}</p>
             </div>
           )}
           <button
             type="submit"
-            className="btn btn-primary w-full mt-2 flex items-center justify-center"
             disabled={loading}
+            className="w-full bg-orange-600 text-white font-semibold py-2.5 rounded-lg hover:bg-orange-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? <LoadingSpinner size="sm" /> : 'Sign in'}
+            {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
-        <div className="flex justify-between w-full mt-4 text-sm text-gray-500">
-          <button className="hover:underline" type="button">Forgot password?</button>
-          <span>
-            Need an account?{' '}
-            <button className="font-semibold text-primary-600 hover:underline" type="button" onClick={() => navigate('/register')}>Sign up</button>
-          </span>
+        <div className="mt-6 text-center">
+          <p className="text-gray-600 text-sm">
+            Don't have an account?{' '}
+            <button
+              onClick={() => navigate('/register')}
+              className="text-orange-600 hover:text-orange-700 font-medium"
+            >
+              Sign up
+            </button>
+          </p>
         </div>
       </div>
     </div>
