@@ -40,8 +40,33 @@ export default function Login() {
     try {
       console.log('Attempting login with:', email);
       await login(email, password);
-      console.log('Login successful, navigating to dashboard');
-      navigate('/dashboard');
+      console.log('Login successful, checking onboarding status');
+      
+      // Check if user has completed onboarding
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const response = await fetch('/api/auth/me', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          const userData = await response.json();
+          
+          if (userData.data && !userData.data.onboardingCompleted) {
+            console.log('User needs onboarding, redirecting to onboarding');
+            navigate('/onboarding');
+          } else {
+            console.log('User completed onboarding, navigating to dashboard');
+            navigate('/dashboard');
+          }
+        } catch (error) {
+          console.error('Error checking user data:', error);
+          navigate('/dashboard');
+        }
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       console.error('Login error:', err);
       

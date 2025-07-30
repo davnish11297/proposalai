@@ -9,6 +9,7 @@ interface User {
   role: string;
   avatar?: string;
   organizationId?: string;
+  onboardingCompleted?: boolean;
 }
 
 interface AuthContextType {

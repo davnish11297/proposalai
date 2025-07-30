@@ -4,6 +4,7 @@ import { useAuth } from './hooks/useAuth';
 import LoadingSpinner from './components/LoadingSpinner';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
 import ProposalEditor from './pages/ProposalEditor';
 import ProposalViewer from './pages/ProposalViewer';
@@ -39,10 +40,13 @@ function App() {
     );
   }
 
+
+
   return (
     // <ThemeProvider>
     <Routes>
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/onboarding" element={<Onboarding />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/drafts" element={<Drafts />} />
       <Route path="/sent-proposals" element={<SentProposals />} />
