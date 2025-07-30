@@ -230,7 +230,14 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 // Serve static files from the React app build directory
-app.use(express.static(path.join(__dirname, '../../../client/build')));
+const staticPath = path.join(__dirname, '../../client/build');
+const indexPath = path.join(__dirname, '../../client/build/index.html');
+
+console.log('🔧 Static files path:', staticPath);
+console.log('🔧 Index file path:', indexPath);
+console.log('🔧 __dirname:', __dirname);
+
+app.use(express.static(staticPath));
 
 // Handle client-side routing - serve index.html for all non-API routes
 app.get('*', (req, res) => {
@@ -242,8 +249,10 @@ app.get('*', (req, res) => {
     });
   }
   
+  console.log('🔧 Serving index.html for path:', req.path);
+  
   // Serve the React app for all other routes
-  return res.sendFile(path.join(__dirname, '../../../client/build/index.html'));
+  return res.sendFile(indexPath);
 });
 
 // Start server
