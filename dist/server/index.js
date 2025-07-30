@@ -10,7 +10,7 @@ const compression_1 = __importDefault(require("compression"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const path_1 = __importDefault(require("path"));
-const mongoClient_1 = require("./utils/mongoClient");
+const mongoClient_js_1 = require("./utils/mongoClient.js");
 const proposals_1 = __importDefault(require("./routes/proposals"));
 const comments_1 = __importDefault(require("./routes/comments"));
 const teams_1 = __importDefault(require("./routes/teams"));
@@ -181,7 +181,12 @@ app.use((err, req, res, next) => {
             : err.message || 'Something went wrong'
     });
 });
-app.use(express_1.default.static(path_1.default.join(__dirname, '../../client/build')));
+const staticPath = path_1.default.join(__dirname, '../../client/build');
+const indexPath = path_1.default.join(__dirname, '../../client/build/index.html');
+console.log('🔧 Static files path:', staticPath);
+console.log('🔧 Index file path:', indexPath);
+console.log('🔧 __dirname:', __dirname);
+app.use(express_1.default.static(staticPath));
 app.get('*', (req, res) => {
     if (req.path.startsWith('/api/')) {
         return res.status(404).json({
@@ -189,14 +194,15 @@ app.get('*', (req, res) => {
             error: 'Route not found'
         });
     }
-    return res.sendFile(path_1.default.join(__dirname, '../../client/build/index.html'));
+    console.log('🔧 Serving index.html for path:', req.path);
+    return res.sendFile(indexPath);
 });
 async function startServer() {
     try {
         let retries = 3;
         while (retries > 0) {
             try {
-                await (0, mongoClient_1.connectToDatabase)();
+                await (0, mongoClient_js_1.connectToDatabase)();
                 break;
             }
             catch (error) {

@@ -8,30 +8,36 @@ export class ClientController {
     try {
       const clients = await db.client.findMany({
         where: { organizationId: req.user!.organizationId },
-        include: {
-          proposals: {
+        orderBy: { createdAt: 'desc' }
+      });
+
+      // Fetch proposals for each client separately
+      const clientsWithStats = await Promise.all(
+        clients.map(async (client) => {
+          const proposals = await db.proposal.findMany({
+            where: { clientName: client.name },
             select: {
               id: true,
               title: true,
               status: true,
               createdAt: true
-            }
-          }
-        },
-        orderBy: { createdAt: 'desc' }
-      });
+            },
+            orderBy: { createdAt: 'desc' }
+          });
 
-      const clientsWithStats = clients.map(client => ({
-        ...client,
-        proposals: client.proposals.map((proposal: any) => ({
-          id: proposal.id,
-          title: proposal.title,
-          status: proposal.status,
-          createdAt: proposal.createdAt
-        })),
-        totalProposals: client.proposals.length,
-        activeProposals: client.proposals.filter((p: any) => p.status === 'ACTIVE').length
-      }));
+          return {
+            ...client,
+            proposals: proposals.map((proposal: any) => ({
+              id: proposal.id,
+              title: proposal.title,
+              status: proposal.status,
+              createdAt: proposal.createdAt
+            })),
+            totalProposals: proposals.length,
+            activeProposals: proposals.filter((p: any) => p.status === 'ACTIVE').length
+          };
+        })
+      );
 
       res.json({
         success: true,
@@ -51,23 +57,7 @@ export class ClientController {
     try {
       const { id } = req.params;
       const client = await db.client.findFirst({
-        where: { id },
-        include: {
-          proposals: {
-            orderBy: { updatedAt: 'desc' },
-            select: {
-              id: true,
-              title: true,
-              description: true,
-              type: true,
-              status: true,
-              createdAt: true,
-              updatedAt: true,
-              clientName: true,
-              metadata: true
-            }
-          }
-        }
+        where: { id }
       });
       
       if (!client) {
@@ -75,14 +65,33 @@ export class ClientController {
         return;
       }
 
+      // Fetch proposals for this client separately
+      const proposals = await db.proposal.findMany({
+        where: { clientName: client.name },
+        orderBy: { updatedAt: 'desc' },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          type: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+          clientName: true,
+          metadata: true
+        }
+      });
+
       // Transform proposals to include email info from metadata
       const transformedClient = {
         ...client,
-        proposals: client.proposals.map((proposal: any) => {
+        proposals: proposals.map((proposal: any) => {
           let emailSentAt, emailRecipient;
           if (proposal.metadata) {
             try {
-              const metadata = JSON.parse(proposal.metadata);
+              const metadata = typeof proposal.metadata === 'string' 
+                ? JSON.parse(proposal.metadata) 
+                : proposal.metadata;
               if (metadata.lastEmailSent) {
                 emailSentAt = metadata.lastEmailSent.sentAt;
                 emailRecipient = metadata.lastEmailSent.recipientEmail;
