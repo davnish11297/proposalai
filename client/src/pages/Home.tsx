@@ -81,7 +81,7 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center px-4">
+      <main className="flex-1 flex items-center justify-center px-4 pt-20">
         <div className="max-w-4xl w-full">
           <div className="text-center mb-8">
             <div className="inline-flex items-center px-3 py-1 rounded-full bg-gray-800 text-white text-sm font-medium mb-4">
