@@ -86,7 +86,7 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center px-4 pt-20">
+      <main className="flex-1 flex items-center justify-center px-4 pt-20 relative">
         <div className="max-w-4xl w-full">
           <div className="text-center mb-8">
             <div className="inline-flex items-center px-3 py-1 rounded-full bg-gray-800 text-white text-sm font-medium mb-4">
@@ -311,7 +311,7 @@ export default function Home() {
       </footer>
 
       {/* Left Panel - Problem Research */}
-      <div className="fixed left-8 top-1/2 transform -translate-y-1/2 hidden lg:block">
+      <div className="absolute left-8 top-1/2 transform -translate-y-1/2 hidden lg:block">
         <div className="relative">
           <div className="w-16 h-16 bg-yellow-200 rounded-full flex items-center justify-center mb-4 animate-pulse">
             <span className="text-yellow-800 font-semibold text-sm animate-bounce">PR</span>
@@ -340,7 +340,7 @@ export default function Home() {
       </div>
 
       {/* Right Panel - Build Product */}
-      <div className="fixed right-8 top-1/2 transform -translate-y-1/2 hidden lg:block">
+      <div className="absolute right-8 top-1/2 transform -translate-y-1/2 hidden lg:block">
         <div className="relative">
           <div className="w-16 h-16 bg-green-200 rounded-full flex items-center justify-center mb-4 animate-pulse">
             <span className="text-green-800 font-semibold text-sm animate-bounce">BP</span>
