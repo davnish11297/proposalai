@@ -1,0 +1,284 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+  --primary-blue: #2563eb;
+  --primary-blue-dark: #1d4ed8;
+  --secondary-gray: #6b7280;
+  --light-gray: #f8fafc;
+  --border-gray: #e2e8f0;
+  --success-green: #10b981;
+  --warning-orange: #f59e0b;
+  --danger-red: #ef4444;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+/* Modern Input Styles */
+.input {
+  @apply w-full px-4 py-3 text-sm border border-gray-200 rounded-xl 
+         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+         placeholder-gray-400 transition-all duration-200 bg-white
+         hover:border-gray-300;
+}
+
+.input:focus {
+  @apply shadow-lg shadow-blue-500/10;
+}
+
+/* Modern Textarea Styles */
+.textarea {
+  @apply w-full px-4 py-3 text-sm border border-gray-200 rounded-xl 
+         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+         placeholder-gray-400 transition-all duration-200 bg-white resize-none
+         hover:border-gray-300;
+}
+
+.textarea:focus {
+  @apply shadow-lg shadow-blue-500/10;
+}
+
+/* Modern Button Styles */
+.btn {
+  @apply px-6 py-3 text-sm font-medium rounded-xl transition-all duration-200 
+         focus:outline-none focus:ring-2 focus:ring-offset-2 inline-flex items-center justify-center
+         disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-primary {
+  @apply bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 
+         shadow-md hover:shadow-lg active:scale-95;
+}
+
+.btn-secondary {
+  @apply bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-500
+         border border-gray-200 hover:border-gray-300;
+}
+
+.btn-success {
+  @apply bg-emerald-500 text-white hover:bg-emerald-600 focus:ring-emerald-500
+         shadow-md hover:shadow-lg active:scale-95;
+}
+
+.btn-warning {
+  @apply bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-500
+         shadow-md hover:shadow-lg active:scale-95;
+}
+
+.btn-danger {
+  @apply bg-red-500 text-white hover:bg-red-600 focus:ring-red-500
+         shadow-md hover:shadow-lg active:scale-95;
+}
+
+.btn-ghost {
+  @apply text-gray-600 hover:text-gray-800 hover:bg-gray-100 focus:ring-gray-500;
+}
+
+.btn-outline {
+  @apply border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white
+         focus:ring-blue-500;
+}
+
+/* Modern Card Styles */
+.card {
+  @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-6
+         hover:shadow-md transition-all duration-200;
+}
+
+.card-elevated {
+  @apply bg-white rounded-2xl shadow-lg border border-gray-100 p-6
+         hover:shadow-xl transition-all duration-300;
+}
+
+/* Modern Navigation */
+.nav-link {
+  @apply flex items-center space-x-2 text-gray-600 hover:text-blue-600 
+         transition-colors duration-200 px-3 py-2 rounded-lg hover:bg-blue-50;
+}
+
+.nav-link.active {
+  @apply text-blue-600 bg-blue-50 font-medium;
+}
+
+/* Status Badges */
+.badge {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
+}
+
+.badge-success {
+  @apply bg-emerald-100 text-emerald-800;
+}
+
+.badge-warning {
+  @apply bg-amber-100 text-amber-800;
+}
+
+.badge-danger {
+  @apply bg-red-100 text-red-800;
+}
+
+.badge-info {
+  @apply bg-blue-100 text-blue-800;
+}
+
+.badge-gray {
+  @apply bg-gray-100 text-gray-800;
+}
+
+/* Modern Loading Animation */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Smooth Transitions */
+.transition-smooth {
+  @apply transition-all duration-300 ease-in-out;
+}
+
+/* Glass Effect */
+.glass {
+  @apply bg-white/80 backdrop-blur-sm border border-white/20;
+}
+
+/* Gradient Backgrounds */
+.gradient-blue {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.gradient-purple {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.gradient-ocean {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+}
+
+/* Modern Shadows */
+.shadow-modern {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.shadow-modern-lg {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Hover Effects */
+.hover-lift {
+  @apply transition-transform duration-200 hover:-translate-y-1 hover:shadow-lg;
+}
+
+/* Modern Scrollbar */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Text Gradients */
+.text-gradient {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Modern Form Groups */
+.form-group {
+  @apply space-y-2;
+}
+
+.form-label {
+  @apply block text-sm font-medium text-gray-700;
+}
+
+.form-help {
+  @apply text-xs text-gray-500;
+}
+
+.form-error {
+  @apply text-xs text-red-500;
+}
+
+/* Responsive Grid */
+.grid-responsive {
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+}
+
+/* Animation Classes */
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Modern List Styles */
+.list-modern {
+  @apply space-y-2;
+}
+
+.list-modern li {
+  @apply flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors;
+}
+
+/* Utility Classes */
+.text-balance {
+  text-wrap: balance;
+}
+
+/* Focus Visible */
+.focus-visible {
+  @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2;
+}
