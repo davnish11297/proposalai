@@ -7,6 +7,8 @@ const Onboarding: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [name, setName] = useState('');
   const [privacyMode, setPrivacyMode] = useState(false);
+  const [selectedIndustry, setSelectedIndustry] = useState('');
+  const [selectedGoal, setSelectedGoal] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const totalSteps = 3;
@@ -34,7 +36,9 @@ const Onboarding: React.FC = () => {
           },
           body: JSON.stringify({
             name: name.trim(),
-            privacyMode
+            privacyMode,
+            industry: selectedIndustry,
+            goal: selectedGoal
           })
         });
 
@@ -62,7 +66,10 @@ const Onboarding: React.FC = () => {
     navigate('/dashboard');
   };
 
-  const canContinue = currentStep === 1 ? name.trim().length > 0 : true;
+  const canContinue = 
+    currentStep === 1 ? name.trim().length > 0 : 
+    currentStep === 2 ? selectedIndustry && selectedGoal : 
+    true;
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -127,7 +134,12 @@ const Onboarding: React.FC = () => {
                   {['Technology', 'Healthcare', 'Finance', 'Education', 'Marketing', 'Consulting'].map((industry) => (
                     <button
                       key={industry}
-                      className="px-4 py-3 border border-gray-300 rounded-lg text-sm font-medium hover:border-orange-500 hover:bg-orange-50 transition-colors"
+                      onClick={() => setSelectedIndustry(industry)}
+                      className={`px-4 py-3 border rounded-lg text-sm font-medium transition-colors ${
+                        selectedIndustry === industry
+                          ? 'border-orange-500 bg-orange-50 text-orange-700'
+                          : 'border-gray-300 hover:border-orange-500 hover:bg-orange-50'
+                      }`}
                     >
                       {industry}
                     </button>
@@ -146,7 +158,12 @@ const Onboarding: React.FC = () => {
                   ].map((goal) => (
                     <button
                       key={goal}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm font-medium hover:border-orange-500 hover:bg-orange-50 transition-colors text-left"
+                      onClick={() => setSelectedGoal(goal)}
+                      className={`w-full px-4 py-3 border rounded-lg text-sm font-medium transition-colors text-left ${
+                        selectedGoal === goal
+                          ? 'border-orange-500 bg-orange-50 text-orange-700'
+                          : 'border-gray-300 hover:border-orange-500 hover:bg-orange-50'
+                      }`}
                     >
                       {goal}
                     </button>

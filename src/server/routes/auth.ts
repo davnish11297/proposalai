@@ -231,7 +231,7 @@ router.get('/me', authenticateToken, async (req, res) => {
 router.post('/onboarding/complete', authenticateToken, async (req, res) => {
   try {
     const authenticatedReq = req as AuthenticatedRequest;
-    const { name, privacyMode } = req.body;
+    const { name, privacyMode, industry, goal } = req.body;
 
     if (!name) {
       return res.status(400).json({
@@ -251,6 +251,8 @@ router.post('/onboarding/complete', authenticateToken, async (req, res) => {
           firstName: name,
           onboardingCompleted: true,
           privacyMode: privacyMode || false,
+          industry: industry || '',
+          goal: goal || '',
           updatedAt: new Date()
         }
       }
