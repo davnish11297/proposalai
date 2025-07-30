@@ -12,11 +12,13 @@ const Onboarding: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const totalSteps = 3;
+  console.log('totalSteps:', totalSteps, 'currentStep === totalSteps:', currentStep === totalSteps);
 
   const { updateUser } = useAuth();
 
   const handleContinue = async () => {
     console.log('handleContinue called, currentStep:', currentStep, 'totalSteps:', totalSteps);
+    console.log('Button clicked!'); // Add this to confirm button click
     
     if (currentStep === 1 && !name.trim()) {
       console.log('Step 1: Name is empty, not proceeding');
@@ -85,7 +87,7 @@ const Onboarding: React.FC = () => {
     currentStep === 3 ? true : 
     true;
 
-  console.log('Onboarding render - currentStep:', currentStep, 'canContinue:', canContinue, 'isLoading:', isLoading);
+  console.log('Onboarding render - currentStep:', currentStep, 'canContinue:', canContinue, 'isLoading:', isLoading, 'name:', name, 'selectedIndustry:', selectedIndustry, 'selectedGoal:', selectedGoal);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -242,13 +244,18 @@ const Onboarding: React.FC = () => {
             )}
             
             <button
-              onClick={handleContinue}
+              onClick={(e) => {
+                console.log('Button clicked directly!');
+                alert('Button clicked!'); // Temporary test
+                handleContinue();
+              }}
               disabled={!canContinue || isLoading}
               className={`px-6 py-2 rounded-lg font-medium transition-colors ${
                 canContinue && !isLoading
                   ? 'bg-orange-600 text-white hover:bg-orange-700'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
+              title={`canContinue: ${canContinue}, isLoading: ${isLoading}`}
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
@@ -256,9 +263,9 @@ const Onboarding: React.FC = () => {
                   Setting up...
                 </div>
               ) : currentStep === totalSteps ? (
-                'Get Started'
+                `Get Started (Step ${currentStep}/${totalSteps})`
               ) : (
-                'Continue'
+                `Continue (Step ${currentStep}/${totalSteps})`
               )}
             </button>
           </div>
