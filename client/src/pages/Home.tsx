@@ -104,7 +104,7 @@ export default function Home() {
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Describe your project or proposal..."
-                className="w-full px-8 py-6 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                className="w-full px-8 py-8 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
               />
               <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center gap-3">
                 <button className="w-8 h-8 bg-green-400 rounded-full flex items-center justify-center hover:bg-green-500 transition-colors">
