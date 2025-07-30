@@ -64,13 +64,23 @@ export default function Drafts() {
   const fetchDrafts = async () => {
     try {
       setLoading(true);
+      console.log('🔍 Starting fetchDrafts...');
+      console.log('🔍 Token from localStorage:', localStorage.getItem('token'));
+      
       const response = await proposalsAPI.getAll();
-      console.log('All proposals:', response.data.data);
+      console.log('🔍 API Response:', response);
+      console.log('🔍 Response data:', response.data);
+      console.log('🔍 All proposals:', response.data.data);
+      
       const draftProposals = response.data.data.filter((p: any) => p.status === 'DRAFT');
-      console.log('Draft proposals:', draftProposals);
+      console.log('🔍 Draft proposals after filter:', draftProposals);
+      console.log('🔍 Draft count:', draftProposals.length);
+      
       setDrafts(draftProposals);
-    } catch (err) {
-      console.error('Error fetching drafts:', err);
+    } catch (err: any) {
+      console.error('❌ Error fetching drafts:', err);
+      console.error('❌ Error details:', err.response?.data);
+      console.error('❌ Error status:', err.response?.status);
       setError('Failed to load drafts');
     } finally {
       setLoading(false);
