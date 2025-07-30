@@ -65,8 +65,12 @@ export default function Drafts() {
     try {
       setLoading(true);
       const response = await proposalsAPI.getAll();
-      setDrafts(response.data.data.filter((p: any) => p.status === 'DRAFT'));
+      console.log('All proposals:', response.data.data);
+      const draftProposals = response.data.data.filter((p: any) => p.status === 'DRAFT');
+      console.log('Draft proposals:', draftProposals);
+      setDrafts(draftProposals);
     } catch (err) {
+      console.error('Error fetching drafts:', err);
       setError('Failed to load drafts');
     } finally {
       setLoading(false);
@@ -243,65 +247,68 @@ export default function Drafts() {
           </div>
         </div>
       </header>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24">
         {/* Back Button */}
         <button
           onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-2 mb-6 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-400 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-blue-500 transition shadow"
+          className="flex items-center gap-2 mb-6 px-4 py-2 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 transition shadow"
         >
           <ArrowLeftIcon className="h-5 w-5" /> Back to Dashboard
         </button>
-        <h2 className="text-4xl font-extrabold text-blue-800 mb-8 text-center tracking-tight drop-shadow-lg">Your Draft Proposals</h2>
+        
+        <h2 className="text-4xl font-extrabold text-gray-900 mb-8 text-center tracking-tight">Your Draft Proposals</h2>
+        
         {loading ? (
-          <div className="flex justify-center items-center h-40 text-lg text-blue-600 font-semibold animate-pulse">Loading drafts...</div>
+          <div className="flex justify-center items-center h-40 text-lg text-orange-600 font-semibold animate-pulse">Loading drafts...</div>
         ) : error ? (
           <div className="flex justify-center items-center h-40 text-lg text-red-500 font-semibold">{error}</div>
         ) : drafts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-60 text-blue-200">
+          <div className="flex flex-col items-center justify-center h-60 text-gray-400">
             <DocumentTextIcon className="h-16 w-16 mb-4" />
-            <div className="text-xl font-medium">No drafts found</div>
-            <div className="text-sm mt-2">Start by generating a new proposal!</div>
+            <div className="text-xl font-medium text-gray-500">No drafts found</div>
+            <div className="text-sm mt-2 text-gray-400">Start by generating a new proposal!</div>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {drafts.map((draft) => (
-              <div key={draft.id} className="bg-white rounded-2xl shadow-xl border-2 border-blue-200 p-6 flex flex-col justify-between hover:shadow-2xl transition-all duration-200">
+              <div key={draft.id} className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-100 p-6 flex flex-col justify-between hover:shadow-2xl transition-all duration-200">
                 <div>
                   <div className="flex items-center gap-3 mb-2">
-                    <DocumentTextIcon className="h-7 w-7 text-blue-500" />
-                    <span className="text-lg font-bold text-blue-900 truncate" title={draft.title}>{draft.title}</span>
+                    <DocumentTextIcon className="h-7 w-7 text-orange-500" />
+                    <span className="text-lg font-bold text-gray-900 truncate" title={draft.title}>{draft.title}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-blue-700 mb-1">
+                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
                     <UserIcon className="h-4 w-4" />
                     <span>{draft.clientName || 'N/A'}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-blue-400 mb-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
                     <CalendarIcon className="h-4 w-4" />
                     <span>{new Date(draft.createdAt).toLocaleDateString()}</span>
                   </div>
-                  <div className="text-blue-800 text-sm line-clamp-3 mb-4">{draft.description}</div>
+                  <div className="text-gray-700 text-sm line-clamp-3 mb-4">{draft.description}</div>
                 </div>
                 <div className="flex gap-2 mt-2 flex-wrap">
                   <button
-                    className="flex items-center gap-1 px-3 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-400 text-white font-semibold hover:from-blue-600 hover:to-blue-500 transition text-sm"
+                    className="flex items-center gap-1 px-3 py-2 rounded-lg bg-orange-600 text-white font-semibold hover:bg-orange-700 transition text-sm"
                     onClick={() => handleEdit(draft.id)}
                   >
                     <PencilSquareIcon className="h-4 w-4" /> Edit
                   </button>
                   <button
-                    className="flex items-center gap-1 px-3 py-2 rounded-lg bg-gradient-to-r from-green-400 to-green-300 text-white font-semibold hover:from-green-500 hover:to-green-400 transition text-sm"
+                    className="flex items-center gap-1 px-3 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition text-sm"
                     onClick={() => handleView(draft.id)}
                   >
                     <EyeIcon className="h-4 w-4" /> View
                   </button>
                   <button
-                    className="flex items-center gap-1 px-3 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-purple-400 text-white font-semibold hover:from-purple-600 hover:to-purple-500 transition text-sm"
+                    className="flex items-center gap-1 px-3 py-2 rounded-lg bg-purple-600 text-white font-semibold hover:bg-purple-700 transition text-sm"
                     onClick={() => handleSend(draft)}
                   >
                     <PaperAirplaneIcon className="h-4 w-4" /> Send
                   </button>
                   <button
-                    className="flex items-center gap-1 px-3 py-2 rounded-lg bg-gradient-to-r from-red-400 to-red-300 text-white font-semibold hover:from-red-500 hover:to-red-400 transition text-sm"
+                    className="flex items-center gap-1 px-3 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition text-sm"
                     onClick={() => handleDelete(draft.id)}
                   >
                     <TrashIcon className="h-4 w-4" /> Delete
@@ -335,7 +342,7 @@ export default function Drafts() {
                     <button
                       type="button"
                       onClick={() => setShowClientDropdown(!showClientDropdown)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-left flex items-center justify-between"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white text-left flex items-center justify-between"
                       disabled={sending}
                     >
                       <span className={selectedClientId ? 'text-gray-900' : 'text-gray-500'}>
@@ -384,7 +391,7 @@ export default function Drafts() {
                               setShowNewClientForm(true);
                               setShowClientDropdown(false);
                             }}
-                            className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded-md flex items-center gap-2 text-purple-600"
+                            className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded-md flex items-center gap-2 text-orange-600"
                           >
                             <PlusIcon className="h-4 w-4" />
                             <span className="font-medium">Add New Client</span>
@@ -397,12 +404,12 @@ export default function Drafts() {
 
                 {/* New Client Form */}
                 {showNewClientForm && (
-                  <div className="border border-purple-200 rounded-lg p-4 bg-purple-50">
+                  <div className="border border-orange-200 rounded-lg p-4 bg-orange-50">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-medium text-purple-900">Add New Client</h4>
+                      <h4 className="font-medium text-orange-900">Add New Client</h4>
                       <button
                         onClick={() => setShowNewClientForm(false)}
-                        className="text-purple-600 hover:text-purple-800"
+                        className="text-orange-600 hover:text-orange-800"
                       >
                         ×
                       </button>
@@ -418,7 +425,7 @@ export default function Drafts() {
                           placeholder="Enter client's full name"
                           value={newClientName}
                           onChange={(e) => setNewClientName(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                           disabled={creatingClient}
                         />
                       </div>
@@ -432,7 +439,7 @@ export default function Drafts() {
                           placeholder="client@example.com"
                           value={newClientEmail}
                           onChange={(e) => setNewClientEmail(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                           disabled={creatingClient}
                         />
                       </div>
@@ -440,7 +447,7 @@ export default function Drafts() {
                       <button
                         onClick={handleCreateClient}
                         disabled={creatingClient || !newClientName.trim() || !newClientEmail.trim()}
-                        className="w-full px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        className="w-full px-3 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
                         {creatingClient ? (
                           <>
@@ -470,7 +477,7 @@ export default function Drafts() {
                         placeholder="Enter client's full name"
                         value={clientName}
                         onChange={(e) => setClientName(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                         disabled={sending}
                       />
                     </div>
@@ -484,7 +491,7 @@ export default function Drafts() {
                         placeholder="recipient@example.com"
                         value={recipientEmail}
                         onChange={(e) => setRecipientEmail(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                         disabled={sending}
                       />
                     </div>
@@ -508,7 +515,7 @@ export default function Drafts() {
               <button
                 onClick={handleSendProposal}
                 disabled={sending || !recipientEmail.trim() || !clientName.trim()}
-                className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-500 to-purple-400 text-white font-semibold rounded-lg hover:from-purple-600 hover:to-purple-500 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-3 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {sending ? (
                   <>
