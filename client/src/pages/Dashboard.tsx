@@ -49,23 +49,69 @@ const Dashboard: React.FC = () => {
   const [clientName, setClientName] = useState('');
   const [proposalId, setProposalId] = useState<string | null>(null);
   const [selectedSuggestions, setSelectedSuggestions] = useState<string[]>([]);
-  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [uploadedPdfContent, setUploadedPdfContent] = useState<string>('');
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
 
-  // State for suggestions
-  const [predefinedSuggestions, setPredefinedSuggestions] = useState<Array<{
-    text: string;
-    icon: React.ReactNode;
-    color: 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'yellow';
-  }>>([]);
-  
-  const [refinementSuggestions, setRefinementSuggestions] = useState<Array<{
-    text: string;
-    icon: React.ReactNode;
-    color: 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'yellow';
-  }>>([]);
+  // Predefined suggestions for proposal enhancement
+  const predefinedSuggestions = [
+    {
+      text: "Add Executive Summary",
+      icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>,
+      color: 'blue' as const
+    },
+    {
+      text: "Include Budget Details",
+      icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+      </svg>,
+      color: 'green' as const
+    },
+    {
+      text: "Add Timeline Section",
+      icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>,
+      color: 'purple' as const
+    },
+    {
+      text: "Highlight Key Benefits",
+      icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>,
+      color: 'orange' as const
+    },
+    {
+      text: "Clarify Project Scope",
+      icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+      </svg>,
+      color: 'red' as const
+    },
+    {
+      text: "Define Success Metrics",
+      icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>,
+      color: 'yellow' as const
+    },
+    {
+      text: "Showcase Team Expertise",
+      icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>,
+      color: 'blue' as const
+    },
+    {
+      text: "Provide Case Studies",
+      icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+      </svg>,
+      color: 'green' as const
+    }
+  ];
 
   // Show notification prompt after a delay
   useEffect(() => {
@@ -116,6 +162,10 @@ const Dashboard: React.FC = () => {
     setGenerating(true);
     try {
       const content = uploadedPdfContent || proposalText;
+      const selectedSuggestionsText = selectedSuggestions.length > 0 
+        ? `\n\nEnhancement requests: ${selectedSuggestions.join(', ')}`
+        : '';
+      
       const messages = [
         {
           role: 'system',
@@ -123,7 +173,7 @@ const Dashboard: React.FC = () => {
         },
         {
           role: 'user',
-          content: `Generate a professional proposal based on this content: ${content}`
+          content: `Generate a professional proposal based on this content: ${content}${selectedSuggestionsText}`
         }
       ];
 
@@ -308,12 +358,54 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
+              {/* Suggestion Bubbles */}
+              <div className="w-full mb-6">
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {predefinedSuggestions.map((suggestion, index) => {
+                    const isSelected = selectedSuggestions.includes(suggestion.text);
+                    const isDisabled = !isSelected && selectedSuggestions.length >= 5;
+                    
+                    const colorClasses = {
+                      blue: isSelected ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100',
+                      green: isSelected ? 'bg-green-100 text-green-700 border-green-300' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100',
+                      purple: isSelected ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100',
+                      orange: isSelected ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100',
+                      red: isSelected ? 'bg-red-100 text-red-700 border-red-300' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100',
+                      yellow: isSelected ? 'bg-yellow-100 text-yellow-700 border-yellow-300' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                    };
+                    
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => !isDisabled && !generating && handleSuggestionClick(suggestion.text)}
+                        disabled={generating || isDisabled}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 cursor-pointer border flex items-center gap-1.5 ${
+                          generating || isDisabled 
+                            ? 'opacity-40 cursor-not-allowed bg-gray-50 text-gray-400 border-gray-200' 
+                            : colorClasses[suggestion.color]
+                        }`}
+                      >
+                        {suggestion.icon}
+                        {suggestion.text}
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedSuggestions.length > 0 && (
+                  <div className="text-center mt-2">
+                    <span className="text-xs text-gray-500">
+                      {selectedSuggestions.length}/5 suggestions selected
+                    </span>
+                  </div>
+                )}
+              </div>
+
               {/* Generate and Clear buttons */}
               <div className="flex gap-4 mt-2 w-full justify-center">
                 <button
                   className="px-6 py-2 rounded-lg bg-orange-600 text-white font-bold shadow-md hover:bg-orange-700 transition disabled:opacity-60"
                   onClick={handleGenerateWithAI}
-                  disabled={generating || !proposalText.trim()}
+                  disabled={generating || (!proposalText.trim() && !uploadedPdfContent.trim())}
                 >
                   {generating ? 'Generating...' : 'Generate'}
                 </button>
@@ -391,6 +483,48 @@ const Dashboard: React.FC = () => {
                       )}
                     </label>
                   </div>
+                </div>
+
+                {/* Refinement Suggestions */}
+                <div className="w-full mb-4">
+                  <div className="flex flex-wrap gap-2">
+                    {predefinedSuggestions.map((suggestion, index) => {
+                      const isSelected = selectedSuggestions.includes(suggestion.text);
+                      const isDisabled = !isSelected && selectedSuggestions.length >= 5;
+                      
+                      const colorClasses = {
+                        blue: isSelected ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100',
+                        green: isSelected ? 'bg-green-100 text-green-700 border-green-300' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100',
+                        purple: isSelected ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100',
+                        orange: isSelected ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100',
+                        red: isSelected ? 'bg-red-100 text-red-700 border-red-300' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100',
+                        yellow: isSelected ? 'bg-yellow-100 text-yellow-700 border-yellow-300' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                      };
+                      
+                      return (
+                        <button
+                          key={index}
+                          onClick={() => !isDisabled && !generating && handleSuggestionClick(suggestion.text)}
+                          disabled={generating || isDisabled}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 cursor-pointer border flex items-center gap-1.5 ${
+                            generating || isDisabled 
+                              ? 'opacity-40 cursor-not-allowed bg-gray-50 text-gray-400 border-gray-200' 
+                              : colorClasses[suggestion.color]
+                          }`}
+                        >
+                          {suggestion.icon}
+                          {suggestion.text}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {selectedSuggestions.length > 0 && (
+                    <div className="text-center mt-2">
+                      <span className="text-xs text-gray-500">
+                        {selectedSuggestions.length}/5 suggestions selected
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Refine and Clear buttons */}
