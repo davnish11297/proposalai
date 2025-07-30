@@ -262,7 +262,7 @@ export default function Drafts() {
         {/* Back Button */}
         <button
           onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-2 mb-6 px-4 py-2 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 transition shadow"
+                      className="flex items-center gap-2 mb-6 px-4 py-2 bg-orange-600 text-white font-semibold hover:bg-orange-700 transition shadow"
         >
           <ArrowLeftIcon className="h-5 w-5" /> Back to Dashboard
         </button>
@@ -300,25 +300,25 @@ export default function Drafts() {
                 </div>
                 <div className="flex gap-2 mt-2 flex-wrap">
                   <button
-                    className="flex items-center gap-1 px-3 py-2 rounded-lg bg-orange-600 text-white font-semibold hover:bg-orange-700 transition text-sm"
+                    className="flex items-center gap-1 px-3 py-2 bg-orange-600 text-white font-semibold hover:bg-orange-700 transition text-sm"
                     onClick={() => handleEdit(draft.id)}
                   >
                     <PencilSquareIcon className="h-4 w-4" /> Edit
                   </button>
                   <button
-                    className="flex items-center gap-1 px-3 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition text-sm"
+                    className="flex items-center gap-1 px-3 py-2 bg-green-600 text-white font-semibold hover:bg-green-700 transition text-sm"
                     onClick={() => handleView(draft.id)}
                   >
                     <EyeIcon className="h-4 w-4" /> View
                   </button>
                   <button
-                    className="flex items-center gap-1 px-3 py-2 rounded-lg bg-purple-600 text-white font-semibold hover:bg-purple-700 transition text-sm"
+                    className="flex items-center gap-1 px-3 py-2 bg-purple-600 text-white font-semibold hover:bg-purple-700 transition text-sm"
                     onClick={() => handleSend(draft)}
                   >
                     <PaperAirplaneIcon className="h-4 w-4" /> Send
                   </button>
                   <button
-                    className="flex items-center gap-1 px-3 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition text-sm"
+                    className="flex items-center gap-1 px-3 py-2 bg-red-600 text-white font-semibold hover:bg-red-700 transition text-sm"
                     onClick={() => handleDelete(draft.id)}
                   >
                     <TrashIcon className="h-4 w-4" /> Delete
@@ -525,7 +525,7 @@ export default function Drafts() {
               <button
                 onClick={handleSendProposal}
                 disabled={sending || !recipientEmail.trim() || !clientName.trim()}
-                className="flex-1 px-4 py-3 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-3 bg-orange-600 text-white font-semibold hover:bg-orange-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {sending ? (
                   <>

@@ -379,7 +379,7 @@ const Dashboard: React.FC = () => {
                         key={index}
                         onClick={() => !isDisabled && !generating && handleSuggestionClick(suggestion.text)}
                         disabled={generating || isDisabled}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 cursor-pointer border flex items-center gap-1.5 ${
+                        className={`px-3 py-1.5 text-xs font-medium transition-all duration-200 cursor-pointer border flex items-center gap-1.5 ${
                           generating || isDisabled 
                             ? 'opacity-40 cursor-not-allowed bg-gray-50 text-gray-400 border-gray-200' 
                             : colorClasses[suggestion.color]
@@ -403,14 +403,14 @@ const Dashboard: React.FC = () => {
               {/* Generate and Clear buttons */}
               <div className="flex gap-4 mt-2 w-full justify-center">
                 <button
-                  className="px-6 py-2 rounded-lg bg-orange-600 text-white font-bold shadow-md hover:bg-orange-700 transition disabled:opacity-60"
+                  className="px-6 py-2 bg-orange-600 text-white font-bold shadow-md hover:bg-orange-700 transition disabled:opacity-60"
                   onClick={handleGenerateWithAI}
                   disabled={generating || (!proposalText.trim() && !uploadedPdfContent.trim())}
                 >
                   {generating ? 'Generating...' : 'Generate'}
                 </button>
                 <button
-                  className="px-6 py-2 rounded-lg bg-gray-200 text-gray-700 font-bold shadow-md hover:bg-gray-300 transition"
+                  className="px-6 py-2 bg-gray-200 text-gray-700 font-bold shadow-md hover:bg-gray-300 transition"
                   onClick={() => {
                     setProposalText('');
                     setSelectedSuggestions([]);
@@ -530,7 +530,7 @@ const Dashboard: React.FC = () => {
                 {/* Refine and Clear buttons */}
                 <div className="flex gap-3">
                   <button
-                    className="px-4 py-2 rounded-lg bg-orange-600 text-white font-bold shadow-md hover:bg-orange-700 transition disabled:opacity-60 flex-1"
+                    className="px-4 py-2 bg-orange-600 text-white font-bold shadow-md hover:bg-orange-700 transition disabled:opacity-60 flex-1"
                     onClick={async () => {
                       setGenerating(true);
                       await handleGenerateWithAI();
@@ -540,7 +540,7 @@ const Dashboard: React.FC = () => {
                     {generating ? 'Generating...' : 'Refine'}
                   </button>
                   <button
-                    className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 font-bold shadow-md hover:bg-gray-300 transition"
+                    className="px-4 py-2 bg-gray-200 text-gray-700 font-bold shadow-md hover:bg-gray-300 transition"
                     onClick={() => {
                       setProposalText('');
                       setSelectedSuggestions([]);
@@ -597,20 +597,20 @@ const Dashboard: React.FC = () => {
                   <button
                     onClick={handleSaveDraft}
                     disabled={savingDraft}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-60 flex-1"
+                    className="px-4 py-2 bg-green-600 text-white font-semibold hover:bg-green-700 transition disabled:opacity-60 flex-1"
                   >
                     {savingDraft ? 'Saving...' : 'Save Draft'}
                   </button>
                   <button
                     onClick={() => setShowEmailModal(true)}
-                    className="px-4 py-2 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 transition"
+                    className="px-4 py-2 bg-orange-600 text-white font-semibold hover:bg-orange-700 transition"
                   >
                     Send Email
                   </button>
                   <button
                     onClick={handleDownloadPdf}
                     disabled={downloadingPdf}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition disabled:opacity-60"
+                    className="px-4 py-2 bg-purple-600 text-white font-semibold hover:bg-purple-700 transition disabled:opacity-60"
                   >
                     {downloadingPdf ? 'Downloading...' : 'Download PDF'}
                   </button>
@@ -684,14 +684,14 @@ const Dashboard: React.FC = () => {
                   setEmail('');
                   setClientName('');
                 }}
-                className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition"
+                                  className="px-4 py-2 bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition"
                 disabled={sendingEmail}
               >
                 Cancel
               </button>
               <button
                 onClick={handleSendEmail}
-                className="px-4 py-2 rounded-lg bg-orange-600 text-white font-semibold shadow hover:bg-orange-700 transition disabled:opacity-60"
+                                  className="px-4 py-2 bg-orange-600 text-white font-semibold shadow hover:bg-orange-700 transition disabled:opacity-60"
                 disabled={sendingEmail || !email.trim() || !clientName.trim()}
               >
                 {sendingEmail ? 'Sending...' : 'Send'}

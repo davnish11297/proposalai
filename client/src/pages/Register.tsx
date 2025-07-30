@@ -120,7 +120,7 @@ export default function Register() {
             {/* Google Sign Up Button */}
             <button
               onClick={handleGoogleSignup}
-              className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors font-medium mb-6"
+              className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors font-medium mb-6"
               type="button"
             >
               <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
@@ -298,7 +298,7 @@ export default function Register() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-orange-600 to-orange-700 text-white py-3 px-4 rounded-lg font-medium hover:from-orange-700 hover:to-orange-800 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-gradient-to-r from-orange-600 to-orange-700 text-white py-3 px-4 font-medium hover:from-orange-700 hover:to-orange-800 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <div className="flex items-center justify-center">
