@@ -20,19 +20,11 @@ export class ProposalController {
 
       if (status) where.status = status;
       if (type) where.type = type;
-      if (clientName) where.clientName = { contains: clientName as string, mode: 'insensitive' };
+      if (clientName) where.clientName = { $regex: clientName as string, $options: 'i' };
 
       const [proposals, total] = await Promise.all([
         db.proposal.findMany({
           where,
-          include: {
-            author: {
-              select: { name: true, email: true }
-            },
-            _count: {
-              select: { comments: true, activities: true }
-            }
-          },
           orderBy: { updatedAt: 'desc' },
           skip,
           take: Number(limit),
@@ -40,9 +32,34 @@ export class ProposalController {
         db.proposal.count({ where })
       ]);
 
+      // Fetch related data separately for each proposal
+      const proposalsWithData = await Promise.all(
+        proposals.map(async (proposal) => {
+          const [comments, activities] = await Promise.all([
+            db.comment.findMany({
+              where: { proposalId: proposal.id },
+              orderBy: { createdAt: 'desc' }
+            }),
+            db.activity.findMany({
+              where: { proposalId: proposal.id },
+              orderBy: { createdAt: 'desc' },
+              take: 10
+            })
+          ]);
+
+          return {
+            ...proposal,
+            _count: {
+              comments: comments.length,
+              activities: activities.length
+            }
+          };
+        })
+      );
+
       res.json({
         success: true,
-        data: proposals,
+        data: proposalsWithData,
         pagination: {
           page: Number(page),
           limit: Number(limit),
@@ -68,28 +85,6 @@ export class ProposalController {
         where: {
           id,
           organizationId: req.user!.organizationId,
-        },
-        include: {
-          author: {
-            select: { name: true, email: true }
-          },
-          comments: {
-            include: {
-              author: {
-                select: { name: true }
-              }
-            },
-            orderBy: { createdAt: 'desc' }
-          },
-          activities: {
-            include: {
-              user: {
-                select: { name: true }
-              }
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 10
-          }
         }
       });
 
@@ -101,12 +96,31 @@ export class ProposalController {
         return;
       }
 
+      // Fetch related data separately
+      const [comments, activities] = await Promise.all([
+        db.comment.findMany({
+          where: { proposalId: id },
+          orderBy: { createdAt: 'desc' }
+        }),
+        db.activity.findMany({
+          where: { proposalId: id },
+          orderBy: { createdAt: 'desc' },
+          take: 10
+        })
+      ]);
+
+      const proposalWithData = {
+        ...proposal,
+        comments,
+        activities
+      };
+
       // Record view activity
       await db.activity.create({
         data: {
           type: 'VIEWED',
-          user: { connect: { id: req.user!.userId } },
-          proposal: { connect: { id } },
+          userId: req.user!.userId,
+          proposalId: id,
           details: JSON.stringify({ action: 'viewed' }),
           message: 'Proposal viewed'
         }
@@ -114,7 +128,7 @@ export class ProposalController {
 
       res.json({
         success: true,
-        data: proposal
+        data: proposalWithData
       });
     } catch (error) {
       console.error('Get proposal error:', error);
@@ -130,14 +144,6 @@ export class ProposalController {
     try {
       const proposalData: ICreateProposal = req.body;
 
-      // Handle client (simplified - no organization-specific client management for now)
-      let clientId: string | undefined = undefined;
-      if (proposalData.clientName) {
-        // For now, just store the client name in the proposal
-        // In a future version, we can add organization-specific client management
-        clientId = undefined; // We'll store client info in the proposal metadata
-      }
-
       const proposal = await db.proposal.create({
         data: {
           title: proposalData.title ?? 'Untitled Proposal',
@@ -146,14 +152,9 @@ export class ProposalController {
           type: proposalData.type || 'PROPOSAL',
           content: typeof proposalData.content === 'string' ? proposalData.content : JSON.stringify(proposalData.content || {}),
           metadata: typeof proposalData.metadata === 'string' ? proposalData.metadata : JSON.stringify(proposalData.metadata || {}),
-          authorId: req.user!.userId,
+          userId: req.user!.userId,
           organizationId: req.user!.organizationId!,
           status: proposalData.status || 'DRAFT',
-        },
-        include: {
-          author: {
-            select: { name: true, email: true }
-          }
         }
       });
 
@@ -161,8 +162,8 @@ export class ProposalController {
       await db.activity.create({
         data: {
           type: 'CREATED',
-          user: { connect: { id: req.user!.userId } },
-          proposal: { connect: { id: proposal.id } },
+          userId: req.user!.userId,
+          proposalId: proposal.id,
           details: JSON.stringify({ action: 'created' }),
           message: 'Proposal created'
         }
@@ -212,11 +213,6 @@ export class ProposalController {
           status: updateData.status ?? undefined,
           content: typeof updateData.content === 'string' ? updateData.content : JSON.stringify(updateData.content || {}),
           metadata: typeof updateData.metadata === 'string' ? updateData.metadata : JSON.stringify(updateData.metadata || {})
-        },
-        include: {
-          author: {
-            select: { name: true, email: true }
-          }
         }
       });
 
@@ -224,8 +220,8 @@ export class ProposalController {
       await db.activity.create({
         data: {
           type: 'UPDATED',
-          user: { connect: { id: req.user!.userId } },
-          proposal: { connect: { id } },
+          userId: req.user!.userId,
+          proposalId: id,
           details: JSON.stringify({ updatedFields: Object.keys(updateData) }),
           message: 'Proposal updated'
         }
@@ -400,14 +396,6 @@ export class ProposalController {
         return;
       }
 
-      // Handle client (simplified - no organization-specific client management for now)
-      let clientId: string | undefined = undefined;
-      if (request.clientName) {
-        // For now, just store the client name in the proposal
-        // In a future version, we can add organization-specific client management
-        clientId = undefined; // We'll store client info in the proposal metadata
-      }
-
       // Before passing organization to downstream functions, map only fields that exist on the model
       const processedOrganization = {
         ...organization,
@@ -492,14 +480,9 @@ export class ProposalController {
             generationRequest: request,
             suggestedSnippets: suggestedSnippets.map(s => s.id)
           }),
-          authorId: req.user!.userId,
+          userId: req.user!.userId,
           organizationId: req.user!.organizationId!,
           status: 'DRAFT',
-        },
-        include: {
-          author: {
-            select: { name: true, email: true }
-          }
         }
       });
 
@@ -507,8 +490,8 @@ export class ProposalController {
       await db.activity.create({
         data: {
           type: 'CREATED',
-          user: { connect: { id: req.user!.userId } },
-          proposal: { connect: { id: proposal.id } },
+          userId: req.user!.userId,
+          proposalId: proposal.id,
           details: JSON.stringify({ generatedWithAI: true }),
           message: 'Proposal generated'
         }
@@ -591,23 +574,7 @@ export class ProposalController {
       const { accessCode } = req.query;
 
       const proposal = await db.proposal.findUnique({
-        where: { id },
-        include: {
-          user: {
-            select: {
-              firstName: true,
-              lastName: true
-            }
-          },
-          organization: {
-            select: {
-              name: true,
-              logo: true,
-              primaryColor: true,
-              secondaryColor: true
-            }
-          }
-        }
+        where: { id }
       });
 
       if (!proposal) {
@@ -650,11 +617,7 @@ export class ProposalController {
 
       return res.json({
         success: true,
-        data: {
-          ...proposal,
-          user: proposal.user,
-          organization: proposal.organization
-        }
+        data: proposal
       });
     } catch (error) {
       console.error('Get public proposal error:', error);
@@ -739,14 +702,6 @@ export class ProposalController {
         where: {
           id: proposalId,
           organizationId: (req as any).user?.organizationId
-        },
-        include: {
-          author: {
-            select: {
-              name: true,
-              email: true
-            }
-          }
         }
       });
 
@@ -844,8 +799,8 @@ export class ProposalController {
       await db.activity.create({
         data: {
           type: 'EMAIL_SENT',
-          user: { connect: { id: userId } },
-          proposal: { connect: { id: proposalId } },
+          userId: userId,
+          proposalId: proposalId,
           details: JSON.stringify({
             action: 'email_sent',
             recipientEmail,

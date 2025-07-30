@@ -19,27 +19,39 @@ class ProposalController {
             if (type)
                 where.type = type;
             if (clientName)
-                where.clientName = { contains: clientName, mode: 'insensitive' };
+                where.clientName = { $regex: clientName, $options: 'i' };
             const [proposals, total] = await Promise.all([
                 database_1.prisma.proposal.findMany({
                     where,
-                    include: {
-                        author: {
-                            select: { name: true, email: true }
-                        },
-                        _count: {
-                            select: { comments: true, activities: true }
-                        }
-                    },
                     orderBy: { updatedAt: 'desc' },
                     skip,
                     take: Number(limit),
                 }),
                 database_1.prisma.proposal.count({ where })
             ]);
+            const proposalsWithData = await Promise.all(proposals.map(async (proposal) => {
+                const [comments, activities] = await Promise.all([
+                    database_1.prisma.comment.findMany({
+                        where: { proposalId: proposal.id },
+                        orderBy: { createdAt: 'desc' }
+                    }),
+                    database_1.prisma.activity.findMany({
+                        where: { proposalId: proposal.id },
+                        orderBy: { createdAt: 'desc' },
+                        take: 10
+                    })
+                ]);
+                return {
+                    ...proposal,
+                    _count: {
+                        comments: comments.length,
+                        activities: activities.length
+                    }
+                };
+            }));
             res.json({
                 success: true,
-                data: proposals,
+                data: proposalsWithData,
                 pagination: {
                     page: Number(page),
                     limit: Number(limit),
@@ -63,28 +75,6 @@ class ProposalController {
                 where: {
                     id,
                     organizationId: req.user.organizationId,
-                },
-                include: {
-                    author: {
-                        select: { name: true, email: true }
-                    },
-                    comments: {
-                        include: {
-                            author: {
-                                select: { name: true }
-                            }
-                        },
-                        orderBy: { createdAt: 'desc' }
-                    },
-                    activities: {
-                        include: {
-                            user: {
-                                select: { name: true }
-                            }
-                        },
-                        orderBy: { createdAt: 'desc' },
-                        take: 10
-                    }
                 }
             });
             if (!proposal) {
@@ -94,18 +84,34 @@ class ProposalController {
                 });
                 return;
             }
+            const [comments, activities] = await Promise.all([
+                database_1.prisma.comment.findMany({
+                    where: { proposalId: id },
+                    orderBy: { createdAt: 'desc' }
+                }),
+                database_1.prisma.activity.findMany({
+                    where: { proposalId: id },
+                    orderBy: { createdAt: 'desc' },
+                    take: 10
+                })
+            ]);
+            const proposalWithData = {
+                ...proposal,
+                comments,
+                activities
+            };
             await database_1.prisma.activity.create({
                 data: {
                     type: 'VIEWED',
-                    user: { connect: { id: req.user.userId } },
-                    proposal: { connect: { id } },
+                    userId: req.user.userId,
+                    proposalId: id,
                     details: JSON.stringify({ action: 'viewed' }),
                     message: 'Proposal viewed'
                 }
             });
             res.json({
                 success: true,
-                data: proposal
+                data: proposalWithData
             });
         }
         catch (error) {
@@ -119,10 +125,6 @@ class ProposalController {
     async createProposal(req, res) {
         try {
             const proposalData = req.body;
-            let clientId = undefined;
-            if (proposalData.clientName) {
-                clientId = undefined;
-            }
             const proposal = await database_1.prisma.proposal.create({
                 data: {
                     title: proposalData.title ?? 'Untitled Proposal',
@@ -131,21 +133,16 @@ class ProposalController {
                     type: proposalData.type || 'PROPOSAL',
                     content: typeof proposalData.content === 'string' ? proposalData.content : JSON.stringify(proposalData.content || {}),
                     metadata: typeof proposalData.metadata === 'string' ? proposalData.metadata : JSON.stringify(proposalData.metadata || {}),
-                    authorId: req.user.userId,
+                    userId: req.user.userId,
                     organizationId: req.user.organizationId,
                     status: proposalData.status || 'DRAFT',
-                },
-                include: {
-                    author: {
-                        select: { name: true, email: true }
-                    }
                 }
             });
             await database_1.prisma.activity.create({
                 data: {
                     type: 'CREATED',
-                    user: { connect: { id: req.user.userId } },
-                    proposal: { connect: { id: proposal.id } },
+                    userId: req.user.userId,
+                    proposalId: proposal.id,
                     details: JSON.stringify({ action: 'created' }),
                     message: 'Proposal created'
                 }
@@ -190,18 +187,13 @@ class ProposalController {
                     status: updateData.status ?? undefined,
                     content: typeof updateData.content === 'string' ? updateData.content : JSON.stringify(updateData.content || {}),
                     metadata: typeof updateData.metadata === 'string' ? updateData.metadata : JSON.stringify(updateData.metadata || {})
-                },
-                include: {
-                    author: {
-                        select: { name: true, email: true }
-                    }
                 }
             });
             await database_1.prisma.activity.create({
                 data: {
                     type: 'UPDATED',
-                    user: { connect: { id: req.user.userId } },
-                    proposal: { connect: { id } },
+                    userId: req.user.userId,
+                    proposalId: id,
                     details: JSON.stringify({ updatedFields: Object.keys(updateData) }),
                     message: 'Proposal updated'
                 }
@@ -357,10 +349,6 @@ class ProposalController {
                 });
                 return;
             }
-            let clientId = undefined;
-            if (request.clientName) {
-                clientId = undefined;
-            }
             const processedOrganization = {
                 ...organization,
                 description: organization.description ?? undefined,
@@ -427,21 +415,16 @@ class ProposalController {
                         generationRequest: request,
                         suggestedSnippets: suggestedSnippets.map(s => s.id)
                     }),
-                    authorId: req.user.userId,
+                    userId: req.user.userId,
                     organizationId: req.user.organizationId,
                     status: 'DRAFT',
-                },
-                include: {
-                    author: {
-                        select: { name: true, email: true }
-                    }
                 }
             });
             await database_1.prisma.activity.create({
                 data: {
                     type: 'CREATED',
-                    user: { connect: { id: req.user.userId } },
-                    proposal: { connect: { id: proposal.id } },
+                    userId: req.user.userId,
+                    proposalId: proposal.id,
                     details: JSON.stringify({ generatedWithAI: true }),
                     message: 'Proposal generated'
                 }
@@ -515,23 +498,7 @@ class ProposalController {
             const { id } = req.params;
             const { accessCode } = req.query;
             const proposal = await database_1.prisma.proposal.findUnique({
-                where: { id },
-                include: {
-                    user: {
-                        select: {
-                            firstName: true,
-                            lastName: true
-                        }
-                    },
-                    organization: {
-                        select: {
-                            name: true,
-                            logo: true,
-                            primaryColor: true,
-                            secondaryColor: true
-                        }
-                    }
-                }
+                where: { id }
             });
             if (!proposal) {
                 return res.status(404).json({
@@ -566,11 +533,7 @@ class ProposalController {
             });
             return res.json({
                 success: true,
-                data: {
-                    ...proposal,
-                    user: proposal.user,
-                    organization: proposal.organization
-                }
+                data: proposal
             });
         }
         catch (error) {
@@ -646,14 +609,6 @@ class ProposalController {
                 where: {
                     id: proposalId,
                     organizationId: req.user?.organizationId
-                },
-                include: {
-                    author: {
-                        select: {
-                            name: true,
-                            email: true
-                        }
-                    }
                 }
             });
             if (!proposal) {
@@ -730,8 +685,8 @@ class ProposalController {
             await database_1.prisma.activity.create({
                 data: {
                     type: 'EMAIL_SENT',
-                    user: { connect: { id: userId } },
-                    proposal: { connect: { id: proposalId } },
+                    userId: userId,
+                    proposalId: proposalId,
                     details: JSON.stringify({
                         action: 'email_sent',
                         recipientEmail,
