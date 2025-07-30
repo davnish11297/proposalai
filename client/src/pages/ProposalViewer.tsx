@@ -16,7 +16,8 @@ import {
   HomeIcon,
   DocumentTextIcon,
   UsersIcon,
-  UserIcon
+  UserIcon,
+  ChevronDownIcon
 } from '@heroicons/react/24/outline';
 import { getOpenRouterChatCompletion } from '../services/api';
 
@@ -70,12 +71,14 @@ const ProposalViewer: React.FC = () => {
   const fetchProposal = useCallback(async () => {
     try {
       setLoading(true);
+      console.log('🔍 Fetching proposal with ID:', id);
       const response = await proposalsAPI.getById(id!);
+      console.log('🔍 Proposal response:', response);
       if (response.data.success) {
         setProposal(response.data.data);
       }
     } catch (error) {
-      console.error('Failed to fetch proposal:', error);
+      console.error('❌ Failed to fetch proposal:', error);
       toast.error('Failed to load proposal');
     } finally {
       setLoading(false);
@@ -224,7 +227,7 @@ Return ONLY the JSON object, no other text.`;
       case 'WON': return 'bg-green-100 text-green-800';
       case 'LOST': return 'bg-red-100 text-red-800';
       case 'IN_REVIEW': return 'bg-yellow-100 text-yellow-800';
-      case 'SENT': return 'bg-blue-100 text-blue-800';
+      case 'SENT': return 'bg-orange-100 text-orange-800';
       case 'DRAFT': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -249,151 +252,6 @@ Return ONLY the JSON object, no other text.`;
       hour: '2-digit',
       minute: '2-digit'
     });
-  };
-
-  const renderBudgetDetails = (budgetDetails: any) => {
-    if (!budgetDetails) return null;
-    
-    if (typeof budgetDetails === 'object' && budgetDetails.total) {
-      return (
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h4 className="font-semibold text-gray-900 mb-2">Budget Breakdown</h4>
-          <div className="text-2xl font-bold text-blue-600 mb-2">
-            ${budgetDetails.total?.toLocaleString() || 'N/A'}
-          </div>
-          {budgetDetails.breakdown && (
-            <div className="space-y-2">
-              {Object.entries(budgetDetails.breakdown).map(([key, value]: [string, any]) => (
-                <div key={key} className="flex justify-between text-sm">
-                  <span className="text-gray-600 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
-                  <span className="font-medium">${value?.toLocaleString() || 'N/A'}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      );
-    }
-    
-    return <div className="text-gray-700">{JSON.stringify(budgetDetails)}</div>;
-  };
-
-  const renderContentSection = (title: string, content: any) => {
-    if (!content) return null;
-    
-    // Handle budget details specially
-    if (typeof content === 'object' && content.total && content.breakdown) {
-      return renderBudgetDetails(content);
-    }
-    
-    // Convert content to string for processing
-    let displayContent = '';
-    if (typeof content === 'string') {
-      displayContent = content;
-    } else if (typeof content === 'object' && content !== null) {
-      displayContent = JSON.stringify(content, null, 2);
-    } else {
-      displayContent = String(content);
-    }
-    
-    // Handle escaped characters
-    displayContent = displayContent
-      .replace(/\\n/g, '\n')
-      .replace(/\\t/g, '\t')
-      .replace(/\\"/g, '"')
-      .replace(/\\'/g, "'")
-      .replace(/\\\\/g, '\\');
-    
-    // Process markdown-like formatting
-    const processContent = (text: string) => {
-      return text
-        // Headers
-        .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold text-gray-900 mt-4 mb-2">$1</h3>')
-        .replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold text-gray-900 mt-6 mb-3">$1</h2>')
-        .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold text-gray-900 mt-8 mb-4">$1</h1>')
-        
-        // Tables - more robust parsing
-        .replace(/(\|.*\|[\s\S]*?)(?=\n\n|\n[^|]|$)/g, (match) => {
-          const lines = match.trim().split('\n').filter(line => line.trim());
-          if (lines.length < 2) return match;
-          
-          const tableRows = lines.filter(line => line.includes('|'));
-          if (tableRows.length < 2) return match;
-          
-          let tableHtml = '<div class="overflow-x-auto my-4"><table class="min-w-full border-collapse border border-gray-300 bg-white">';
-          
-          tableRows.forEach((row, index) => {
-            const cells = row.split('|').map(cell => cell.trim()).filter(cell => cell);
-            
-            if (index === 0) {
-              // Header row
-              tableHtml += '<thead><tr class="bg-gray-50">';
-              cells.forEach(cell => {
-                tableHtml += `<th class="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-900">${cell}</th>`;
-              });
-              tableHtml += '</tr></thead><tbody>';
-            } else if (index === 1 && cells.every(cell => /^[-:]+$/.test(cell))) {
-              // Separator row - skip it
-              return;
-            } else {
-              // Data row
-              tableHtml += '<tr>';
-              cells.forEach(cell => {
-                tableHtml += `<td class="border border-gray-300 px-4 py-2 text-sm text-gray-700">${cell}</td>`;
-              });
-              tableHtml += '</tr>';
-            }
-          });
-          
-          tableHtml += '</tbody></table></div>';
-          return tableHtml;
-        })
-        
-        // Bold text
-        .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
-        .replace(/__(.*?)__/g, '<strong class="font-semibold text-gray-900">$1</strong>')
-        
-        // Italic text
-        .replace(/\*(.*?)\*/g, '<em class="italic text-gray-800">$1</em>')
-        .replace(/_(.*?)_/g, '<em class="italic text-gray-800">$1</em>')
-        
-        // Code blocks
-        .replace(/```([\s\S]*?)```/g, '<pre class="bg-gray-100 p-3 rounded-lg text-sm font-mono text-gray-800 overflow-x-auto my-3">$1</pre>')
-        .replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1 py-0.5 rounded text-sm font-mono text-gray-800">$1</code>')
-        
-        // Links
-        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-600 hover:text-blue-800 underline" target="_blank" rel="noopener noreferrer">$1</a>')
-        
-        // Lists
-        .replace(/^\s*[-*+]\s+(.*$)/gim, '<li class="ml-4 mb-1">$1</li>')
-        .replace(/^\s*\d+\.\s+(.*$)/gim, '<li class="ml-4 mb-1">$1</li>')
-        
-        // Line breaks
-        .replace(/\n\n/g, '</p><p class="mb-3">')
-        .replace(/\n/g, '<br>');
-    };
-    
-    // Process the content
-    const processedContent = processContent(displayContent);
-    
-    // Wrap in paragraphs and handle lists
-    const finalContent = processedContent
-      .replace(/<li/g, '<ul class="list-disc list-inside mb-3"><li')
-      .replace(/<\/li>/g, '</li></ul>')
-      .replace(/<\/ul><ul/g, '</ul><ul')
-      .replace(/<p class="mb-3">/g, '<p class="mb-3 text-gray-700 leading-relaxed">');
-    
-    return (
-      <div className="mb-8">
-        <h3 className="text-xl font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2">{title}</h3>
-        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-          <div 
-            className="text-gray-700 leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: finalContent }}
-          />
-        </div>
-      </div>
-    );
   };
 
   const handleLogout = () => {
@@ -467,7 +325,7 @@ Return ONLY the JSON object, no other text.`;
     if (generatingAnalytics) {
       return (
         <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-orange-600 mx-auto mb-4"></div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Generating Analytics</h3>
           <p className="text-gray-600">AI is analyzing your proposal to provide insights...</p>
         </div>
@@ -483,7 +341,7 @@ Return ONLY the JSON object, no other text.`;
           <button
             onClick={generateAnalytics}
             disabled={generatingAnalytics}
-            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-400 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-blue-500 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
+            className="px-6 py-3 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
           >
             {generatingAnalytics ? (
               <>
@@ -581,86 +439,12 @@ Return ONLY the JSON object, no other text.`;
           </div>
         </div>
 
-        {/* Detailed Analysis */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Risk Assessment */}
-          <div className="bg-white rounded-xl p-6 border border-gray-200">
-            <h4 className="text-lg font-semibold text-gray-900 mb-4">Risk Assessment</h4>
-            <div className="space-y-3">
-              {analytics.riskAssessment && Object.entries(analytics.riskAssessment).map(([risk, details]: [string, any]) => (
-                <div key={risk} className="p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-gray-900 capitalize">{risk}</span>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      details.level === 'High' ? 'bg-red-100 text-red-800' :
-                      details.level === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-green-100 text-green-800'
-                    }`}>
-                      {details.level}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600">{details.explanation}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* ROI Analysis */}
-          <div className="bg-white rounded-xl p-6 border border-gray-200">
-            <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <CurrencyDollarIcon className="h-5 w-5 text-green-600" />
-              ROI Potential
-            </h4>
-            <div className="space-y-3">
-              {analytics.roiPotential && Object.entries(analytics.roiPotential).map(([key, value]: [string, any]) => (
-                <div key={key} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <span className="font-medium text-gray-900 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                  <span className="text-gray-700">{value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Competitive Analysis */}
-        {analytics.competitiveAnalysis && (
-          <div className="bg-white rounded-xl p-6 border border-gray-200">
-            <h4 className="text-lg font-semibold text-gray-900 mb-4">Competitive Analysis</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Object.entries(analytics.competitiveAnalysis).map(([key, value]: [string, any]) => (
-                <div key={key} className="p-4 bg-blue-50 rounded-lg">
-                  <h5 className="font-medium text-blue-900 mb-2 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</h5>
-                  <p className="text-blue-700">{value}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Timeline Feasibility */}
-        {analytics.timelineFeasibility && (
-          <div className="bg-white rounded-xl p-6 border border-gray-200">
-            <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <ClockIcon className="h-5 w-5 text-blue-600" />
-              Timeline Feasibility
-            </h4>
-            <div className="space-y-3">
-              {Object.entries(analytics.timelineFeasibility).map(([key, value]: [string, any]) => (
-                <div key={key} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <span className="font-medium text-gray-900 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                  <span className="text-gray-700">{value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Regenerate Button */}
         <div className="text-center pt-6">
           <button
             onClick={generateAnalytics}
             disabled={generatingAnalytics}
-            className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-400 text-white font-semibold rounded-lg hover:from-purple-600 hover:to-purple-500 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
+            className="px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
           >
             {generatingAnalytics ? (
               <>
@@ -681,48 +465,61 @@ Return ONLY the JSON object, no other text.`;
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pb-12">
-        {/* Top Navigation Bar */}
-        <nav className="bg-gradient-to-r from-blue-600 to-blue-400 shadow-lg fixed w-full z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center">
-                <h1 className="text-xl font-extrabold text-white tracking-wider drop-shadow">ProposalAI</h1>
+      <div className="min-h-screen bg-gray-50" style={{ backgroundImage: 'radial-gradient(circle, #e5e7eb 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
+        {/* Header */}
+        <header className="sticky top-0 z-40 w-full bg-transparent">
+          <div className="max-w-7xl mx-auto px-4 sm:px-8 flex items-center justify-between h-16">
+            {/* Left side - Logo and Navigation */}
+            <div className="flex items-center gap-8">
+              <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/dashboard')}>
+                <span className="text-xl font-bold text-gray-900">ProposalAI</span>
               </div>
-              <div className="flex items-center space-x-8">
-                <a href="/dashboard" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                  <HomeIcon className="w-5 h-5" />
-                  <span>Dashboard</span>
-                </a>
-                <a href="/drafts" className="flex items-center space-x-1 text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">
-                  <DocumentTextIcon className="w-5 h-5" />
-                  <span>Drafts</span>
-                </a>
-                <a href="/sent-proposals" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                  <PaperAirplaneIcon className="w-5 h-5" />
-                  <span>Sent Proposals</span>
-                </a>
-                <a href="/clients" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                  <UsersIcon className="w-5 h-5" />
-                  <span>Clients</span>
-                </a>
-                <a href="/profile" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                  <UserIcon className="w-5 h-5" />
-                  <span>Profile</span>
-                </a>
-                <NotificationBell />
+              <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
                 <button 
-                  onClick={handleLogout}
-                  className="text-white/80 hover:text-white transition-colors"
+                  onClick={() => navigate('/dashboard')}
+                  className="text-gray-600 hover:text-gray-900 transition flex items-center gap-2"
                 >
-                  Logout
+                  <HomeIcon className="w-4 h-4" />
+                  Dashboard
+                </button>
+                <button 
+                  onClick={() => navigate('/drafts')}
+                  className="text-orange-600 font-medium flex items-center gap-2"
+                >
+                  <DocumentTextIcon className="w-4 h-4" />
+                  Drafts
+                </button>
+                <button 
+                  onClick={() => navigate('/clients')}
+                  className="text-gray-600 hover:text-gray-900 transition flex items-center gap-2"
+                >
+                  <UsersIcon className="w-4 h-4" />
+                  Clients
+                </button>
+              </nav>
+            </div>
+            
+            {/* Right side - User actions */}
+            <div className="flex items-center gap-4">
+              <NotificationBell />
+              <div className="relative">
+                <button className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition">
+                  <UserIcon className="w-5 h-5" />
+                  <span className="hidden md:block">Account</span>
+                  <ChevronDownIcon className="w-4 h-4" />
                 </button>
               </div>
+              <button
+                onClick={handleLogout}
+                className="text-gray-600 hover:text-gray-900 transition font-medium"
+              >
+                Logout
+              </button>
             </div>
           </div>
-        </nav>
+        </header>
         <div className="flex items-center justify-center min-h-screen">
-          <div className="animate-spin rounded-full h-20 w-20 border-b-4 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-20 w-20 border-b-4 border-orange-600"></div>
         </div>
       </div>
     );
@@ -730,53 +527,66 @@ Return ONLY the JSON object, no other text.`;
 
   if (!proposal) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pb-12">
-        {/* Top Navigation Bar */}
-        <nav className="bg-gradient-to-r from-blue-600 to-blue-400 shadow-lg fixed w-full z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center">
-                <h1 className="text-xl font-extrabold text-white tracking-wider drop-shadow">ProposalAI</h1>
+      <div className="min-h-screen bg-gray-50" style={{ backgroundImage: 'radial-gradient(circle, #e5e7eb 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
+        {/* Header */}
+        <header className="sticky top-0 z-40 w-full bg-transparent">
+          <div className="max-w-7xl mx-auto px-4 sm:px-8 flex items-center justify-between h-16">
+            {/* Left side - Logo and Navigation */}
+            <div className="flex items-center gap-8">
+              <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/dashboard')}>
+                <span className="text-xl font-bold text-gray-900">ProposalAI</span>
               </div>
-              <div className="flex items-center space-x-8">
-                <a href="/dashboard" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                  <HomeIcon className="w-5 h-5" />
-                  <span>Dashboard</span>
-                </a>
-                <a href="/drafts" className="flex items-center space-x-1 text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">
-                  <DocumentTextIcon className="w-5 h-5" />
-                  <span>Drafts</span>
-                </a>
-                <a href="/sent-proposals" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                  <PaperAirplaneIcon className="w-5 h-5" />
-                  <span>Sent Proposals</span>
-                </a>
-                <a href="/clients" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                  <UsersIcon className="w-5 h-5" />
-                  <span>Clients</span>
-                </a>
-                <a href="/profile" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                  <UserIcon className="w-5 h-5" />
-                  <span>Profile</span>
-                </a>
-                <NotificationBell />
+              <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
                 <button 
-                  onClick={handleLogout}
-                  className="text-white/80 hover:text-white transition-colors"
+                  onClick={() => navigate('/dashboard')}
+                  className="text-gray-600 hover:text-gray-900 transition flex items-center gap-2"
                 >
-                  Logout
+                  <HomeIcon className="w-4 h-4" />
+                  Dashboard
+                </button>
+                <button 
+                  onClick={() => navigate('/drafts')}
+                  className="text-orange-600 font-medium flex items-center gap-2"
+                >
+                  <DocumentTextIcon className="w-4 h-4" />
+                  Drafts
+                </button>
+                <button 
+                  onClick={() => navigate('/clients')}
+                  className="text-gray-600 hover:text-gray-900 transition flex items-center gap-2"
+                >
+                  <UsersIcon className="w-4 h-4" />
+                  Clients
+                </button>
+              </nav>
+            </div>
+            
+            {/* Right side - User actions */}
+            <div className="flex items-center gap-4">
+              <NotificationBell />
+              <div className="relative">
+                <button className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition">
+                  <UserIcon className="w-5 h-5" />
+                  <span className="hidden md:block">Account</span>
+                  <ChevronDownIcon className="w-4 h-4" />
                 </button>
               </div>
+              <button
+                onClick={handleLogout}
+                className="text-gray-600 hover:text-gray-900 transition font-medium"
+              >
+                Logout
+              </button>
             </div>
           </div>
-        </nav>
+        </header>
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-gray-900 mb-4">Proposal Not Found</h1>
             <p className="text-gray-600 mb-6">The proposal you're looking for doesn't exist or has been removed.</p>
             <button
               onClick={() => navigate('/drafts')}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
             >
               Back to Drafts
             </button>
@@ -787,66 +597,79 @@ Return ONLY the JSON object, no other text.`;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pb-12">
-      {/* Top Navigation Bar */}
-      <nav className="bg-gradient-to-r from-blue-600 to-blue-400 shadow-lg fixed w-full z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-extrabold text-white tracking-wider drop-shadow">ProposalAI</h1>
+    <div className="min-h-screen bg-gray-50" style={{ backgroundImage: 'radial-gradient(circle, #e5e7eb 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
+      {/* Header */}
+      <header className="sticky top-0 z-40 w-full bg-transparent">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 flex items-center justify-between h-16">
+          {/* Left side - Logo and Navigation */}
+          <div className="flex items-center gap-8">
+            <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/dashboard')}>
+              <span className="text-xl font-bold text-gray-900">ProposalAI</span>
             </div>
-            <div className="flex items-center space-x-8">
-              <a href="/dashboard" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <HomeIcon className="w-5 h-5" />
-                <span>Dashboard</span>
-              </a>
-              <a href="/drafts" className="flex items-center space-x-1 text-white font-semibold border-b-2 border-white/80 pb-1 transition-colors">
-                <DocumentTextIcon className="w-5 h-5" />
-                <span>Drafts</span>
-              </a>
-              <a href="/sent-proposals" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <PaperAirplaneIcon className="w-5 h-5" />
-                <span>Sent Proposals</span>
-              </a>
-              <a href="/clients" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <UsersIcon className="w-5 h-5" />
-                <span>Clients</span>
-              </a>
-              <a href="/profile" className="flex items-center space-x-1 text-white/80 hover:text-white transition-colors">
-                <UserIcon className="w-5 h-5" />
-                <span>Profile</span>
-              </a>
-              <NotificationBell />
+            <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
               <button 
-                onClick={handleLogout}
-                className="text-white/80 hover:text-white transition-colors"
+                onClick={() => navigate('/dashboard')}
+                className="text-gray-600 hover:text-gray-900 transition flex items-center gap-2"
               >
-                Logout
+                <HomeIcon className="w-4 h-4" />
+                Dashboard
+              </button>
+              <button 
+                onClick={() => navigate('/drafts')}
+                className="text-orange-600 font-medium flex items-center gap-2"
+              >
+                <DocumentTextIcon className="w-4 h-4" />
+                Drafts
+              </button>
+              <button 
+                onClick={() => navigate('/clients')}
+                className="text-gray-600 hover:text-gray-900 transition flex items-center gap-2"
+              >
+                <UsersIcon className="w-4 h-4" />
+                Clients
+              </button>
+            </nav>
+          </div>
+          
+          {/* Right side - User actions */}
+          <div className="flex items-center gap-4">
+            <NotificationBell />
+            <div className="relative">
+              <button className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition">
+                <UserIcon className="w-5 h-5" />
+                <span className="hidden md:block">Account</span>
+                <ChevronDownIcon className="w-4 h-4" />
               </button>
             </div>
+            <button
+              onClick={handleLogout}
+              className="text-gray-600 hover:text-gray-900 transition font-medium"
+            >
+              Logout
+            </button>
           </div>
         </div>
-      </nav>
+      </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24">
         {/* Back Button */}
         <button
           onClick={() => navigate('/drafts')}
-          className="flex items-center gap-2 mb-6 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-400 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-blue-500 transition shadow"
+          className="flex items-center gap-2 mb-6 px-4 py-2 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 transition shadow"
         >
           ← Back to Drafts
         </button>
 
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-100 p-6 mb-6">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div className="flex-1">
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">{proposal.title}</h1>
                 <div className="flex items-center gap-4 text-sm text-gray-600">
                   <span>Client: {proposal.clientName}</span>
                   <span>•</span>
-                  <span>Created by {proposal.author.name || proposal.author.email || 'Unknown'}</span>
+                  <span>Created by {proposal.author?.name || proposal.author?.email || 'Unknown'}</span>
                   <span>•</span>
                   <span>{formatDate(proposal.createdAt)}</span>
                 </div>
@@ -857,14 +680,14 @@ Return ONLY the JSON object, no other text.`;
                 </span>
                 <button
                   onClick={() => navigate(`/proposals/${proposal.id}`)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
                 >
                   Edit Proposal
                 </button>
                 {proposal.status === 'DRAFT' && (
                   <button
                     onClick={handleSend}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-400 text-white rounded-lg hover:from-purple-600 hover:to-purple-500 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                   >
                     <PaperAirplaneIcon className="h-4 w-4" />
                     Send
@@ -875,7 +698,7 @@ Return ONLY the JSON object, no other text.`;
           </div>
 
           {/* Tabs */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-100 mb-6">
             <div className="border-b border-gray-200">
               <nav className="flex space-x-8 px-6">
                 {[
@@ -891,7 +714,7 @@ Return ONLY the JSON object, no other text.`;
                     onClick={() => setActiveTab(tab.id as any)}
                     className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
                       activeTab === tab.id
-                        ? 'border-blue-500 text-blue-600'
+                        ? 'border-orange-500 text-orange-600'
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                     }`}
                   >
@@ -1052,43 +875,18 @@ Return ONLY the JSON object, no other text.`;
 
                       {/* If content is an object with sections */}
                       {typeof proposal.content === 'object' && proposal.content !== null && (
-                        <>
-                          {proposal.content.fullContent && 
-                            renderContentSection('Full Content', proposal.content.fullContent)}
-                          
-                          {proposal.content.executiveSummary && 
-                            renderContentSection('Executive Summary', proposal.content.executiveSummary)}
-                          
-                          {proposal.content.problemStatement && 
-                            renderContentSection('Problem Statement', proposal.content.problemStatement)}
-                          
-                          {proposal.content.solution && 
-                            renderContentSection('Solution', proposal.content.solution)}
-                          
-                          {proposal.content.approach && 
-                            renderContentSection('Approach', proposal.content.approach)}
-                          
-                          {proposal.content.timeline && 
-                            renderContentSection('Timeline', proposal.content.timeline)}
-                          
-                          {proposal.content.budgetDetails && 
-                            renderContentSection('Budget Details', proposal.content.budgetDetails)}
-                          
-                          {proposal.content.budget && 
-                            renderContentSection('Budget', proposal.content.budget)}
-                          
-                          {proposal.content.pricing && 
-                            renderContentSection('Pricing', proposal.content.pricing)}
-                          
-                          {proposal.content.nextSteps && 
-                            renderContentSection('Next Steps', proposal.content.nextSteps)}
-                          
-                          {proposal.content.findings && 
-                            renderContentSection('Findings', proposal.content.findings)}
-                          
-                          {proposal.content.recommendations && 
-                            renderContentSection('Recommendations', proposal.content.recommendations)}
-                        </>
+                        <div className="space-y-6">
+                          {Object.entries(proposal.content).map(([key, value]) => (
+                            <div key={key}>
+                              <h3 className="text-lg font-semibold text-gray-900 mb-3 capitalize">
+                                {key.replace(/([A-Z])/g, ' $1').trim()}
+                              </h3>
+                              <div className="bg-gray-50 rounded-lg p-4">
+                                <pre className="whitespace-pre-wrap text-gray-700">{String(value)}</pre>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </>
                   )}
@@ -1258,7 +1056,7 @@ Return ONLY the JSON object, no other text.`;
                     placeholder="Enter client's full name"
                     value={clientName}
                     onChange={(e) => setClientName(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                     disabled={sending}
                   />
                 </div>
@@ -1272,7 +1070,7 @@ Return ONLY the JSON object, no other text.`;
                     placeholder="recipient@example.com"
                     value={recipientEmail}
                     onChange={(e) => setRecipientEmail(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                     disabled={sending}
                   />
                 </div>
@@ -1294,7 +1092,7 @@ Return ONLY the JSON object, no other text.`;
               <button
                 onClick={handleSendProposal}
                 disabled={sending || !recipientEmail.trim() || !clientName.trim()}
-                className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-500 to-purple-400 text-white font-semibold rounded-lg hover:from-purple-600 hover:to-purple-500 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-3 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {sending ? (
                   <>
