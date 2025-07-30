@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken, JWTPayload } from '../utils/auth';
-import { prisma } from '../utils/database';
+import { connectToDatabase } from '../utils/mongoClient';
+import { ObjectId } from 'mongodb';
 
 export interface AuthenticatedRequest extends Request {
   user?: JWTPayload & {
@@ -35,8 +36,10 @@ export async function authenticateToken(
     }
 
     // Verify user still exists
-    const user = await prisma.user.findUnique({
-      where: { id: payload.userId }
+    const { db } = await connectToDatabase();
+    
+    const user = await db.collection('users').findOne({ 
+      _id: new ObjectId(payload.userId)
     });
 
     if (!user) {
@@ -50,7 +53,7 @@ export async function authenticateToken(
     // Cast the request to include the user property
     (req as AuthenticatedRequest).user = {
       ...payload,
-      organizationId: user.organizationId
+      organizationId: user.organizationId?.toString()
     };
     next();
   } catch (error) {

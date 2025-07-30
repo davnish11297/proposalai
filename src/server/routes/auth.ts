@@ -1,7 +1,8 @@
 import { Router } from 'express';
-import { getMongoClient } from '../utils/mongoClient';
+import { connectToDatabase } from '../utils/mongoClient';
 import { hashPassword, comparePassword, generateToken } from '../utils/auth';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
+import { ObjectId } from 'mongodb';
 
 const router = Router();
 
@@ -17,8 +18,7 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    const client = await getMongoClient();
-    const db = client.db();
+    const { db } = await connectToDatabase();
 
     // Check if user already exists
     const existingUser = await db.collection('users').findOne({ email });
@@ -73,7 +73,11 @@ router.post('/register', async (req, res) => {
       lastName,
       role: 'ADMIN',
       organizationId: organizationResult.insertedId.toString(),
-      onboardingCompleted: false
+      onboardingCompleted: false,
+      isActive: true,
+      emailVerified: false,
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
 
     // Generate token
@@ -114,8 +118,7 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    const client = await getMongoClient();
-    const db = client.db();
+    const { db } = await connectToDatabase();
 
     // Find user
     const user = await db.collection('users').findOne({ email });
@@ -142,7 +145,19 @@ router.post('/login', async (req, res) => {
     });
 
     // Generate token
-    const token = generateToken(user);
+    const tokenUser = {
+      id: user._id.toString(),
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      organizationId: user.organizationId.toString(),
+      isActive: user.isActive || true,
+      emailVerified: user.emailVerified || false,
+      createdAt: user.createdAt || new Date(),
+      updatedAt: user.updatedAt || new Date()
+    };
+    const token = generateToken(tokenUser);
 
     return res.json({
       success: true,
@@ -179,11 +194,10 @@ router.post('/login', async (req, res) => {
 router.get('/me', authenticateToken, async (req, res) => {
   try {
     const authenticatedReq = req as AuthenticatedRequest;
-    const client = await getMongoClient();
-    const db = client.db();
+    const { db } = await connectToDatabase();
 
     const user = await db.collection('users').findOne({ 
-      _id: authenticatedReq.user!.userId 
+      _id: new ObjectId(authenticatedReq.user!.userId)
     });
 
     if (!user) {
@@ -240,12 +254,11 @@ router.post('/onboarding/complete', authenticateToken, async (req, res) => {
       });
     }
 
-    const client = await getMongoClient();
-    const db = client.db();
+    const { db } = await connectToDatabase();
 
     // Update user with onboarding data
     await db.collection('users').updateOne(
-      { _id: authenticatedReq.user!.userId },
+      { _id: new ObjectId(authenticatedReq.user!.userId) },
       {
         $set: {
           firstName: name,

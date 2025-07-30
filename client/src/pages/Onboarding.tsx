@@ -16,33 +16,46 @@ const Onboarding: React.FC = () => {
   const { updateUser } = useAuth();
 
   const handleContinue = async () => {
+    console.log('handleContinue called, currentStep:', currentStep, 'totalSteps:', totalSteps);
+    
     if (currentStep === 1 && !name.trim()) {
+      console.log('Step 1: Name is empty, not proceeding');
       return; // Don't proceed if name is empty
     }
 
     if (currentStep < totalSteps) {
+      console.log('Moving to next step:', currentStep + 1);
       setCurrentStep(currentStep + 1);
     } else {
+      console.log('Completing onboarding...');
       // Complete onboarding
       setIsLoading(true);
       try {
         // Call the onboarding completion API
         const token = localStorage.getItem('token');
+        console.log('Token:', token ? 'exists' : 'missing');
+        
+        const requestBody = {
+          name: name.trim(),
+          privacyMode,
+          industry: selectedIndustry,
+          goal: selectedGoal
+        };
+        console.log('Request body:', requestBody);
+        
         const response = await fetch('/api/auth/onboarding/complete', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({
-            name: name.trim(),
-            privacyMode,
-            industry: selectedIndustry,
-            goal: selectedGoal
-          })
+          body: JSON.stringify(requestBody)
         });
 
+        console.log('Response status:', response.status);
+        
         if (response.ok) {
+          console.log('Onboarding completed successfully');
           // Update the user context
           updateUser({ 
             firstName: name.trim(), 
@@ -69,7 +82,10 @@ const Onboarding: React.FC = () => {
   const canContinue = 
     currentStep === 1 ? name.trim().length > 0 : 
     currentStep === 2 ? selectedIndustry && selectedGoal : 
+    currentStep === 3 ? true : 
     true;
+
+  console.log('Onboarding render - currentStep:', currentStep, 'canContinue:', canContinue, 'isLoading:', isLoading);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">

@@ -1,9 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const database_1 = require("../utils/database");
+const mongoClient_1 = require("../utils/mongoClient");
 const auth_1 = require("../utils/auth");
 const auth_2 = require("../middleware/auth");
+const mongodb_1 = require("mongodb");
 const router = (0, express_1.Router)();
 router.post('/register', async (req, res) => {
     try {
@@ -14,56 +15,65 @@ router.post('/register', async (req, res) => {
                 error: 'All fields are required'
             });
         }
-        const existingUser = await database_1.prisma.user.findUnique({
-            where: { email }
-        });
+        const { db } = await (0, mongoClient_1.connectToDatabase)();
+        const existingUser = await db.collection('users').findOne({ email });
         if (existingUser) {
             return res.status(400).json({
                 success: false,
                 error: 'User already exists'
             });
         }
-        const existingOrg = await database_1.prisma.organization.findUnique({
-            where: { slug: organizationSlug }
-        });
+        const existingOrg = await db.collection('organizations').findOne({ slug: organizationSlug });
         if (existingOrg) {
             return res.status(400).json({
                 success: false,
                 error: 'Organization slug already taken'
             });
         }
-        const organization = await database_1.prisma.organization.create({
-            data: {
-                name: organizationName,
-                slug: organizationSlug,
-                isActive: true
-            }
+        const organizationResult = await db.collection('organizations').insertOne({
+            name: organizationName,
+            slug: organizationSlug,
+            isActive: true,
+            createdAt: new Date(),
+            updatedAt: new Date()
         });
         const hashedPassword = await (0, auth_1.hashPassword)(password);
-        const user = await database_1.prisma.user.create({
-            data: {
-                email,
-                password: hashedPassword,
-                firstName,
-                lastName,
-                role: 'ADMIN',
-                isActive: true,
-                organizationId: organization.id
-            }
+        const userResult = await db.collection('users').insertOne({
+            email,
+            password: hashedPassword,
+            firstName,
+            lastName,
+            role: 'ADMIN',
+            isActive: true,
+            organizationId: organizationResult.insertedId,
+            onboardingCompleted: false,
+            createdAt: new Date(),
+            updatedAt: new Date()
         });
+        const user = {
+            id: userResult.insertedId.toString(),
+            email,
+            firstName,
+            lastName,
+            role: 'ADMIN',
+            organizationId: organizationResult.insertedId.toString(),
+            onboardingCompleted: false,
+            isActive: true,
+            emailVerified: false,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
         const token = (0, auth_1.generateToken)(user);
         return res.status(201).json({
             success: true,
             data: {
-                user: {
-                    id: user.id,
-                    email: user.email,
-                    firstName: user.firstName,
-                    lastName: user.lastName,
-                    role: user.role,
-                    organizationId: user.organizationId
+                user,
+                organization: {
+                    id: organizationResult.insertedId.toString(),
+                    name: organizationName,
+                    slug: organizationSlug,
+                    isActive: true
                 },
-                organization,
                 token
             },
             message: 'User registered successfully'
@@ -86,12 +96,8 @@ router.post('/login', async (req, res) => {
                 error: 'Email and password are required'
             });
         }
-        const user = await database_1.prisma.user.findUnique({
-            where: { email },
-            include: {
-                organization: true
-            }
-        });
+        const { db } = await (0, mongoClient_1.connectToDatabase)();
+        const user = await db.collection('users').findOne({ email });
         if (!user) {
             return res.status(401).json({
                 success: false,
@@ -105,19 +111,40 @@ router.post('/login', async (req, res) => {
                 error: 'Invalid credentials'
             });
         }
-        const token = (0, auth_1.generateToken)(user);
+        const organization = await db.collection('organizations').findOne({
+            _id: user.organizationId
+        });
+        const tokenUser = {
+            id: user._id.toString(),
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role,
+            organizationId: user.organizationId.toString(),
+            isActive: user.isActive || true,
+            emailVerified: user.emailVerified || false,
+            createdAt: user.createdAt || new Date(),
+            updatedAt: user.updatedAt || new Date()
+        };
+        const token = (0, auth_1.generateToken)(tokenUser);
         return res.json({
             success: true,
             data: {
                 user: {
-                    id: user.id,
+                    id: user._id.toString(),
                     email: user.email,
                     firstName: user.firstName,
                     lastName: user.lastName,
                     role: user.role,
-                    organizationId: user.organizationId
+                    organizationId: user.organizationId.toString(),
+                    onboardingCompleted: user.onboardingCompleted || false
                 },
-                organization: user.organization,
+                organization: organization ? {
+                    id: organization._id.toString(),
+                    name: organization.name,
+                    slug: organization.slug,
+                    isActive: organization.isActive
+                } : null,
                 token
             },
             message: 'Login successful'
@@ -134,11 +161,9 @@ router.post('/login', async (req, res) => {
 router.get('/me', auth_2.authenticateToken, async (req, res) => {
     try {
         const authenticatedReq = req;
-        const user = await database_1.prisma.user.findUnique({
-            where: { id: authenticatedReq.user.userId },
-            include: {
-                organization: true
-            }
+        const { db } = await (0, mongoClient_1.connectToDatabase)();
+        const user = await db.collection('users').findOne({
+            _id: new mongodb_1.ObjectId(authenticatedReq.user.userId)
         });
         if (!user) {
             return res.status(404).json({
@@ -146,18 +171,27 @@ router.get('/me', auth_2.authenticateToken, async (req, res) => {
                 error: 'User not found'
             });
         }
+        const organization = await db.collection('organizations').findOne({
+            _id: user.organizationId
+        });
         return res.json({
             success: true,
             data: {
                 user: {
-                    id: user.id,
+                    id: user._id.toString(),
                     email: user.email,
                     firstName: user.firstName,
                     lastName: user.lastName,
                     role: user.role,
-                    organizationId: user.organizationId
+                    organizationId: user.organizationId.toString(),
+                    onboardingCompleted: user.onboardingCompleted || false
                 },
-                organization: user.organization
+                organization: organization ? {
+                    id: organization._id.toString(),
+                    name: organization.name,
+                    slug: organization.slug,
+                    isActive: organization.isActive
+                } : null
             }
         });
     }
@@ -166,6 +200,42 @@ router.get('/me', auth_2.authenticateToken, async (req, res) => {
         return res.status(500).json({
             success: false,
             error: 'Failed to get user'
+        });
+    }
+});
+router.post('/onboarding/complete', auth_2.authenticateToken, async (req, res) => {
+    try {
+        const authenticatedReq = req;
+        const { name, privacyMode, industry, goal } = req.body;
+        if (!name) {
+            return res.status(400).json({
+                success: false,
+                error: 'Name is required'
+            });
+        }
+        const { db } = await (0, mongoClient_1.connectToDatabase)();
+        await db.collection('users').updateOne({ _id: new mongodb_1.ObjectId(authenticatedReq.user.userId) }, {
+            $set: {
+                firstName: name,
+                onboardingCompleted: true,
+                privacyMode: privacyMode || false,
+                industry: industry || '',
+                goal: goal || '',
+                updatedAt: new Date()
+            }
+        });
+        return res.json({
+            success: true,
+            data: {
+                message: 'Onboarding completed successfully'
+            }
+        });
+    }
+    catch (error) {
+        console.error('Onboarding completion error:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to complete onboarding'
         });
     }
 });

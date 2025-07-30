@@ -5,7 +5,8 @@ exports.requireRole = requireRole;
 exports.requireOrganization = requireOrganization;
 exports.optionalAuth = optionalAuth;
 const auth_1 = require("../utils/auth");
-const database_1 = require("../utils/database");
+const mongoClient_1 = require("../utils/mongoClient");
+const mongodb_1 = require("mongodb");
 async function authenticateToken(req, res, next) {
     try {
         const authHeader = req.headers.authorization;
@@ -25,8 +26,9 @@ async function authenticateToken(req, res, next) {
             });
             return;
         }
-        const user = await database_1.prisma.user.findUnique({
-            where: { id: payload.userId }
+        const { db } = await (0, mongoClient_1.connectToDatabase)();
+        const user = await db.collection('users').findOne({
+            _id: new mongodb_1.ObjectId(payload.userId)
         });
         if (!user) {
             res.status(401).json({
@@ -37,7 +39,7 @@ async function authenticateToken(req, res, next) {
         }
         req.user = {
             ...payload,
-            organizationId: user.organizationId
+            organizationId: user.organizationId?.toString()
         };
         next();
     }
