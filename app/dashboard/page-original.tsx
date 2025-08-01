@@ -657,7 +657,7 @@ export default function OriginalDashboardPage() {
                 )}
                 
                 <textarea
-                  className="w-full h-[180px] rounded-lg border border-gray-200 px-4 py-3 text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50 resize-none font-normal"
+                  className="w-full h-[180px] rounded-lg border border-gray-200 px-4 py-3 text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50 resize-none font-normal text-gray-900"
                   placeholder="Ask ProposalAI or type / to see prompts..."
                   value={proposalText}
                   onChange={e => setProposalText(e.target.value)}
