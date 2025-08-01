@@ -65,6 +65,7 @@ interface DashboardData {
 }
 
 export default function SmartDashboard() {
+  console.log('🔄 SmartDashboard: Component rendering');
   const { user, loading: authLoading, logout } = useAuth();
   const router = useRouter();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
@@ -73,8 +74,10 @@ export default function SmartDashboard() {
 
   // Fetch dashboard data with robust error handling
   const fetchDashboardData = async () => {
+    console.log('🔄 SmartDashboard: Starting to fetch dashboard data');
     try {
       const token = localStorage.getItem('token');
+      console.log('🔄 SmartDashboard: Token found:', !!token);
       if (!token) {
         throw new Error('No authentication token found');
       }
@@ -97,14 +100,15 @@ export default function SmartDashboard() {
       }
 
       const data = await response.json();
+      console.log('🔄 SmartDashboard: Dashboard data received:', data);
       
       if (data.fallback) {
-        toast.warning('Dashboard loaded with limited data');
+        toast.error('Dashboard loaded with limited data');
       }
       
       setDashboardData(data.data);
     } catch (error) {
-      console.error('Dashboard fetch error:', error);
+      console.error('❌ SmartDashboard: Dashboard fetch error:', error);
       
       // Set safe fallback data
       const fallbackData: DashboardData = {
@@ -132,6 +136,7 @@ export default function SmartDashboard() {
       setDashboardData(fallbackData);
       toast.error('Dashboard temporarily unavailable. Basic features are still working.');
     } finally {
+      console.log('🔄 SmartDashboard: Setting loading to false');
       setLoading(false);
     }
   };
@@ -182,7 +187,7 @@ export default function SmartDashboard() {
     }
   };
 
-  if (authLoading || loading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <LoadingSpinner size="lg" />
@@ -190,12 +195,26 @@ export default function SmartDashboard() {
     );
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+        <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+          <div className="h-10 bg-gray-200 rounded-lg animate-pulse mb-2 w-96"></div>
+          <div className="h-6 bg-gray-200 rounded-lg animate-pulse mb-8 w-80"></div>
+          <div className="text-center text-gray-600">Loading dashboard data...</div>
+        </div>
+      </div>
+    );
+  }
+
   if (!user) {
+    console.log('🔄 SmartDashboard: No user, redirecting to login');
     router.push('/login');
     return null;
   }
 
   if (!dashboardData) {
+    console.log('🔄 SmartDashboard: No dashboard data, showing error state');
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="text-center">
@@ -211,8 +230,10 @@ export default function SmartDashboard() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+  try {
+    console.log('🔄 SmartDashboard: Rendering main dashboard content');
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Navigation */}
       <nav className="bg-white/90 backdrop-blur-md shadow-sm border-b border-gray-100 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -434,7 +455,7 @@ export default function SmartDashboard() {
                 {/* Combine and process both recent activity and proposals */}
                 {(() => {
                   // Merge recent activity and proposals into unified timeline
-                  const unifiedActivities = [];
+                  const unifiedActivities: any[] = [];
                   
                   // Add recent activity items
                   dashboardData.recentActivity.forEach(activity => {
@@ -595,5 +616,21 @@ export default function SmartDashboard() {
         )}
       </div>
     </div>
-  );
+    );
+  } catch (error) {
+    console.error('❌ SmartDashboard: Rendering error:', error);
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">Dashboard rendering error</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="btn btn-primary"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    );
+  }
 }
