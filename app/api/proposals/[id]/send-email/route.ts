@@ -4,6 +4,7 @@ import connectDB from '@/lib/mongodb';
 import Proposal from '@/models/Proposal';
 import User from '@/models/User';
 import Organization from '@/models/Organization';
+import Client from '@/models/Client';
 import { ClientService } from '@/lib/services/clientService';
 import { VersionManager } from '@/lib/services/versionManager';
 import sgMail from '@sendgrid/mail';
@@ -36,7 +37,8 @@ export async function POST(
       subject, 
       message, 
       sendCurrentVersion = true,
-      forceNewVersion = false 
+      forceNewVersion = false,
+      clientId 
     } = body;
 
     if (!recipientEmail) {
@@ -160,15 +162,34 @@ export async function POST(
       </div>
     `;
 
-    // Create or find client
-    const client = await ClientService.findOrCreateClient(
-      {
-        name: clientName || 'Unknown Client',
-        email: recipientEmail,
-        company: 'Unknown Company'
-      },
-      userAuth
-    );
+    // Get or create client
+    let client;
+    if (clientId) {
+      // Use existing client
+      client = await Client.findById(clientId);
+      if (!client || client.organizationId.toString() !== userAuth.organizationId) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Client not found or access denied'
+          },
+          { status: 404 }
+        );
+      }
+      // Update last contact date
+      client.lastContactDate = new Date();
+      await client.save();
+    } else {
+      // Create or find client
+      client = await ClientService.findOrCreateClient(
+        {
+          name: clientName || 'Unknown Client',
+          email: recipientEmail,
+          company: 'Unknown Company'
+        },
+        userAuth
+      );
+    }
 
     // Send email using SendGrid
     if (process.env.SENDGRID_API_KEY) {

@@ -8,6 +8,7 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { formatRelativeTime } from '@/lib/utils';
 
+
 interface DashboardData {
   priorities: {
     needsFollowUp: number;
@@ -71,6 +72,8 @@ export default function SmartDashboard() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  
+
 
   // Fetch dashboard data with robust error handling
   const fetchDashboardData = async () => {
@@ -186,6 +189,8 @@ export default function SmartDashboard() {
         router.push('/dashboard/create');
     }
   };
+
+
 
   if (authLoading) {
     return (
@@ -551,32 +556,11 @@ export default function SmartDashboard() {
                       {/* Action Buttons */}
                       <div className="flex items-center gap-2">
                         <Link 
-                          href={`/proposals/${item.proposalId}`}
-                          className="btn btn-outline btn-sm"
+                          href={`/proposals/${item.proposalId}/view`}
+                          className="btn btn-primary btn-sm bg-blue-500 hover:bg-blue-600 text-white"
                         >
-                          Edit
+                          View
                         </Link>
-                        
-                        {item.status === 'viewed' && (
-                          <button className="btn btn-primary btn-sm">
-                            Follow up
-                          </button>
-                        )}
-                        
-                        {item.status === 'draft' && (
-                          <button className="btn btn-primary btn-sm">
-                            Send now
-                          </button>
-                        )}
-                        
-                        {(item.status === 'sent' || item.status === 'viewed') && (
-                          <Link 
-                            href={`/proposals/${item.proposalId}/view`}
-                            className="btn btn-secondary btn-sm"
-                          >
-                            View
-                          </Link>
-                        )}
                       </div>
                     </div>
                   ));
@@ -615,6 +599,8 @@ export default function SmartDashboard() {
           </div>
         )}
       </div>
+
+
     </div>
     );
   } catch (error) {
