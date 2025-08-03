@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { debounce } from '@/lib/utils';
 
 interface AutoSaveState {
-  status: 'idle' | 'saving' | 'saved' | 'error';
+  status: 'idle' | 'pending' | 'saving' | 'saved' | 'error';
   lastSaved?: Date;
   error?: string;
 }
@@ -14,6 +14,7 @@ interface UseAutoSaveProps {
   description?: string;
   enabled?: boolean;
   saveInterval?: number; // in milliseconds
+  debounceDelay?: number; // in milliseconds
 }
 
 export const useAutoSave = ({
@@ -23,9 +24,12 @@ export const useAutoSave = ({
   description,
   enabled = true,
   saveInterval = 10000, // 10 seconds
+  debounceDelay = 500, // 500ms debounce
 }: UseAutoSaveProps) => {
   const [saveState, setSaveState] = useState<AutoSaveState>({ status: 'idle' });
   const lastSavedContent = useRef<string>('');
+  const lastSavedTitle = useRef<string>('');
+  const lastSavedDescription = useRef<string>('');
   const timeoutRef = useRef<NodeJS.Timeout>();
   const isInitialLoad = useRef(true);
 
@@ -34,8 +38,10 @@ export const useAutoSave = ({
       return;
     }
 
-    // Skip if content hasn't changed
-    if (content === lastSavedContent.current) {
+    // Skip if nothing has changed
+    if (content === lastSavedContent.current && 
+        title === lastSavedTitle.current && 
+        description === lastSavedDescription.current) {
       return;
     }
 
@@ -66,6 +72,8 @@ export const useAutoSave = ({
       }
 
       lastSavedContent.current = content;
+      lastSavedTitle.current = title || '';
+      lastSavedDescription.current = description || '';
       setSaveState({ 
         status: 'saved', 
         lastSaved: new Date() 
@@ -92,39 +100,61 @@ export const useAutoSave = ({
 
   // Debounced auto-save function
   const debouncedAutoSave = useCallback(
-    debounce(autoSave, saveInterval),
-    [autoSave, saveInterval]
+    debounce(autoSave, debounceDelay),
+    [autoSave, debounceDelay]
   );
 
-  // Effect to trigger auto-save when content changes
+  // Effect to trigger auto-save when any field changes
   useEffect(() => {
     // Skip auto-save on initial load
     if (isInitialLoad.current) {
       isInitialLoad.current = false;
       lastSavedContent.current = content;
+      lastSavedTitle.current = title || '';
+      lastSavedDescription.current = description || '';
       return;
     }
 
-    if (!enabled || !content || content === lastSavedContent.current) {
+    // Check if any field has changed
+    const hasContentChanged = content !== lastSavedContent.current;
+    const hasTitleChanged = title !== lastSavedTitle.current;
+    const hasDescriptionChanged = description !== lastSavedDescription.current;
+
+    // Debug logging
+    if (hasContentChanged || hasTitleChanged || hasDescriptionChanged) {
+      console.log('Auto-save triggered:', {
+        hasContentChanged,
+        hasTitleChanged,
+        hasDescriptionChanged,
+        content: content.substring(0, 50) + '...',
+        title,
+        description: description?.substring(0, 50) + '...'
+      });
+    }
+
+    if (!enabled || (!hasContentChanged && !hasTitleChanged && !hasDescriptionChanged)) {
       return;
     }
+
+    // Show pending state immediately
+    setSaveState({ status: 'pending' });
 
     // Clear existing timeout
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
 
-    // Set new timeout for auto-save
+    // Set new timeout for debounced auto-save
     timeoutRef.current = setTimeout(() => {
       debouncedAutoSave();
-    }, saveInterval);
+    }, debounceDelay);
 
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [content, enabled, saveInterval, debouncedAutoSave]);
+  }, [content, title, description, enabled, debounceDelay, debouncedAutoSave]);
 
   // Manual save function
   const forceSave = useCallback(async () => {
