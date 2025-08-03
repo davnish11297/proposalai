@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateToken } from '@/lib/middleware';
+import { validateContent, getErrorMessage, addContentFilteringInstructions } from '@/lib/utils/contentValidation';
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,6 +29,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Pre-generation validation: Check user input for inappropriate content
+    const userMessages = messages.filter(msg => msg.role === 'user');
+    for (const message of userMessages) {
+      const validation = validateContent(message.content);
+      if (!validation.isValid) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: getErrorMessage(validation.error!),
+            validationError: true
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     // Check if OpenRouter API key is configured
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
@@ -43,6 +60,17 @@ export async function POST(request: NextRequest) {
 
     console.log('Using OpenRouter API key:', apiKey.substring(0, 10) + '...');
 
+    // Add content filtering instructions to system messages
+    const enhancedMessages = messages.map(message => {
+      if (message.role === 'system') {
+        return {
+          ...message,
+          content: addContentFilteringInstructions(message.content)
+        };
+      }
+      return message;
+    });
+
     // Call OpenRouter API
     const openRouterResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -54,7 +82,7 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         model: 'anthropic/claude-3.5-sonnet',
-        messages: messages,
+        messages: enhancedMessages,
         max_tokens: 4000,
         temperature: 0.7
       })
@@ -108,9 +136,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Post-generation validation: Check AI response for inappropriate content
+    const aiResponse = data.choices[0].message.content;
+    const validation = validateContent(aiResponse);
+    
+    if (!validation.isValid) {
+      console.log('AI response validation failed:', validation.error);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'The generated content contains inappropriate material. Please try rephrasing your request with clearer, more professional language.',
+          validationError: true
+        },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
-      content: data.choices[0].message.content,
+      content: validation.sanitizedContent || aiResponse,
       usage: data.usage
     });
 

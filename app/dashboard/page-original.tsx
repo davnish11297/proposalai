@@ -162,7 +162,9 @@ export default function OriginalDashboardPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate AI content');
+        const error = new Error(errorData.error || 'Failed to generate AI content');
+        (error as any).response = { data: errorData };
+        throw error;
       }
 
       const data = await response.json();
@@ -385,9 +387,23 @@ export default function OriginalDashboardPage() {
     
     console.log('Form data:', formData);
     console.log('Missing fields:', missingFields);
+    console.log('Tone value:', formData.tone);
+    console.log('Tone field exists:', 'tone' in formData);
     
     if (missingFields.length > 0) {
-      toast.error(`Please fill in required fields: ${missingFields.join(', ')}`);
+      const fieldLabels = {
+        industry: 'Industry/Domain',
+        proposalType: 'Proposal Type', 
+        targetAudience: 'Target Audience',
+        timeline: 'Timeline',
+        tone: 'Tone of Proposal'
+      };
+      
+      const missingFieldLabels = missingFields.map(field => fieldLabels[field as keyof typeof fieldLabels] || field);
+      toast.error(`Please fill in required fields: ${missingFieldLabels.join(', ')}`);
+      
+      // Scroll to top to help users see the form fields
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     
@@ -508,9 +524,17 @@ Please generate a focused and compelling proposal **based only on the given info
       
       // Generate refinement suggestions for the new proposal
       generateRefinementSuggestions(aiContent);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating proposal:', error);
-      toast.error('Failed to generate proposal content. Please try again.');
+      
+      // Handle validation errors specifically
+      if (error.response?.data?.validationError) {
+        toast.error(error.response.data.error || 'Please try rephrasing your request with clearer, more professional language.');
+      } else if (error.message?.includes('validation')) {
+        toast.error('Please try rephrasing your request with clearer, more professional language.');
+      } else {
+        toast.error('Failed to generate proposal content. Please try again.');
+      }
     } finally {
       setGenerating(false);
     }
@@ -907,13 +931,18 @@ Please generate a focused and compelling proposal **based only on the given info
                   <select
                     value={formData.industry}
                     onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 ${
+                      !formData.industry ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    }`}
                   >
                     <option value="">Select Industry</option>
                     {FORM_OPTIONS.industries.map(industry => (
                       <option key={industry} value={industry}>{industry}</option>
                     ))}
                   </select>
+                  {!formData.industry && (
+                    <p className="text-xs text-red-600 mt-1">Please select an industry</p>
+                  )}
                 </div>
 
                 {/* Proposal Type */}
@@ -1090,13 +1119,18 @@ Please generate a focused and compelling proposal **based only on the given info
                   <select
                     value={formData.tone}
                     onChange={(e) => setFormData(prev => ({ ...prev, tone: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 ${
+                      !formData.tone ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    }`}
                   >
                     <option value="">Select Tone</option>
                     {FORM_OPTIONS.tones.map(tone => (
                       <option key={tone} value={tone}>{tone}</option>
                     ))}
                   </select>
+                  {!formData.tone && (
+                    <p className="text-xs text-red-600 mt-1">Please select a tone for your proposal</p>
+                  )}
                 </div>
               </div>
             </div>
