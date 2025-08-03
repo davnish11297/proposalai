@@ -32,6 +32,63 @@ const GENERIC_SUGGESTIONS = [
   "Specify Payment Terms"
 ];
 
+// Form options
+const FORM_OPTIONS = {
+  industries: [
+    'Healthcare', 'Real Estate', 'SaaS/Software', 'Marketing/Advertising',
+    'Finance/Banking', 'E-commerce', 'Education', 'Construction',
+    'Manufacturing', 'Consulting', 'Non-profit', 'Government',
+    'Technology', 'Retail', 'Hospitality', 'Transportation'
+  ],
+  proposalTypes: [
+    'Project Pitch', 'Partnership/Collaboration', 'Product Launch',
+    'Service Offering', 'Investment Proposal', 'RFP Response',
+    'Grant Application', 'Contract Renewal', 'Expansion Proposal'
+  ],
+  targetAudiences: [
+    'Client', 'Investor', 'Government Agency', 'Business Partner',
+    'Internal Stakeholders', 'Board of Directors', 'Vendor',
+    'Supplier', 'Consultant', 'Contractor'
+  ],
+  projectScopes: [
+    'One-time project', 'Long-term collaboration', 'Pilot/Prototype',
+    'Retainer-based', 'Ongoing service', 'Consultation',
+    'Implementation', 'Training', 'Support & Maintenance'
+  ],
+  budgetRanges: [
+    '<$5,000', '$5,000–$20,000', '$20,000–$100,000',
+    '$100,000–$500,000', '$500,000+', 'Not specified'
+  ],
+  timelines: [
+    'Immediate (1–2 weeks)', 'Short-term (1–3 months)',
+    'Medium-term (3–6 months)', 'Long-term (6+ months)',
+    'Ongoing', 'Not specified'
+  ],
+  problemStatements: [
+    'Low customer retention', 'Inefficient workflow', 'Lack of online visibility',
+    'Regulatory compliance issues', 'Poor product-market fit',
+    'High operational costs', 'Limited market reach', 'Technology gaps',
+    'Quality control issues', 'Scalability challenges'
+  ],
+  valuePropositions: [
+    'Cost savings', 'Increased efficiency', 'Revenue growth',
+    'Customer satisfaction', 'Innovation', 'Risk reduction',
+    'Competitive advantage', 'Market expansion', 'Quality improvement',
+    'Time savings'
+  ],
+  deliverables: [
+    'Software solution', 'Marketing campaign', 'Market analysis report',
+    'Product design', 'Legal documents', 'Strategy roadmap',
+    'Training program', 'Consultation report', 'Implementation plan',
+    'Support services'
+  ],
+  tones: [
+    'Formal & Professional', 'Friendly & Persuasive', 'Technical & Detailed',
+    'Visionary & Inspirational', 'Executive Summary Style',
+    'Confident & Assertive', 'Collaborative & Partnership-focused'
+  ]
+};
+
 // Dashboard component
 export default function OriginalDashboardPage() {
   const { user, loading: authLoading, logout } = useAuth();
@@ -58,6 +115,20 @@ export default function OriginalDashboardPage() {
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [uploadedPdfContent, setUploadedPdfContent] = useState<string>('');
+
+  // Structured form state
+  const [formData, setFormData] = useState({
+    industry: '',
+    proposalType: '',
+    targetAudience: '',
+    projectScope: '',
+    budgetRange: '',
+    timeline: '',
+    problemStatement: '',
+    valueProposition: [],
+    deliverables: [],
+    tone: ''
+  });
 
   // State for suggestions
   const [predefinedSuggestions, setPredefinedSuggestions] = useState<Array<{
@@ -307,6 +378,18 @@ export default function OriginalDashboardPage() {
       toast.error('Please enter a proposal description or upload a PDF before generating content');
       return;
     }
+
+    // Check required fields
+    const requiredFields = ['industry', 'proposalType', 'targetAudience', 'timeline', 'tone'];
+    const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData]);
+    
+    console.log('Form data:', formData);
+    console.log('Missing fields:', missingFields);
+    
+    if (missingFields.length > 0) {
+      toast.error(`Please fill in required fields: ${missingFields.join(', ')}`);
+      return;
+    }
     
     try {
       setGenerating(true);
@@ -316,17 +399,45 @@ export default function OriginalDashboardPage() {
         ? `${proposalText.trim() ? proposalText.trim() + '\n\n' : ''}PDF Content:\n${uploadedPdfContent.trim()}`
         : proposalText.trim();
       
+      // Build structured context
+      const context = {
+        industry: formData.industry,
+        proposalType: formData.proposalType,
+        targetAudience: formData.targetAudience,
+        projectScope: formData.projectScope,
+        budgetRange: formData.budgetRange,
+        timeline: formData.timeline,
+        problemStatement: formData.problemStatement,
+        valueProposition: formData.valueProposition.join(', '),
+        deliverables: formData.deliverables.join(', '),
+        tone: formData.tone
+      };
+      
       let systemPrompt = '';
       let userPrompt = '';
       
       if (uploadedPdfContent.trim()) {
         // PDF uploaded: Only refine, do not rewrite
-        systemPrompt = `You are an expert proposal writer. Your task is to refine and improve the provided proposal content based on the user's instructions. Do NOT rewrite the entire proposal. Only make targeted improvements, edits, and enhancements. Preserve the original structure, sections, and as much of the original content as possible.`;
-        userPrompt = `Here is the current proposal content (from a PDF):\n${uploadedPdfContent.trim()}\n\nUser's refinement instructions: ${proposalText.trim() ? proposalText.trim() : ''}${selectedSuggestions.length > 0 ? '\nRefinements: ' + selectedSuggestions.join(' | ') : ''}\n\nPlease return the improved proposal, keeping the original structure and content, but making it better according to the instructions.`;
+        systemPrompt = `You are an expert proposal writer. Your task is to refine and improve the provided proposal content based on the user's instructions and structured context. Do NOT rewrite the entire proposal. Only make targeted improvements, edits, and enhancements. Preserve the original structure, sections, and as much of the original content as possible.`;
+        userPrompt = `Here is the current proposal content (from a PDF):\n${uploadedPdfContent.trim()}\n\nUser's refinement instructions: ${proposalText.trim() ? proposalText.trim() : ''}${selectedSuggestions.length > 0 ? '\nRefinements: ' + selectedSuggestions.join(' | ') : ''}\n\nProposal Context:\n- Industry: ${context.industry}\n- Proposal Type: ${context.proposalType}\n- Target Audience: ${context.targetAudience}\n- Project Scope: ${context.projectScope || 'Not specified'}\n- Budget Range: ${context.budgetRange || 'Not specified'}\n- Timeline: ${context.timeline}\n- Problem Statement: ${context.problemStatement || 'Not specified'}\n- Value Proposition: ${context.valueProposition || 'Not specified'}\n- Deliverables: ${context.deliverables || 'Not specified'}\n- Tone: ${context.tone}\n\nPlease return the improved proposal, keeping the original structure and content, but making it better according to the instructions and context.`;
       } else {
-        // No PDF: Use original prompt for new proposals
-        systemPrompt = `You are an expert proposal writer. Generate a professional proposal with these sections: Executive Summary, Approach, Budget Details, Timeline. Use clear, persuasive language.`;
-        userPrompt = `Content: ${combinedContent}\n\n${proposalText.trim() ? 'Instructions: ' + proposalText.trim() + '\n' : ''}${selectedSuggestions.length > 0 ? 'Refinements: ' + selectedSuggestions.join(' | ') + '\n' : ''}Generate a professional proposal with: 1. Executive Summary 2. Approach 3. Budget Details 4. Timeline`;
+        // No PDF: Use structured context for new proposals
+        systemPrompt = `You are a professional business proposal writer.
+
+I will provide you with:
+- A short freeform idea from the user
+- Structured context to help guide the proposal
+
+Please generate a focused and compelling proposal **based only on the given information**, without adding unrelated assumptions.
+
+### Instructions:
+- DO NOT change the theme or logic of the user's original idea.
+- Use the structured context to refine and enrich the proposal.
+- Maintain a clear, professional tone based on the selected style.
+- Avoid fluff or vagueness.
+- Keep the structure appropriate for a business/client proposal.
+- Include these sections: Executive Summary, Approach, Budget Details, Timeline.`;
+        userPrompt = `### User Idea:\n${combinedContent}\n\n### Proposal Details:\n- Industry: ${context.industry}\n- Proposal Type: ${context.proposalType}\n- Target Audience: ${context.targetAudience}\n- Project Scope: ${context.projectScope || 'Not specified'}\n- Budget Range: ${context.budgetRange || 'Not specified'}\n- Timeline: ${context.timeline}\n- Problem Statement / Pain Point: ${context.problemStatement || 'Not specified'}\n- Value Proposition Focus: ${context.valueProposition || 'Not specified'}\n- Deliverables Expected: ${context.deliverables || 'Not specified'}\n- Tone of Proposal: ${context.tone}\n\n${proposalText.trim() ? 'Additional Instructions: ' + proposalText.trim() + '\n' : ''}${selectedSuggestions.length > 0 ? 'Refinements: ' + selectedSuggestions.join(' | ') + '\n' : ''}Generate a professional proposal with: 1. Executive Summary 2. Approach 3. Budget Details 4. Timeline`;
       }
       
       // Compose prompt for AI
@@ -580,7 +691,7 @@ export default function OriginalDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex flex-col">
+    <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex flex-col">
       {/* Modern Top Navigation */}
       <nav className="bg-white/90 backdrop-blur-md shadow-sm border-b border-gray-100 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -639,13 +750,14 @@ export default function OriginalDashboardPage() {
       {/* Main Content */}
       <div className="w-full max-w-[1400px] mx-auto py-8 px-4 sm:px-8">
         {!showContent ? (
-          // Single centered card when no content is generated
-          <div className="flex flex-col items-center justify-center min-h-[80vh]">
-            <div className="w-full max-w-6xl card-elevated p-10 flex flex-col items-center justify-center min-h-[480px] mx-auto">
-              <h2 className="text-3xl font-extrabold text-gray-900 mb-6 text-center tracking-tight">What can I help with?</h2>
+          // Two-column layout with structured form sidebar
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Main content area */}
+            <div className="flex-1 card-elevated p-8">
+              <h2 className="text-3xl font-extrabold text-gray-900 mb-6 tracking-tight">What can I help with?</h2>
               
               {/* Text box with integrated PDF upload */}
-              <div className="w-full relative mb-4">
+              <div className="w-full relative mb-6">
                 {/* PDF Upload Status */}
                 {uploadedPdfContent && (
                   <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-3 py-2 rounded-lg mb-2">
@@ -657,7 +769,7 @@ export default function OriginalDashboardPage() {
                 )}
                 
                 <textarea
-                  className="w-full h-[180px] rounded-lg border border-gray-200 px-4 py-3 text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50 resize-none font-normal text-gray-900"
+                  className="w-full h-[200px] rounded-lg border border-gray-200 px-4 py-3 text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50 resize-none font-normal text-gray-900"
                   placeholder="Ask ProposalAI or type / to see prompts..."
                   value={proposalText}
                   onChange={e => setProposalText(e.target.value)}
@@ -701,65 +813,291 @@ export default function OriginalDashboardPage() {
               </div>
 
               {/* Initial Suggestions */}
-              {!showContent && (
-                <div className="mb-6">
-                  <div className="flex flex-wrap gap-2">
-                    {loadingSuggestions ? (
-                      // Loading placeholders
-                      Array.from({ length: 5 }).map((_, i) => (
-                        <div key={i} className="px-3 py-1.5 rounded-full border border-gray-200 bg-gray-100 animate-pulse inline-flex items-center">
-                          <div className="h-3 bg-gray-200 rounded animate-pulse" style={{ width: `${60 + (i * 10)}px` }}></div>
-                        </div>
-                      ))
-                    ) : (
-                      predefinedSuggestions.map((suggestion, i) => {
-                        const isSelected = selectedSuggestions.includes(suggestion.text);
-                        const isDisabled = !isSelected && selectedSuggestions.length >= 5;
-                        
-                        const baseClasses = "px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 cursor-pointer border";
-                        const selectedClasses = isSelected 
-                          ? "bg-blue-100 text-blue-700 border-blue-300 shadow-sm" 
-                          : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100 hover:border-gray-300";
-                        const disabledClasses = isDisabled 
-                          ? "opacity-40 cursor-not-allowed bg-gray-50 text-gray-400 border-gray-200" 
-                          : "";
-                        
-                        return (
-                          <button
-                            key={`initial-${i}-${suggestion.text}`}
-                            onClick={() => !isDisabled && !generating && handleSuggestionClick(suggestion.text)}
-                            disabled={generating || isDisabled}
-                            className={`${baseClasses} ${generating || isDisabled ? disabledClasses : selectedClasses}`}
-                          >
-                            {suggestion.text}
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
+              <div className="mb-6">
+                <div className="flex flex-wrap gap-2">
+                  {loadingSuggestions ? (
+                    // Loading placeholders
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="px-3 py-1.5 rounded-full border border-gray-200 bg-gray-100 animate-pulse inline-flex items-center">
+                        <div className="h-3 bg-gray-200 rounded animate-pulse" style={{ width: `${60 + (i * 10)}px` }}></div>
+                      </div>
+                    ))
+                  ) : (
+                    predefinedSuggestions.map((suggestion, i) => {
+                      const isSelected = selectedSuggestions.includes(suggestion.text);
+                      const isDisabled = !isSelected && selectedSuggestions.length >= 5;
+                      
+                      const baseClasses = "px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 cursor-pointer border";
+                      const selectedClasses = isSelected 
+                        ? "bg-blue-100 text-blue-700 border-blue-300 shadow-sm" 
+                        : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100 hover:border-gray-300";
+                      const disabledClasses = isDisabled 
+                        ? "opacity-40 cursor-not-allowed bg-gray-50 text-gray-400 border-gray-200" 
+                        : "";
+                      
+                      return (
+                        <button
+                          key={`initial-${i}-${suggestion.text}`}
+                          onClick={() => !isDisabled && !generating && handleSuggestionClick(suggestion.text)}
+                          disabled={generating || isDisabled}
+                          className={`${baseClasses} ${generating || isDisabled ? disabledClasses : selectedClasses}`}
+                        >
+                          {suggestion.text}
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
-              )}
+              </div>
               
               {/* Generate and Clear buttons */}
-              <div className="flex gap-4 mt-2 w-full justify-center">
+              <div className="flex gap-3">
                 <button
-                  className="btn btn-primary px-8 py-3"
+                  className="btn btn-primary flex-1"
                   onClick={handleGenerateWithAI}
-                  disabled={generating || (!proposalText.trim() && !uploadedPdfContent.trim())}
+                  disabled={generating}
                 >
                   {generating ? 'Generating...' : 'Generate'}
                 </button>
                 <button
-                  className="btn btn-secondary px-8 py-3"
+                  className="btn btn-secondary"
                   onClick={() => {
                     setProposalText('');
                     setSelectedSuggestions([]);
                     setUploadedPdfContent('');
+                    setShowContent(false);
+                    setGeneratedContent({
+                      executiveSummary: '',
+                      approach: '',
+                      budgetDetails: '',
+                      timeline: '',
+                      fullContent: ''
+                    });
+                    // Reset form data
+                    setFormData({
+                      industry: '',
+                      proposalType: '',
+                      targetAudience: '',
+                      projectScope: '',
+                      budgetRange: '',
+                      timeline: '',
+                      problemStatement: '',
+                      valueProposition: [],
+                      deliverables: [],
+                      tone: ''
+                    });
                   }}
                   disabled={generating}
                 >
-                  Clear
+                  New
                 </button>
+              </div>
+            </div>
+
+            {/* Structured Form Sidebar */}
+            <div className="lg:w-[420px] card-elevated p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Proposal Context</h3>
+              
+              <div className="space-y-4">
+                {/* Industry/Domain */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Industry/Domain <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.industry}
+                    onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  >
+                    <option value="">Select Industry</option>
+                    {FORM_OPTIONS.industries.map(industry => (
+                      <option key={industry} value={industry}>{industry}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Proposal Type */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Proposal Type <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.proposalType}
+                    onChange={(e) => setFormData(prev => ({ ...prev, proposalType: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  >
+                    <option value="">Select Type</option>
+                    {FORM_OPTIONS.proposalTypes.map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Target Audience */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Target Audience <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.targetAudience}
+                    onChange={(e) => setFormData(prev => ({ ...prev, targetAudience: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  >
+                    <option value="">Select Audience</option>
+                    {FORM_OPTIONS.targetAudiences.map(audience => (
+                      <option key={audience} value={audience}>{audience}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Project Scope */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Project Scope
+                  </label>
+                  <select
+                    value={formData.projectScope}
+                    onChange={(e) => setFormData(prev => ({ ...prev, projectScope: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  >
+                    <option value="">Select Scope</option>
+                    {FORM_OPTIONS.projectScopes.map(scope => (
+                      <option key={scope} value={scope}>{scope}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Budget Range */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Budget Range
+                  </label>
+                  <select
+                    value={formData.budgetRange}
+                    onChange={(e) => setFormData(prev => ({ ...prev, budgetRange: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  >
+                    <option value="">Select Budget</option>
+                    {FORM_OPTIONS.budgetRanges.map(budget => (
+                      <option key={budget} value={budget}>{budget}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Timeline */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Timeline <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.timeline}
+                    onChange={(e) => setFormData(prev => ({ ...prev, timeline: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  >
+                    <option value="">Select Timeline</option>
+                    {FORM_OPTIONS.timelines.map(timeline => (
+                      <option key={timeline} value={timeline}>{timeline}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Problem Statement */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Problem Statement
+                  </label>
+                  <select
+                    value={formData.problemStatement}
+                    onChange={(e) => setFormData(prev => ({ ...prev, problemStatement: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  >
+                    <option value="">Select Problem</option>
+                    {FORM_OPTIONS.problemStatements.map(problem => (
+                      <option key={problem} value={problem}>{problem}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Value Proposition */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Value Proposition Focus
+                  </label>
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {FORM_OPTIONS.valuePropositions.map(prop => (
+                      <label key={prop} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.valueProposition.includes(prop)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData(prev => ({
+                                ...prev,
+                                valueProposition: [...prev.valueProposition, prop]
+                              }));
+                            } else {
+                              setFormData(prev => ({
+                                ...prev,
+                                valueProposition: prev.valueProposition.filter(p => p !== prop)
+                              }));
+                            }
+                          }}
+                          className="mr-2"
+                        />
+                        <span className="text-sm text-gray-700">{prop}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Deliverables */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Deliverables Expected
+                  </label>
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {FORM_OPTIONS.deliverables.map(deliverable => (
+                      <label key={deliverable} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.deliverables.includes(deliverable)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData(prev => ({
+                                ...prev,
+                                deliverables: [...prev.deliverables, deliverable]
+                              }));
+                            } else {
+                              setFormData(prev => ({
+                                ...prev,
+                                deliverables: prev.deliverables.filter(d => d !== deliverable)
+                              }));
+                            }
+                          }}
+                          className="mr-2"
+                        />
+                        <span className="text-sm text-gray-700">{deliverable}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Tone */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tone of Proposal <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.tone}
+                    onChange={(e) => setFormData(prev => ({ ...prev, tone: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  >
+                    <option value="">Select Tone</option>
+                    {FORM_OPTIONS.tones.map(tone => (
+                      <option key={tone} value={tone}>{tone}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -840,6 +1178,19 @@ export default function OriginalDashboardPage() {
                       budgetDetails: '',
                       timeline: '',
                       fullContent: ''
+                    });
+                    // Reset form data
+                    setFormData({
+                      industry: '',
+                      proposalType: '',
+                      targetAudience: '',
+                      projectScope: '',
+                      budgetRange: '',
+                      timeline: '',
+                      problemStatement: '',
+                      valueProposition: [],
+                      deliverables: [],
+                      tone: ''
                     });
                   }}
                   disabled={generating}
