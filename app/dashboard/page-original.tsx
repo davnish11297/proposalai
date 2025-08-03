@@ -777,19 +777,39 @@ Please generate a focused and compelling proposal **based only on the given info
                   disabled={generating}
                 />
                 
-                {/* AI Icons inside text box */}
-                <div className="absolute bottom-3 right-3 flex items-center gap-2">
-                  <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                    <span className="text-white text-xs font-bold">G</span>
-                  </div>
-                  <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                    <span className="text-white text-xs font-bold">GA</span>
-                  </div>
-                  <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  </div>
+                {/* PDF Upload Button inside text box */}
+                <div className="absolute bottom-3 right-3">
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={handlePdfUpload}
+                    className="hidden"
+                    id="pdf-upload"
+                    disabled={uploadingPdf}
+                  />
+                  <label
+                    htmlFor="pdf-upload"
+                    className={`inline-flex items-center justify-center w-8 h-8 rounded-full transition cursor-pointer ${
+                      uploadingPdf 
+                        ? 'bg-gray-100 opacity-50 cursor-not-allowed' 
+                        : uploadedPdfContent 
+                        ? 'bg-green-100 hover:bg-green-200' 
+                        : 'bg-gray-100 hover:bg-gray-200'
+                    }`}
+                    title={uploadedPdfContent ? "PDF uploaded - Click to replace" : "Upload PDF"}
+                  >
+                    {uploadingPdf ? (
+                      <LoadingSpinner size="sm" />
+                    ) : uploadedPdfContent ? (
+                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                    )}
+                  </label>
                 </div>
               </div>
 
@@ -956,175 +976,175 @@ Please generate a focused and compelling proposal **based only on the given info
               </div>
             </div>
 
-            {/* Structured Form Sidebar */}
-            <div className="lg:w-[420px] bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Proposal Context</h3>
+                        {/* Structured Form Sidebar */}
+            <div className="lg:w-[420px] bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Proposal Context</h3>
               
-              <div className="grid grid-cols-2 gap-3">
-                {/* Industry/Domain */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Industry/Domain <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.industry}
-                    onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value }))}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 text-sm ${
-                      !formData.industry ? 'border-red-300 bg-red-50' : 'border-gray-200'
-                    }`}
-                  >
-                    <option value="">Select Industry</option>
-                    {FORM_OPTIONS.industries.map(industry => (
-                      <option key={industry} value={industry}>{industry}</option>
-                    ))}
-                  </select>
-                  {!formData.industry && (
-                    <p className="text-xs text-red-600 mt-1">Please select an industry</p>
-                  )}
-                </div>
+                              <div className="space-y-4">
+                  {/* Industry/Domain */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Industry/Domain <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.industry}
+                      onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value }))}
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-sm ${
+                        !formData.industry ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                    >
+                      <option value="">Select Industry</option>
+                      {FORM_OPTIONS.industries.map(industry => (
+                        <option key={industry} value={industry}>{industry}</option>
+                      ))}
+                    </select>
+                    {!formData.industry && (
+                      <p className="text-xs text-red-600 mt-1">Please select an industry</p>
+                    )}
+                  </div>
 
-                {/* Proposal Type */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Proposal Type <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.proposalType}
-                    onChange={(e) => setFormData(prev => ({ ...prev, proposalType: e.target.value }))}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 text-sm ${
-                      !formData.proposalType ? 'border-red-300 bg-red-50' : 'border-gray-200'
-                    }`}
-                  >
-                    <option value="">Select Type</option>
-                    {FORM_OPTIONS.proposalTypes.map(type => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
-                  {!formData.proposalType && (
-                    <p className="text-xs text-red-600 mt-1">Please select a proposal type</p>
-                  )}
-                </div>
+                                  {/* Proposal Type */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Proposal Type <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.proposalType}
+                      onChange={(e) => setFormData(prev => ({ ...prev, proposalType: e.target.value }))}
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-sm ${
+                        !formData.proposalType ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                    >
+                      <option value="">Select Type</option>
+                      {FORM_OPTIONS.proposalTypes.map(type => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                    {!formData.proposalType && (
+                      <p className="text-xs text-red-600 mt-1">Please select a proposal type</p>
+                    )}
+                  </div>
 
-                {/* Target Audience */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Target Audience <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.targetAudience}
-                    onChange={(e) => setFormData(prev => ({ ...prev, targetAudience: e.target.value }))}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 text-sm ${
-                      !formData.targetAudience ? 'border-red-300 bg-red-50' : 'border-gray-200'
-                    }`}
-                  >
-                    <option value="">Select Audience</option>
-                    {FORM_OPTIONS.targetAudiences.map(audience => (
-                      <option key={audience} value={audience}>{audience}</option>
-                    ))}
-                  </select>
-                  {!formData.targetAudience && (
-                    <p className="text-xs text-red-600 mt-1">Please select a target audience</p>
-                  )}
-                </div>
+                  {/* Target Audience */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Target Audience <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.targetAudience}
+                      onChange={(e) => setFormData(prev => ({ ...prev, targetAudience: e.target.value }))}
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-sm ${
+                        !formData.targetAudience ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                    >
+                      <option value="">Select Audience</option>
+                      {FORM_OPTIONS.targetAudiences.map(audience => (
+                        <option key={audience} value={audience}>{audience}</option>
+                      ))}
+                    </select>
+                    {!formData.targetAudience && (
+                      <p className="text-xs text-red-600 mt-1">Please select a target audience</p>
+                    )}
+                  </div>
 
-                {/* Timeline */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Timeline <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.timeline}
-                    onChange={(e) => setFormData(prev => ({ ...prev, timeline: e.target.value }))}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 text-sm ${
-                      !formData.timeline ? 'border-red-300 bg-red-50' : 'border-gray-200'
-                    }`}
-                  >
-                    <option value="">Select Timeline</option>
-                    {FORM_OPTIONS.timelines.map(timeline => (
-                      <option key={timeline} value={timeline}>{timeline}</option>
-                    ))}
-                  </select>
-                  {!formData.timeline && (
-                    <p className="text-xs text-red-600 mt-1">Please select a timeline</p>
-                  )}
-                </div>
+                  {/* Timeline */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Timeline <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.timeline}
+                      onChange={(e) => setFormData(prev => ({ ...prev, timeline: e.target.value }))}
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-sm ${
+                        !formData.timeline ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                    >
+                      <option value="">Select Timeline</option>
+                      {FORM_OPTIONS.timelines.map(timeline => (
+                        <option key={timeline} value={timeline}>{timeline}</option>
+                      ))}
+                    </select>
+                    {!formData.timeline && (
+                      <p className="text-xs text-red-600 mt-1">Please select a timeline</p>
+                    )}
+                  </div>
 
-                {/* Project Scope */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Project Scope
-                  </label>
-                  <select
-                    value={formData.projectScope}
-                    onChange={(e) => setFormData(prev => ({ ...prev, projectScope: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 text-sm"
-                  >
-                    <option value="">Select Scope</option>
-                    {FORM_OPTIONS.projectScopes.map(scope => (
-                      <option key={scope} value={scope}>{scope}</option>
-                    ))}
-                  </select>
-                </div>
+                  {/* Project Scope */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Project Scope
+                    </label>
+                    <select
+                      value={formData.projectScope}
+                      onChange={(e) => setFormData(prev => ({ ...prev, projectScope: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-sm"
+                    >
+                      <option value="">Select Scope</option>
+                      {FORM_OPTIONS.projectScopes.map(scope => (
+                        <option key={scope} value={scope}>{scope}</option>
+                      ))}
+                    </select>
+                  </div>
 
-                {/* Budget Range */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Budget Range
-                  </label>
-                  <select
-                    value={formData.budgetRange}
-                    onChange={(e) => setFormData(prev => ({ ...prev, budgetRange: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 text-sm"
-                  >
-                    <option value="">Select Budget</option>
-                    {FORM_OPTIONS.budgetRanges.map(budget => (
-                      <option key={budget} value={budget}>{budget}</option>
-                    ))}
-                  </select>
-                </div>
+                  {/* Budget Range */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Budget Range
+                    </label>
+                    <select
+                      value={formData.budgetRange}
+                      onChange={(e) => setFormData(prev => ({ ...prev, budgetRange: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-sm"
+                    >
+                      <option value="">Select Budget</option>
+                      {FORM_OPTIONS.budgetRanges.map(budget => (
+                        <option key={budget} value={budget}>{budget}</option>
+                      ))}
+                    </select>
+                  </div>
 
-                {/* Problem Statement */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Problem Statement
-                  </label>
-                  <select
-                    value={formData.problemStatement}
-                    onChange={(e) => setFormData(prev => ({ ...prev, problemStatement: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 text-sm"
-                  >
-                    <option value="">Select Problem</option>
-                    {FORM_OPTIONS.problemStatements.map(problem => (
-                      <option key={problem} value={problem}>{problem}</option>
-                    ))}
-                  </select>
-                </div>
+                  {/* Problem Statement */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Problem Statement
+                    </label>
+                    <select
+                      value={formData.problemStatement}
+                      onChange={(e) => setFormData(prev => ({ ...prev, problemStatement: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-sm"
+                    >
+                      <option value="">Select Problem</option>
+                      {FORM_OPTIONS.problemStatements.map(problem => (
+                        <option key={problem} value={problem}>{problem}</option>
+                      ))}
+                    </select>
+                  </div>
 
-                {/* Tone */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Tone of Proposal <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.tone}
-                    onChange={(e) => setFormData(prev => ({ ...prev, tone: e.target.value }))}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 text-sm ${
-                      !formData.tone ? 'border-red-300 bg-red-50' : 'border-gray-200'
-                    }`}
-                  >
-                    <option value="">Select Tone</option>
-                    {FORM_OPTIONS.tones.map(tone => (
-                      <option key={tone} value={tone}>{tone}</option>
-                    ))}
-                  </select>
-                  {!formData.tone && (
-                    <p className="text-xs text-red-600 mt-1">Please select a tone</p>
-                  )}
-                </div>
+                  {/* Tone */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tone of Proposal <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.tone}
+                      onChange={(e) => setFormData(prev => ({ ...prev, tone: e.target.value }))}
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-sm ${
+                        !formData.tone ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                    >
+                      <option value="">Select Tone</option>
+                      {FORM_OPTIONS.tones.map(tone => (
+                        <option key={tone} value={tone}>{tone}</option>
+                      ))}
+                    </select>
+                    {!formData.tone && (
+                      <p className="text-xs text-red-600 mt-1">Please select a tone</p>
+                    )}
+                  </div>
               </div>
 
               {/* Checkbox sections - full width */}
-              <div className="mt-4 space-y-3">
+              <div className="mt-4 space-y-4">
                 {/* Value Proposition */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
