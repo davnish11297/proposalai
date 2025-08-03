@@ -313,7 +313,7 @@ export default function DraftsPage() {
         ) : (
           <>
             {/* Stats */}
-            <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
               <div className="card p-6">
                 <div className="flex items-center">
                   <div className="p-2 bg-blue-100 rounded-lg">
@@ -343,22 +343,6 @@ export default function DraftsPage() {
                         weekAgo.setDate(weekAgo.getDate() - 7);
                         return new Date(p.createdAt) > weekAgo;
                       }).length}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="card p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <svg className="h-6 w-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Last Updated</p>
-                    <p className="text-sm font-bold text-gray-900">
-                      {proposals.length > 0 ? formatDate(Math.max(...proposals.map(p => new Date(p.updatedAt).getTime())).toString()) : 'Never'}
                     </p>
                   </div>
                 </div>
