@@ -2,7 +2,7 @@ import React from 'react';
 import { formatRelativeTime } from '@/lib/utils';
 
 interface AutoSaveIndicatorProps {
-  status: 'idle' | 'saving' | 'saved' | 'error';
+  status: 'idle' | 'pending' | 'saving' | 'saved' | 'error';
   lastSaved?: Date;
   error?: string;
   className?: string;
@@ -16,6 +16,12 @@ export const AutoSaveIndicator: React.FC<AutoSaveIndicatorProps> = ({
 }) => {
   const getStatusIcon = () => {
     switch (status) {
+      case 'pending':
+        return (
+          <svg className="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        );
       case 'saving':
         return (
           <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -41,12 +47,14 @@ export const AutoSaveIndicator: React.FC<AutoSaveIndicatorProps> = ({
 
   const getStatusText = () => {
     switch (status) {
+      case 'pending':
+        return 'Changes pending...';
       case 'saving':
-        return 'Saving...';
+        return 'Saving changes...';
       case 'saved':
-        return lastSaved ? `Saved ${formatRelativeTime(lastSaved)}` : 'Saved';
+        return lastSaved ? `Saved ${formatRelativeTime(lastSaved)}` : 'All changes saved';
       case 'error':
-        return error || 'Save failed';
+        return error || 'Save failed - retrying...';
       default:
         return '';
     }
@@ -54,6 +62,8 @@ export const AutoSaveIndicator: React.FC<AutoSaveIndicatorProps> = ({
 
   const getStatusClasses = () => {
     switch (status) {
+      case 'pending':
+        return 'text-yellow-600 bg-yellow-50 border-yellow-200';
       case 'saving':
         return 'text-blue-600 bg-blue-50 border-blue-200';
       case 'saved':

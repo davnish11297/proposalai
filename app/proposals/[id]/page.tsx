@@ -39,13 +39,14 @@ export default function ProposalEditPage() {
   const [content, setContent] = useState('');
   const [description, setDescription] = useState('');
   
-  // Auto-save functionality
+  // Auto-save functionality with debounced saves on every edit
   const { saveState, forceSave } = useAutoSave({
     proposalId,
     content,
     title,
     description,
     enabled: !!proposal && !saving,
+    debounceDelay: 500, // Save 500ms after user stops typing
   });
   
   // Quality scoring functionality
@@ -136,6 +137,13 @@ export default function ProposalEditPage() {
       toast.error('Failed to save proposal');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Handle save on blur (when user clicks away from input fields)
+  const handleBlur = async () => {
+    if (content !== proposal?.content || title !== proposal?.title || description !== proposal?.description) {
+      await forceSave();
     }
   };
 
@@ -287,6 +295,7 @@ export default function ProposalEditPage() {
                     placeholder="Enter proposal title"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
+                    onBlur={handleBlur}
                   />
                 </div>
 
@@ -300,6 +309,7 @@ export default function ProposalEditPage() {
                     placeholder="Brief description of the proposal"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
+                    onBlur={handleBlur}
                   />
                 </div>
 
@@ -313,6 +323,7 @@ export default function ProposalEditPage() {
                     placeholder="Enter your proposal content here..."
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
+                    onBlur={handleBlur}
                   />
                 </div>
 
