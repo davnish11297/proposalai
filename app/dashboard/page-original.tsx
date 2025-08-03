@@ -747,14 +747,15 @@ Please generate a focused and compelling proposal **based only on the given info
         </div>
       </nav>
 
-      {/* Main Content */}
+      {/* BizBoost-inspired Main Content */}
       <div className="w-full max-w-[1400px] mx-auto py-8 px-4 sm:px-8">
         {!showContent ? (
           // Two-column layout with structured form sidebar
-          <div className="flex flex-col lg:flex-row gap-6">
+          <div className="flex flex-col lg:flex-row gap-8">
             {/* Main content area */}
-            <div className="flex-1 card-elevated p-8">
-              <h2 className="text-3xl font-extrabold text-gray-900 mb-6 tracking-tight">What can I help with?</h2>
+            <div className="flex-1 bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">What can I help with?</h2>
+              <p className="text-gray-600 mb-6">Describe your proposal needs and I'll help you create a compelling, professional document.</p>
               
               {/* Text box with integrated PDF upload */}
               <div className="w-full relative mb-6">
@@ -769,196 +770,294 @@ Please generate a focused and compelling proposal **based only on the given info
                 )}
                 
                 <textarea
-                  className="w-full h-[200px] rounded-lg border border-gray-200 px-4 py-3 text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50 resize-none font-normal text-gray-900"
+                  className="w-full h-[150px] rounded-xl border border-gray-200 px-6 py-4 text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white resize-none font-normal text-gray-900 placeholder-gray-400"
                   placeholder="Ask ProposalAI or type / to see prompts..."
                   value={proposalText}
                   onChange={e => setProposalText(e.target.value)}
                   disabled={generating}
                 />
                 
-                {/* PDF Upload Button inside text box */}
-                <div className="absolute bottom-3 right-3">
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={handlePdfUpload}
-                    className="hidden"
-                    id="pdf-upload"
-                    disabled={uploadingPdf}
-                  />
-                  <label
-                    htmlFor="pdf-upload"
-                    className={`inline-flex items-center justify-center w-8 h-8 rounded-full transition cursor-pointer ${
-                      uploadingPdf 
-                        ? 'bg-gray-100 opacity-50 cursor-not-allowed' 
-                        : uploadedPdfContent 
-                        ? 'bg-green-100 hover:bg-green-200' 
-                        : 'bg-gray-100 hover:bg-gray-200'
-                    }`}
-                    title={uploadedPdfContent ? "PDF uploaded - Click to replace" : "Upload PDF"}
-                  >
-                    {uploadingPdf ? (
-                      <LoadingSpinner size="sm" />
-                    ) : uploadedPdfContent ? (
-                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    ) : (
-                      <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                      </svg>
-                    )}
-                  </label>
+                {/* AI Icons inside text box */}
+                <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                  <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">G</span>
+                  </div>
+                  <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">GA</span>
+                  </div>
+                  <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  </div>
                 </div>
               </div>
 
-              {/* Initial Suggestions */}
+              {/* Popular Actions */}
               <div className="mb-6">
-                <div className="flex flex-wrap gap-2">
-                  {loadingSuggestions ? (
-                    // Loading placeholders
-                    Array.from({ length: 5 }).map((_, i) => (
-                      <div key={i} className="px-3 py-1.5 rounded-full border border-gray-200 bg-gray-100 animate-pulse inline-flex items-center">
-                        <div className="h-3 bg-gray-200 rounded animate-pulse" style={{ width: `${60 + (i * 10)}px` }}></div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Popular Actions</h3>
+                                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {/* Define Success Metrics */}
+                                      <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 cursor-pointer hover:bg-blue-100 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10a2 2 0 01-2 2h-2a2 2 0 01-2-2zm0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
                       </div>
-                    ))
-                  ) : (
-                    predefinedSuggestions.map((suggestion, i) => {
-                      const isSelected = selectedSuggestions.includes(suggestion.text);
-                      const isDisabled = !isSelected && selectedSuggestions.length >= 5;
-                      
-                      const baseClasses = "px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 cursor-pointer border";
-                      const selectedClasses = isSelected 
-                        ? "bg-blue-100 text-blue-700 border-blue-300 shadow-sm" 
-                        : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100 hover:border-gray-300";
-                      const disabledClasses = isDisabled 
-                        ? "opacity-40 cursor-not-allowed bg-gray-50 text-gray-400 border-gray-200" 
-                        : "";
-                      
-                      return (
-                        <button
-                          key={`initial-${i}-${suggestion.text}`}
-                          onClick={() => !isDisabled && !generating && handleSuggestionClick(suggestion.text)}
-                          disabled={generating || isDisabled}
-                          className={`${baseClasses} ${generating || isDisabled ? disabledClasses : selectedClasses}`}
-                        >
-                          {suggestion.text}
-                        </button>
-                      );
-                    })
-                  )}
+                      <div>
+                        <h4 className="font-semibold text-gray-900 text-sm">Define Success Metrics</h4>
+                        <p className="text-xs text-gray-600">Set clear KPIs and measurable outcomes.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Specify Payment Terms */}
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-3 cursor-pointer hover:bg-green-100 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900 text-sm">Specify Payment Terms</h4>
+                        <p className="text-xs text-gray-600">Outline pricing structure and payment schedule.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Include Budget Details */}
+                  <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 cursor-pointer hover:bg-purple-100 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900 text-sm">Include Budget Details</h4>
+                        <p className="text-xs text-gray-600">Break down costs and resource allocation.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Showcase Team Expertise */}
+                  <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 cursor-pointer hover:bg-orange-100 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900 text-sm">Showcase Team Expertise</h4>
+                        <p className="text-xs text-gray-600">Highlight relevant experience and credentials.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Outline Deliverables */}
+                  <div className="bg-blue-gray-50 border border-blue-gray-200 rounded-xl p-3 cursor-pointer hover:bg-blue-gray-100 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-blue-gray-500 rounded-lg flex items-center justify-center">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900 text-sm">Outline Deliverables</h4>
+                        <p className="text-xs text-gray-600">Detail specific outputs and milestones.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Add Timeline */}
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 cursor-pointer hover:bg-indigo-100 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900 text-sm">Add Timeline</h4>
+                        <p className="text-xs text-gray-600">Define project phases and deadlines.</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
               
-              {/* Generate and Clear buttons */}
-              <div className="flex gap-3">
-                <button
-                  className="btn btn-primary flex-1"
-                  onClick={handleGenerateWithAI}
-                  disabled={generating}
-                >
-                  {generating ? 'Generating...' : 'Generate'}
-                </button>
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setProposalText('');
-                    setSelectedSuggestions([]);
-                    setUploadedPdfContent('');
-                    setShowContent(false);
-                    setGeneratedContent({
-                      executiveSummary: '',
-                      approach: '',
-                      budgetDetails: '',
-                      timeline: '',
-                      fullContent: ''
-                    });
-                    // Reset form data
-                    setFormData({
-                      industry: '',
-                      proposalType: '',
-                      targetAudience: '',
-                      projectScope: '',
-                      budgetRange: '',
-                      timeline: '',
-                      problemStatement: '',
-                      valueProposition: [],
-                      deliverables: [],
-                      tone: ''
-                    });
-                  }}
-                  disabled={generating}
-                >
-                  New
-                </button>
+              {/* Action buttons */}
+              <div className="flex items-center justify-between">
+                <div className="flex gap-3">
+                  <button className="bg-white hover:bg-gray-50 text-gray-700 font-medium py-2 px-4 rounded-lg border border-gray-200 hover:border-gray-300 transition-all duration-200">
+                    + Add Context
+                  </button>
+                  <button className="bg-white hover:bg-gray-50 text-gray-700 font-medium py-2 px-4 rounded-lg border border-gray-200 hover:border-gray-300 transition-all duration-200 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m-9 0h10m-10 0a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V6a2 2 0 00-2-2" />
+                    </svg>
+                    Use Template
+                  </button>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    className="bg-white hover:bg-gray-50 text-gray-700 font-semibold py-3 px-6 rounded-xl border-2 border-gray-200 hover:border-gray-300 transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => {
+                      setProposalText('');
+                      setSelectedSuggestions([]);
+                      setUploadedPdfContent('');
+                      setShowContent(false);
+                      setGeneratedContent({
+                        executiveSummary: '',
+                        approach: '',
+                        budgetDetails: '',
+                        timeline: '',
+                        fullContent: ''
+                      });
+                      // Reset form data
+                      setFormData({
+                        industry: '',
+                        proposalType: '',
+                        targetAudience: '',
+                        projectScope: '',
+                        budgetRange: '',
+                        timeline: '',
+                        problemStatement: '',
+                        valueProposition: [],
+                        deliverables: [],
+                        tone: ''
+                      });
+                    }}
+                    disabled={generating}
+                  >
+                    New
+                  </button>
+                  <button
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleGenerateWithAI}
+                    disabled={generating}
+                  >
+                    {generating ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Generating...
+                      </div>
+                    ) : (
+                      'Generate Proposal'
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 
             {/* Structured Form Sidebar */}
-            <div className="lg:w-[420px] card-elevated p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Proposal Context</h3>
+            <div className="lg:w-[420px] bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Proposal Context</h3>
               
-              <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
                 {/* Industry/Domain */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     Industry/Domain <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={formData.industry}
                     onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 text-sm ${
+                      !formData.industry ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                    }`}
                   >
                     <option value="">Select Industry</option>
                     {FORM_OPTIONS.industries.map(industry => (
                       <option key={industry} value={industry}>{industry}</option>
                     ))}
                   </select>
+                  {!formData.industry && (
+                    <p className="text-xs text-red-600 mt-1">Please select an industry</p>
+                  )}
                 </div>
 
                 {/* Proposal Type */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     Proposal Type <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={formData.proposalType}
                     onChange={(e) => setFormData(prev => ({ ...prev, proposalType: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 text-sm ${
+                      !formData.proposalType ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                    }`}
                   >
                     <option value="">Select Type</option>
                     {FORM_OPTIONS.proposalTypes.map(type => (
                       <option key={type} value={type}>{type}</option>
                     ))}
                   </select>
+                  {!formData.proposalType && (
+                    <p className="text-xs text-red-600 mt-1">Please select a proposal type</p>
+                  )}
                 </div>
 
                 {/* Target Audience */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     Target Audience <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={formData.targetAudience}
                     onChange={(e) => setFormData(prev => ({ ...prev, targetAudience: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 text-sm ${
+                      !formData.targetAudience ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                    }`}
                   >
                     <option value="">Select Audience</option>
                     {FORM_OPTIONS.targetAudiences.map(audience => (
                       <option key={audience} value={audience}>{audience}</option>
                     ))}
                   </select>
+                  {!formData.targetAudience && (
+                    <p className="text-xs text-red-600 mt-1">Please select a target audience</p>
+                  )}
+                </div>
+
+                {/* Timeline */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Timeline <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.timeline}
+                    onChange={(e) => setFormData(prev => ({ ...prev, timeline: e.target.value }))}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 text-sm ${
+                      !formData.timeline ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                    }`}
+                  >
+                    <option value="">Select Timeline</option>
+                    {FORM_OPTIONS.timelines.map(timeline => (
+                      <option key={timeline} value={timeline}>{timeline}</option>
+                    ))}
+                  </select>
+                  {!formData.timeline && (
+                    <p className="text-xs text-red-600 mt-1">Please select a timeline</p>
+                  )}
                 </div>
 
                 {/* Project Scope */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     Project Scope
                   </label>
                   <select
                     value={formData.projectScope}
                     onChange={(e) => setFormData(prev => ({ ...prev, projectScope: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 text-sm"
                   >
                     <option value="">Select Scope</option>
                     {FORM_OPTIONS.projectScopes.map(scope => (
@@ -969,13 +1068,13 @@ Please generate a focused and compelling proposal **based only on the given info
 
                 {/* Budget Range */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     Budget Range
                   </label>
                   <select
                     value={formData.budgetRange}
                     onChange={(e) => setFormData(prev => ({ ...prev, budgetRange: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 text-sm"
                   >
                     <option value="">Select Budget</option>
                     {FORM_OPTIONS.budgetRanges.map(budget => (
@@ -984,32 +1083,15 @@ Please generate a focused and compelling proposal **based only on the given info
                   </select>
                 </div>
 
-                {/* Timeline */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Timeline <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.timeline}
-                    onChange={(e) => setFormData(prev => ({ ...prev, timeline: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                  >
-                    <option value="">Select Timeline</option>
-                    {FORM_OPTIONS.timelines.map(timeline => (
-                      <option key={timeline} value={timeline}>{timeline}</option>
-                    ))}
-                  </select>
-                </div>
-
                 {/* Problem Statement */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
                     Problem Statement
                   </label>
                   <select
                     value={formData.problemStatement}
                     onChange={(e) => setFormData(prev => ({ ...prev, problemStatement: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 text-sm"
                   >
                     <option value="">Select Problem</option>
                     {FORM_OPTIONS.problemStatements.map(problem => (
@@ -1018,12 +1100,37 @@ Please generate a focused and compelling proposal **based only on the given info
                   </select>
                 </div>
 
+                {/* Tone */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Tone of Proposal <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.tone}
+                    onChange={(e) => setFormData(prev => ({ ...prev, tone: e.target.value }))}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 text-sm ${
+                      !formData.tone ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                    }`}
+                  >
+                    <option value="">Select Tone</option>
+                    {FORM_OPTIONS.tones.map(tone => (
+                      <option key={tone} value={tone}>{tone}</option>
+                    ))}
+                  </select>
+                  {!formData.tone && (
+                    <p className="text-xs text-red-600 mt-1">Please select a tone</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Checkbox sections - full width */}
+              <div className="mt-4 space-y-3">
                 {/* Value Proposition */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Value Proposition Focus
                   </label>
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                  <div className="grid grid-cols-2 gap-2">
                     {FORM_OPTIONS.valuePropositions.map(prop => (
                       <label key={prop} className="flex items-center">
                         <input
@@ -1052,10 +1159,10 @@ Please generate a focused and compelling proposal **based only on the given info
 
                 {/* Deliverables */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Deliverables Expected
                   </label>
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                  <div className="grid grid-cols-2 gap-2">
                     {FORM_OPTIONS.deliverables.map(deliverable => (
                       <label key={deliverable} className="flex items-center">
                         <input
@@ -1080,23 +1187,6 @@ Please generate a focused and compelling proposal **based only on the given info
                       </label>
                     ))}
                   </div>
-                </div>
-
-                {/* Tone */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tone of Proposal <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.tone}
-                    onChange={(e) => setFormData(prev => ({ ...prev, tone: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                  >
-                    <option value="">Select Tone</option>
-                    {FORM_OPTIONS.tones.map(tone => (
-                      <option key={tone} value={tone}>{tone}</option>
-                    ))}
-                  </select>
                 </div>
               </div>
             </div>
