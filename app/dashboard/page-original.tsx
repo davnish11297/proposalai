@@ -115,6 +115,7 @@ export default function OriginalDashboardPage() {
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [uploadedPdfContent, setUploadedPdfContent] = useState<string>('');
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
 
   // Structured form state
   const [formData, setFormData] = useState({
@@ -171,6 +172,57 @@ export default function OriginalDashboardPage() {
       console.error('AI generation error:', error);
       throw error;
     }
+  }, []);
+
+  // Language detection function
+  const detectLanguage = useCallback((text: string): string => {
+    if (!text.trim()) return 'en';
+    
+    // Simple language detection based on character patterns
+    const chinesePattern = /[\u4e00-\u9fff]/;
+    const spanishPattern = /[áéíóúñü]/i;
+    const frenchPattern = /[àâäéèêëïîôùûüÿç]/i;
+    const hindiPattern = /[\u0900-\u097F]/;
+    
+    if (chinesePattern.test(text)) return 'zh';
+    if (hindiPattern.test(text)) return 'hi';
+    if (frenchPattern.test(text)) return 'fr';
+    if (spanishPattern.test(text)) return 'es';
+    
+    return 'en'; // Default to English
+  }, []);
+
+  // Language-specific AI instructions
+  const getLanguageInstructions = useCallback((language: string) => {
+    const instructions = {
+      en: {
+        cultural: "Use American business writing style with clear, direct language. Focus on measurable outcomes and ROI.",
+        terminology: "Use standard English business terminology and industry-specific jargon appropriately.",
+        style: "Professional, confident tone with active voice and clear structure."
+      },
+      zh: {
+        cultural: "Use Chinese business writing style with respect for hierarchy and relationships. Emphasize harmony and long-term partnerships.",
+        terminology: "Use appropriate Chinese business terminology and industry-specific terms. Include both simplified characters and English terms where appropriate.",
+        style: "Formal, respectful tone with emphasis on relationships and mutual benefit."
+      },
+      es: {
+        cultural: "Use Spanish business writing style with emphasis on personal relationships and trust-building. Include formal greetings and closings.",
+        terminology: "Use Spanish business terminology and industry-specific terms. Maintain professional formality with 'usted' form.",
+        style: "Warm, professional tone with emphasis on collaboration and partnership."
+      },
+      fr: {
+        cultural: "Use French business writing style with emphasis on formality and precision. Include proper business letter structure.",
+        terminology: "Use French business terminology and industry-specific terms. Maintain formal 'vous' form throughout.",
+        style: "Elegant, precise tone with emphasis on quality and expertise."
+      },
+      hi: {
+        cultural: "Use Hindi business writing style with respect for traditional values and modern business practices. Balance formality with approachability.",
+        terminology: "Use Hindi business terminology with English terms where appropriate. Include both Hindi and English industry terms.",
+        style: "Respectful, professional tone with emphasis on trust and reliability."
+      }
+    };
+    
+    return instructions[language as keyof typeof instructions] || instructions.en;
   }, []);
 
   // Generate AI-based suggestions (generic)
@@ -372,6 +424,8 @@ export default function OriginalDashboardPage() {
     );
   }, []);
 
+
+
   const handleGenerateWithAI = useCallback(async () => {
     // Check if we have either user input or uploaded PDF content
     if (!proposalText.trim() && !uploadedPdfContent.trim()) {
@@ -381,10 +435,22 @@ export default function OriginalDashboardPage() {
 
     // Check required fields
     const requiredFields = ['industry', 'proposalType', 'targetAudience', 'timeline', 'tone'];
-    const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData]);
+    const missingFields = requiredFields.filter(field => {
+      const value = formData[field as keyof typeof formData];
+      return !value || value === '' || value.length === 0;
+    });
     
+    console.log('=== FORM VALIDATION DEBUG ===');
     console.log('Form data:', formData);
+    console.log('Required fields:', requiredFields);
     console.log('Missing fields:', missingFields);
+    console.log('Form data type:', typeof formData);
+    console.log('Industry value:', formData.industry, 'Type:', typeof formData.industry);
+    console.log('ProposalType value:', formData.proposalType, 'Type:', typeof formData.proposalType);
+    console.log('TargetAudience value:', formData.targetAudience, 'Type:', typeof formData.targetAudience);
+    console.log('Timeline value:', formData.timeline, 'Type:', typeof formData.timeline);
+    console.log('Tone value:', formData.tone, 'Type:', typeof formData.tone);
+    console.log('=== END DEBUG ===');
     
     if (missingFields.length > 0) {
       toast.error(`Please fill in required fields: ${missingFields.join(', ')}`);
@@ -413,13 +479,23 @@ export default function OriginalDashboardPage() {
         tone: formData.tone
       };
       
+      // Get language-specific instructions
+      const languageInstructions = getLanguageInstructions(selectedLanguage);
+      
       let systemPrompt = '';
       let userPrompt = '';
       
       if (uploadedPdfContent.trim()) {
         // PDF uploaded: Only refine, do not rewrite
-        systemPrompt = `You are an expert proposal writer. Your task is to refine and improve the provided proposal content based on the user's instructions and structured context. Do NOT rewrite the entire proposal. Only make targeted improvements, edits, and enhancements. Preserve the original structure, sections, and as much of the original content as possible.`;
-        userPrompt = `Here is the current proposal content (from a PDF):\n${uploadedPdfContent.trim()}\n\nUser's refinement instructions: ${proposalText.trim() ? proposalText.trim() : ''}${selectedSuggestions.length > 0 ? '\nRefinements: ' + selectedSuggestions.join(' | ') : ''}\n\nProposal Context:\n- Industry: ${context.industry}\n- Proposal Type: ${context.proposalType}\n- Target Audience: ${context.targetAudience}\n- Project Scope: ${context.projectScope || 'Not specified'}\n- Budget Range: ${context.budgetRange || 'Not specified'}\n- Timeline: ${context.timeline}\n- Problem Statement: ${context.problemStatement || 'Not specified'}\n- Value Proposition: ${context.valueProposition || 'Not specified'}\n- Deliverables: ${context.deliverables || 'Not specified'}\n- Tone: ${context.tone}\n\nPlease return the improved proposal, keeping the original structure and content, but making it better according to the instructions and context.`;
+        systemPrompt = `You are an expert proposal writer. Your task is to refine and improve the provided proposal content based on the user's instructions and structured context. Do NOT rewrite the entire proposal. Only make targeted improvements, edits, and enhancements. Preserve the original structure, sections, and as much of the original content as possible.
+
+### Language-Specific Instructions:
+- Cultural Context: ${languageInstructions.cultural}
+- Business Terminology: ${languageInstructions.terminology}
+- Writing Style: ${languageInstructions.style}
+
+IMPORTANT: Generate the proposal in ${selectedLanguage === 'en' ? 'English' : selectedLanguage === 'zh' ? 'Mandarin Chinese' : selectedLanguage === 'es' ? 'Spanish' : selectedLanguage === 'fr' ? 'French' : 'Hindi'}.`;
+        userPrompt = `Here is the current proposal content (from a PDF):\n${uploadedPdfContent.trim()}\n\nUser's refinement instructions: ${proposalText.trim() ? proposalText.trim() : ''}${selectedSuggestions.length > 0 ? '\nRefinements: ' + selectedSuggestions.join(' | ') : ''}\n\nProposal Context:\n- Industry: ${context.industry}\n- Proposal Type: ${context.proposalType}\n- Target Audience: ${context.targetAudience}\n- Project Scope: ${context.projectScope || 'Not specified'}\n- Budget Range: ${context.budgetRange || 'Not specified'}\n- Timeline: ${context.timeline}\n- Problem Statement: ${context.problemStatement || 'Not specified'}\n- Value Proposition: ${context.valueProposition || 'Not specified'}\n- Deliverables: ${context.deliverables || 'Not specified'}\n- Tone: ${context.tone}\n\nPlease return the improved proposal in the specified language, keeping the original structure and content, but making it better according to the instructions and context.`;
       } else {
         // No PDF: Use structured context for new proposals
         systemPrompt = `You are a professional business proposal writer.
@@ -436,8 +512,15 @@ Please generate a focused and compelling proposal **based only on the given info
 - Maintain a clear, professional tone based on the selected style.
 - Avoid fluff or vagueness.
 - Keep the structure appropriate for a business/client proposal.
-- Include these sections: Executive Summary, Approach, Budget Details, Timeline.`;
-        userPrompt = `### User Idea:\n${combinedContent}\n\n### Proposal Details:\n- Industry: ${context.industry}\n- Proposal Type: ${context.proposalType}\n- Target Audience: ${context.targetAudience}\n- Project Scope: ${context.projectScope || 'Not specified'}\n- Budget Range: ${context.budgetRange || 'Not specified'}\n- Timeline: ${context.timeline}\n- Problem Statement / Pain Point: ${context.problemStatement || 'Not specified'}\n- Value Proposition Focus: ${context.valueProposition || 'Not specified'}\n- Deliverables Expected: ${context.deliverables || 'Not specified'}\n- Tone of Proposal: ${context.tone}\n\n${proposalText.trim() ? 'Additional Instructions: ' + proposalText.trim() + '\n' : ''}${selectedSuggestions.length > 0 ? 'Refinements: ' + selectedSuggestions.join(' | ') + '\n' : ''}Generate a professional proposal with: 1. Executive Summary 2. Approach 3. Budget Details 4. Timeline`;
+- Include these sections: Executive Summary, Approach, Budget Details, Timeline.
+
+### Language-Specific Instructions:
+- Cultural Context: ${languageInstructions.cultural}
+- Business Terminology: ${languageInstructions.terminology}
+- Writing Style: ${languageInstructions.style}
+
+IMPORTANT: Generate the proposal in ${selectedLanguage === 'en' ? 'English' : selectedLanguage === 'zh' ? 'Mandarin Chinese' : selectedLanguage === 'es' ? 'Spanish' : selectedLanguage === 'fr' ? 'French' : 'Hindi'}.`;
+        userPrompt = `### User Idea:\n${combinedContent}\n\n### Proposal Details:\n- Industry: ${context.industry}\n- Proposal Type: ${context.proposalType}\n- Target Audience: ${context.targetAudience}\n- Project Scope: ${context.projectScope || 'Not specified'}\n- Budget Range: ${context.budgetRange || 'Not specified'}\n- Timeline: ${context.timeline}\n- Problem Statement / Pain Point: ${context.problemStatement || 'Not specified'}\n- Value Proposition Focus: ${context.valueProposition || 'Not specified'}\n- Deliverables Expected: ${context.deliverables || 'Not specified'}\n- Tone of Proposal: ${context.tone}\n\n${proposalText.trim() ? 'Additional Instructions: ' + proposalText.trim() + '\n' : ''}${selectedSuggestions.length > 0 ? 'Refinements: ' + selectedSuggestions.join(' | ') + '\n' : ''}Generate a professional proposal in the specified language with: 1. Executive Summary 2. Approach 3. Budget Details 4. Timeline`;
       }
       
       // Compose prompt for AI
@@ -776,8 +859,22 @@ Please generate a focused and compelling proposal **based only on the given info
                   disabled={generating}
                 />
                 
-                {/* PDF Upload Button inside text box */}
-                <div className="absolute bottom-3 right-3">
+                {/* Language Selection and PDF Upload */}
+                <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                  {/* Language Dropdown */}
+                  <select
+                    value={selectedLanguage}
+                    onChange={(e) => setSelectedLanguage(e.target.value)}
+                    className="px-3 py-1.5 text-xs font-medium border border-gray-200 rounded-lg bg-white/90 backdrop-blur-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-700 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+                  >
+                    <option value="en" className="text-gray-700">English (English)</option>
+                    <option value="zh" className="text-gray-700">中文 (Mandarin Chinese)</option>
+                    <option value="es" className="text-gray-700">Español (Spanish)</option>
+                    <option value="fr" className="text-gray-700">Français (French)</option>
+                    <option value="hi" className="text-gray-700">हिंदी (Hindi)</option>
+                  </select>
+                  
+                  {/* PDF Upload Button */}
                   <input
                     type="file"
                     accept=".pdf"
@@ -1121,7 +1218,7 @@ Please generate a focused and compelling proposal **based only on the given info
                 )}
                 
                 <textarea
-                  className="w-full h-[180px] rounded-lg border border-gray-200 px-4 py-3 text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50 resize-none"
+                  className="w-full h-[180px] rounded-lg border border-gray-200 px-4 py-3 text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50 resize-none text-gray-900"
                   placeholder={uploadedPdfContent ? "Add additional context or requirements (optional)..." : "Describe your client or project..."}
                   value={proposalText}
                   onChange={e => setProposalText(e.target.value)}
